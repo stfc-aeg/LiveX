@@ -1,12 +1,14 @@
 #include "devices.h"
 
-void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* mcp_addr) {
-  // Run the MCP9600 default setup code. Find devices and set some key defaults
+void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* mcp_addr)
+{
+  // Run the MCP9600 default setup code. Find devices and set defaults
 
   // Initialise MCP9600(s)
   Serial.println("nano_mcp9600 startup");
 
-  for (int idx = 0; idx < num_mcp; idx++) {
+  for (int idx = 0; idx < num_mcp; idx++)
+  {
     Serial.println("\nNow considering new device.");
 
     // Find sensor
@@ -23,7 +25,8 @@ void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* 
     // Set ADC resolution
     mcp[idx].setADCresolution(MCP9600_ADCRESOLUTION_18);
     Serial.print("ADC resolution set to ");
-    switch(mcp[idx].getADCresolution()) {
+    switch(mcp[idx].getADCresolution())
+    {
       case MCP9600_ADCRESOLUTION_18:   Serial.print("18"); break;
       case MCP9600_ADCRESOLUTION_16:   Serial.print("16"); break;
       case MCP9600_ADCRESOLUTION_14:   Serial.print("14"); break;
@@ -34,7 +37,8 @@ void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* 
     // Set thermocouple type (K: -200 to 1372 degrees C)
     mcp[idx].setThermocoupleType(MCP9600_TYPE_K);
     Serial.print("Thermocouple type set to ");
-    switch (mcp[idx].getThermocoupleType()) {
+    switch (mcp[idx].getThermocoupleType())
+    {
       case MCP9600_TYPE_K:  Serial.print("K"); break;
       case MCP9600_TYPE_J:  Serial.print("J"); break;
       case MCP9600_TYPE_T:  Serial.print("T"); break;
@@ -58,5 +62,4 @@ void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* 
     mcp[idx].enable(true);
     Serial.print("enabled");
   }
-
 }
