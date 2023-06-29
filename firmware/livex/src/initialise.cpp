@@ -1,4 +1,4 @@
-#include "devices.h"
+#include "initialise.h"
 
 void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* mcp_addr)
 {
@@ -60,6 +60,62 @@ void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* 
     mcp[idx].configureAlert(1, true, true);  // alert 1 enabled, rising temp
 
     mcp[idx].enable(true);
-    Serial.print("enabled");
+    Serial.println("Enabled");
+  }
+}
+
+void initialiseEthernet(EthernetServer ethServer, byte* mac, byte* ip, int ethPin)
+{
+  // This function initialises Ethernet/ethServer and checks for hardware
+
+  // IS ESP32 module has Ethernet SPI CS on pin 15
+  Ethernet.init(ethPin);
+  // Start the Ethernet connection and the server
+  Ethernet.begin(mac, ip);
+  ethServer.begin();
+
+  // Check if Ethernet hardware present
+  if (Ethernet.hardwareStatus() == EthernetNoHardware) 
+  {
+    Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
+    while (true) 
+    {
+      Serial.print(".");
+      delay(1000); // Do nothing, no point running without Ethernet hardware
+    }
+  }
+  if (Ethernet.linkStatus() == LinkOFF) 
+  {
+    Serial.println("Ethernet cable is not connected.");
+  }
+}
+
+void initialiseModbus(ModbusTCPServer& modbus_server, int inputRegAddress, int numInputRegs, int holdingRegAddress, int numHoldRegs)
+{
+
+  // Modbus setup
+  if (!modbus_server.begin()) 
+  {
+    Serial.println("Failed to start Modbus TCP Server!");
+    while (1);
+  }
+
+  // Configure and intialise modbus coils/registers
+  modbus_server.configureInputRegisters(inputRegAddress, numInputRegs);
+  modbus_server.configureHoldingRegisters(holdingRegAddress, numHoldRegs);
+
+  // Write in default PID values to modbus
+  float pidDefaults[4] = {25, 25.1, 5.5, 0.1}; // setPoint, Kp, Ki, Kd
+  int tempHoldAddr = holdingRegAddress;
+
+  for(float term : pidDefaults)
+  {
+    // Registers hold 16 bits. Floats are written over two registers
+    uint16_t* elems = (uint16_t*)&term;
+    for (int i = 0; i<2; i++)
+    {
+      modbus_server.holdingRegisterWrite(tempHoldAddr+i, elems[i]);
+    }
+    tempHoldAddr = tempHoldAddr +2;
   }
 }

@@ -6,7 +6,7 @@
 
 #include <ExpandedGpio.h>
 #include "pins_is.h"
-#include "devices.h"
+#include "initialise.h"
 
 #include <Adafruit_I2CDevice.h>
 #include <Adafruit_I2CRegister.h>
@@ -27,14 +27,10 @@ byte gateway[] = { 192, 168, 0, 1 };
 byte subnet[] = { 255, 255, 255, 0 };
 
 // Modbus register values
-const int coilAddress = 0; // Currently unused
-const int numCoils = 8;
-
 const int inputRegAddress = 30001;
 const int numInputRegs = 16;
-
 const int holdingRegAddress = 40001;
-const int numRegs = 16;
+const int numHoldRegs = 16;
 
 // PID and Counter setup
 float counter = 0;
@@ -70,75 +66,29 @@ void setup()
   // I2C initialisation to ensure it is established before I2C calls made
   Wire.begin();
 
-  // IS ESP32 module has Ethernet SPI CS on pin 15
-  Ethernet.init(PIN_SPI_SS_ETHERNET_LIB);
-  // Start the Ethernet connection and the server
-  Ethernet.begin(mac, ip);
-  ethServer.begin();
+  initialiseEthernet(ethServer, mac, ip, PIN_SPI_SS_ETHERNET_LIB);
 
-  // Check for Ethernet hardware present
-  if (Ethernet.hardwareStatus() == EthernetNoHardware) 
-  {
-    Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
-    while (true) 
-    {
-      Serial.print(".");
-      delay(1000); // do nothing, no point running without Ethernet hardware
-    }
-  }
-  if (Ethernet.linkStatus() == LinkOFF) 
-  {
-    Serial.println("Ethernet cable is not connected.");
-  }
+  initialiseThermocouples(mcp, num_mcp, mcp_addr);
 
-  // Modbus setup
-  if (!modbus_server.begin()) 
-  {
-    Serial.println("Failed to start Modbus TCP Server!");
-    while (1);
-  }
+  initialiseModbus(modbus_server, inputRegAddress, numInputRegs, holdingRegAddress, numHoldRegs);
 
-  // Configure and intialise modbus coils/registers
-  modbus_server.configureCoils(coilAddress, numCoils);
-  modbus_server.configureInputRegisters(inputRegAddress, numInputRegs);
-  modbus_server.configureHoldingRegisters(holdingRegAddress, numRegs);
-
-  // Write in default PID values to modbus
-  float pidDefaults[4] = {25, 25.1, 5.5, 0.1}; // setPoint, Kp, Ki, Kd
-  int tempHoldAddr = holdingRegAddress;
-
-  for(float term : pidDefaults)
-  {
-    // Registers hold 16 bits. Floats are written over two registers
-    uint16_t* elems = (uint16_t*)&term;
-    for (int i = 0; i<2; i++)
-    {
-      modbus_server.holdingRegisterWrite(tempHoldAddr+i, elems[i]);
-    }
-    tempHoldAddr = tempHoldAddr +2;
-  }
-
-  initialiseThermocouples(mcp, num_mcp, mcp_addr); // devices.cpp
-
-  xTaskCreatePinnedToCore(
-    Core0PIDTask,     /* Task function */
-    "PIDTask",      /* Name of task  */
-    10000,       /* Stack size    */
-    NULL,       /* Parameter     */
-    2,         /* Priority      */
-    NULL,   /* Handle        */
-    0        /* Pin to core 1 */
-  );
-
-  // PID setpoint and mode
-  input = mcp[0].readThermocouple();
-  setPoint = modbus_server.holdingRegisterRead(holdingRegAddress);
+    // PID mode
   myPID.SetMode(AUTOMATIC);
 
   gpio.init();
   gpio.pinMode(0x400b, OUTPUT); // PIN_Q0_0
   gpio.pinMode(0x400a, OUTPUT); // PIN_Q0_1
   gpio.pinMode(0x400d, OUTPUT); // required?
+
+  xTaskCreatePinnedToCore(
+    Core0PIDTask,  /* Task function */
+    "PIDTask",    /* Name of task  */
+    10000,       /* Stack size    */
+    NULL,       /* Parameter     */
+    2,         /* Priority      */
+    NULL,     /* Handle        */
+    0        /* Pin to core 1 */
+  );
 }
 
 long int readThermoCouples()
