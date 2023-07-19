@@ -7,13 +7,17 @@
 #include <ExpandedGpio.h>
 #include "pins_is.h"
 #include "initialise.h"
+#include "modbusAddresses.h"
+#include "pidController.h"
+#include "utilFunctions.h"
 
 #include <Adafruit_I2CDevice.h>
 #include <Adafruit_I2CRegister.h>
 #include "Adafruit_MCP9600.h"
 #include <PID_v1.h>
 
-#define PWM_PIN 0x400d // A0_5
+#define PWM_PIN_A 0x400d // A0_5
+#define PWM_PIN_B 0x4006 // A0_6 // Hypothetical second heater output pin
 
 static bool eth_connected = false;
 
@@ -21,29 +25,42 @@ EthernetServer ethServer(502);
 ModbusTCPServer modbus_server;
 ExpandedGpio gpio;
 
+PIDAddresses pidA_addr = {
+  PWM_PIN_A,
+  MOD_SETPOINT_A_HOLD,
+  MOD_PID_OUTPUT_A_INP,
+  MOD_PID_ENABLE_A_COIL,
+  MOD_KP_A_HOLD,
+  MOD_KI_A_HOLD,
+  MOD_KD_A_HOLD
+};
+
+PIDAddresses pidB_addr = {
+  PWM_PIN_B,
+  MOD_SETPOINT_B_HOLD,
+  MOD_PID_OUTPUT_B_INP,
+  MOD_PID_ENABLE_B_COIL,
+  MOD_KP_B_HOLD,
+  MOD_KI_B_HOLD,
+  MOD_KD_B_HOLD
+};
+
+PIDController PID_A(pidA_addr);
+PIDController PID_B(pidB_addr);
+
 byte mac[] = { 0x10, 0x97, 0xbd, 0xca, 0xea, 0x14 };
 byte ip[] = { 192, 168, 0, 159 };
 byte gateway[] = { 192, 168, 0, 1 };
 byte subnet[] = { 255, 255, 255, 0 };
 
-// Modbus register values
-const int inputRegAddress = 30001;
-const int numInputRegs = 16;
-const int holdingRegAddress = 40001;
-const int numHoldRegs = 16;
+int numHoldRegs = 16;
+int numInputRegs = 16;
+int numCoils = 1;
 
 // PID and Counter setup
 float counter = 0;
 long int tWrite = millis(); // Timer for write
 // Output multiplier as 4095/255 does not work. This is close enough for now.
-float outputMultiplier = 16.0588;
-
-double setPoint, input, output;
-double Kp = 25;
-double Ki = 5;
-double Kd = 0;
-bool loop_PID = false;
-PID myPID(&input, &output, &setPoint, Kp,Ki,Kd, DIRECT);
 
 // MCP9600 setup
 Adafruit_MCP9600 mcp[] = {Adafruit_MCP9600(), Adafruit_MCP9600()};
@@ -70,10 +87,7 @@ void setup()
 
   initialiseThermocouples(mcp, num_mcp, mcp_addr);
 
-  initialiseModbus(modbus_server, inputRegAddress, numInputRegs, holdingRegAddress, numHoldRegs);
-
-    // PID mode
-  myPID.SetMode(AUTOMATIC);
+  initialiseModbus(modbus_server, MOD_COUNTER_INP, numInputRegs, MOD_SETPOINT_A_HOLD, numHoldRegs);
 
   gpio.init();
   gpio.pinMode(0x400b, OUTPUT); // PIN_Q0_0
@@ -89,6 +103,14 @@ void setup()
     NULL,     /* Handle        */
     0        /* Pin to core 1 */
   );
+
+  PID_A.initialise(mcp[0], modbus_server, gpio);
+  PID_B.initialise(mcp[1], modbus_server, gpio);
+
+  // PID mode
+  PID_A.myPID_.SetMode(AUTOMATIC);
+  PID_B.myPID_.SetMode(AUTOMATIC);
+
 }
 
 long int readThermoCouples()
@@ -102,80 +124,15 @@ long int readThermoCouples()
   }
   // Write both readings
   modbus_server.writeInputRegisters(
-    inputRegAddress, (uint16_t*)(&thermoReadings), 4
-  );
+    MOD_THERMOCOUPLE_A, (uint16_t*)(&thermoReadings), 4
+  ); // Written to thermocouple_A, overlapping into B
   // Write counter
   modbus_server.writeInputRegisters(
-    inputRegAddress+4, (uint16_t*)(&counter), 2
+    MOD_COUNTER_INP, (uint16_t*)(&counter), 2
   );
   counter++;
   Serial.print(counter);
   return millis();
-}
-
-union ModbusFloat
-{ // This union allows two 16-bit ints to be read back as a 32-bit float
-    float value;
-    struct 
-    {
-        uint16_t low;
-        uint16_t high;
-    } registers;
-};
-
-float combineHoldingRegisters(int address)
-{ // See union ModbusFloat. Stich two ints into one float
-  uint16_t A = modbus_server.holdingRegisterRead(address);
-  uint16_t B = modbus_server.holdingRegisterRead(address+1);
-
-  ModbusFloat modbusFloat;
-  modbusFloat.registers.high = B; // little-endian
-  modbusFloat.registers.low = A;
-  return modbusFloat.value;
-}
-
-long int do_PID()
-{
-  /* PID loop for one thermocouple
-  Read thermocouple, get setpoint, compute PID, handle output, write it
-  */
-  input = mcp[0].readThermocouple();
-  // Get setpoint here in case it has changed
-  setPoint = combineHoldingRegisters(holdingRegAddress);
-  myPID.Compute();
-  // Circuitry needs reversed output. Could use native PID library reverse
-  // Output is on a scale of 0-255, hence 255-output
-  output = 255 - output;
-  output = output * outputMultiplier; // Scale up to 4095
-  Serial.print("Output value: ");
-  Serial.println(output);
-
-  gpio.analogWrite(PWM_PIN, output); // Expanded pin, use custom library
-
-  // Easier to write to/read from register with float than double. consistency
-  float pidOutput = output;
-  modbus_server.writeInputRegisters(
-    inputRegAddress+6, (uint16_t*)(&pidOutput), 2
-  );
-  return millis(); // Time since last reading
-}
-
-void check_PID_tunings()
-{ // Check if any are different, and set them if so
-  double newKp = double(combineHoldingRegisters(holdingRegAddress+2));
-  double newKi = double(combineHoldingRegisters(holdingRegAddress+4));
-  double newKd = double(combineHoldingRegisters(holdingRegAddress+6));
-  if ((newKp != Kp) || (newKi != Ki) || (newKd != Kd)) {
-    myPID.SetTunings(newKp, newKi, newKd);
-    Kp = newKp;
-    Ki = newKi;
-    Kd = newKd;
-  }
-}
-
-bool check_pid_enabled()
-{ // If value = 0, false
-  return modbus_server.holdingRegisterRead(holdingRegAddress+8);
 }
 
 void loop()
@@ -226,19 +183,22 @@ void Core0PIDTask(void * pvParameters)
     // Run if enabled, period 1000ms. If not
     if ( (millis() - tWrite) >= 1000 ) 
     {
-      loop_PID = check_pid_enabled();
+      PID_A.enabled = PID_A.check_PID_enabled();
 
-      if (loop_PID == true)
+      if (PID_A.enabled == true)
       { // PID tunings checked each run
-        check_PID_tunings();
-        tWrite = do_PID();
+        PID_A.check_PID_tunings();
+        tWrite = PID_A.do_PID();// returned from run instead
+        PID_B.check_PID_tunings();
+        PID_B.do_PID();
       }
       else 
       { // If no PID enabled, write max output (reversed, 0).
-        gpio.analogWrite(PWM_PIN, 4095);
-        tWrite = millis();
+        gpio.analogWrite(PWM_PIN_A, 4095);
+        tWrite = millis(); 
       }
       Serial.println("");
+      
     }
   }
 }

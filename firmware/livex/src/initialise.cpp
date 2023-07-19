@@ -103,7 +103,9 @@ void initialiseModbus(ModbusTCPServer& modbus_server, int inputRegAddress, int n
   // Configure and intialise modbus coils/registers
   modbus_server.configureInputRegisters(inputRegAddress, numInputRegs);
   modbus_server.configureHoldingRegisters(holdingRegAddress, numHoldRegs);
+  modbus_server.configureCoils(1, 1); // sort the variables later
 
+  
   // Write in default PID values to modbus
   float pidDefaults[4] = {25, 25.1, 5.5, 0.1}; // setPoint, Kp, Ki, Kd
   int tempHoldAddr = holdingRegAddress;
@@ -118,4 +120,23 @@ void initialiseModbus(ModbusTCPServer& modbus_server, int inputRegAddress, int n
     }
     tempHoldAddr = tempHoldAddr +2;
   }
+
+    // Write in default PID values to modbus
+  float pidDefaults_[4] = {30, 13, 5.5, 0.1}; // setPoint, Kp, Ki, Kd
+  int tempHoldAddr_ = 40009;
+
+  for(float term : pidDefaults_)
+  {
+    // Registers hold 16 bits. Floats are written over two registers
+    uint16_t* elems = (uint16_t*)&term;
+    for (int i = 0; i<2; i++)
+    {
+      modbus_server.holdingRegisterWrite(tempHoldAddr_+i, elems[i]);
+    }
+    tempHoldAddr_ = tempHoldAddr_ +2;
+  }
+
+  // Default, PID/heating disabled until explicitly enabled
+  modbus_server.coilWrite(1, 1); // sort the variables later
+  modbus_server.coilWrite(2, 1);
 }
