@@ -1,7 +1,11 @@
 #ifndef MODBUS_ADDRESSES_H
 #define MODBUS_ADDRESSES_H
 
-// input registers
+// coils start at 00001-09999
+#define MOD_PID_ENABLE_A_COIL 1
+#define MOD_PID_ENABLE_B_COIL 2
+
+// input registers start at 30001-39999
 #define MOD_COUNTER_INP 30001
 #define MOD_PID_OUTPUT_A_INP 30003
 #define MOD_PID_OUTPUT_B_INP 30005
@@ -11,7 +15,7 @@
 #define MOD_THERMOCOUPLE_C 30011
 #define MOD_THERMOCOUPLE_D 30013
 
-// holding registers
+// holding registers s tart at 40001-49999
 #define MOD_SETPOINT_A_HOLD 40001
 #define MOD_KP_A_HOLD 40003
 #define MOD_KI_A_HOLD 40005
@@ -21,9 +25,5 @@
 #define MOD_KP_B_HOLD 40011
 #define MOD_KI_B_HOLD 40013
 #define MOD_KD_B_HOLD 40015
-
-// coils
-#define MOD_PID_ENABLE_A_COIL 1
-#define MOD_PID_ENABLE_B_COIL 2
 
 #endif

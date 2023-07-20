@@ -9,10 +9,12 @@
 
 #include <ArduinoModbus.h>
 
+#include "modbusAddresses.h"
+
 void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* mcp_addr);
 
 void initialiseEthernet(EthernetServer ethServer, byte* mac, byte* ip, int ethPin);
 
-void initialiseModbus(ModbusTCPServer& modbus_server, int inputRegAddress, int numInputRegs, int holdingRegAddress, int numHoldRegs);
+void initialiseModbus(ModbusTCPServer& modbus_server, int numInputRegs, int numHoldRegs, int numCoils);
 
 #endif

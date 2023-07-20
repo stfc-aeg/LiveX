@@ -90,9 +90,8 @@ void initialiseEthernet(EthernetServer ethServer, byte* mac, byte* ip, int ethPi
   }
 }
 
-void initialiseModbus(ModbusTCPServer& modbus_server, int inputRegAddress, int numInputRegs, int holdingRegAddress, int numHoldRegs)
+void initialiseModbus(ModbusTCPServer& modbus_server, int numInputRegs, int numHoldRegs, int numCoils)
 {
-
   // Modbus setup
   if (!modbus_server.begin()) 
   {
@@ -101,42 +100,12 @@ void initialiseModbus(ModbusTCPServer& modbus_server, int inputRegAddress, int n
   }
 
   // Configure and intialise modbus coils/registers
-  modbus_server.configureInputRegisters(inputRegAddress, numInputRegs);
-  modbus_server.configureHoldingRegisters(holdingRegAddress, numHoldRegs);
-  modbus_server.configureCoils(1, 1); // sort the variables later
+  // Addresses are the first of each register type. 1, 30001, 40001.
+  modbus_server.configureInputRegisters(MOD_COUNTER_INP, numInputRegs);
+  modbus_server.configureHoldingRegisters(MOD_SETPOINT_A_HOLD, numHoldRegs);
+  modbus_server.configureCoils(MOD_PID_ENABLE_A_COIL, numCoils);
 
-  
-  // Write in default PID values to modbus
-  float pidDefaults[4] = {25, 25.1, 5.5, 0.1}; // setPoint, Kp, Ki, Kd
-  int tempHoldAddr = holdingRegAddress;
-
-  for(float term : pidDefaults)
-  {
-    // Registers hold 16 bits. Floats are written over two registers
-    uint16_t* elems = (uint16_t*)&term;
-    for (int i = 0; i<2; i++)
-    {
-      modbus_server.holdingRegisterWrite(tempHoldAddr+i, elems[i]);
-    }
-    tempHoldAddr = tempHoldAddr +2;
-  }
-
-    // Write in default PID values to modbus
-  float pidDefaults_[4] = {30, 13, 5.5, 0.1}; // setPoint, Kp, Ki, Kd
-  int tempHoldAddr_ = 40009;
-
-  for(float term : pidDefaults_)
-  {
-    // Registers hold 16 bits. Floats are written over two registers
-    uint16_t* elems = (uint16_t*)&term;
-    for (int i = 0; i<2; i++)
-    {
-      modbus_server.holdingRegisterWrite(tempHoldAddr_+i, elems[i]);
-    }
-    tempHoldAddr_ = tempHoldAddr_ +2;
-  }
-
-  // Default, PID/heating disabled until explicitly enabled
-  modbus_server.coilWrite(1, 1); // sort the variables later
-  modbus_server.coilWrite(2, 1);
+  // By default, disable (0) PID heating until explicitly enabled
+  modbus_server.coilWrite(MOD_PID_ENABLE_A_COIL, 1);
+  modbus_server.coilWrite(MOD_PID_ENABLE_B_COIL, 1);
 }
