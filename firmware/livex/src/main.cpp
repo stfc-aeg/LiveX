@@ -55,11 +55,12 @@ byte subnet[] = { 255, 255, 255, 0 };
 
 int numHoldRegs = 16;
 int numInputRegs = 16;
-int numCoils = 1;
+int numCoils = 2;
 
 // PID and Counter setup
 float counter = 0;
-long int tWrite = millis(); // Timer for write
+long int tWriteA = millis(); // Timer for write
+long int tWriteB = millis();
 // Output multiplier as 4095/255 does not work. This is close enough for now.
 
 // MCP9600 setup
@@ -83,11 +84,10 @@ void setup()
   // I2C initialisation to ensure it is established before I2C calls made
   Wire.begin();
 
+  // initialise.cpp
   initialiseEthernet(ethServer, mac, ip, PIN_SPI_SS_ETHERNET_LIB);
-
   initialiseThermocouples(mcp, num_mcp, mcp_addr);
-
-  initialiseModbus(modbus_server, MOD_COUNTER_INP, numInputRegs, MOD_SETPOINT_A_HOLD, numHoldRegs);
+  initialiseModbus(modbus_server, numInputRegs, numHoldRegs, numCoils);
 
   gpio.init();
   gpio.pinMode(0x400b, OUTPUT); // PIN_Q0_0
@@ -110,7 +110,6 @@ void setup()
   // PID mode
   PID_A.myPID_.SetMode(AUTOMATIC);
   PID_B.myPID_.SetMode(AUTOMATIC);
-
 }
 
 long int readThermoCouples()
@@ -181,24 +180,22 @@ void Core0PIDTask(void * pvParameters)
     }
 
     // Run if enabled, period 1000ms. If not
-    if ( (millis() - tWrite) >= 1000 ) 
+    if ( (millis() - tWriteA) >= 1000 ) 
     {
       PID_A.enabled = PID_A.check_PID_enabled();
 
       if (PID_A.enabled == true)
-      { // PID tunings checked each run
-        PID_A.check_PID_tunings();
-        tWrite = PID_A.do_PID();// returned from run instead
-        PID_B.check_PID_tunings();
-        PID_B.do_PID();
+      { // Right now these are timed together
+        // Plan for how each device is run should be considered.
+        tWriteA = PID_A.run();
+        tWriteB = PID_B.run();
       }
       else 
       { // If no PID enabled, write max output (reversed, 0).
         gpio.analogWrite(PWM_PIN_A, 4095);
-        tWrite = millis(); 
+        tWriteA = millis(); 
       }
       Serial.println("");
-      
     }
   }
 }
