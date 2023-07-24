@@ -54,7 +54,6 @@ long int PIDController::do_PID()
 {
     input = mcp_.readThermocouple();
     setPoint = combineHoldingRegisters(modbus_server_, addr_.modSetPointHold);
-
     myPID_.Compute();
     // Circuitry needs reversed output. Could use native PID library reverse
     // Output is on a scale of 0-255, hence 255-output
@@ -66,8 +65,14 @@ long int PIDController::do_PID()
 
     gpio_.analogWrite(PWM_PIN_A, output); // Expanded pin, use custom library
 
+    // Write input reading to input registers
+    modbus_server_.writeInputRegisters(
+        addr_.modThermocoupleInp, (uint16_t*)(&input), 2
+    );
+
     // Easier to write to/read from register with float than double. consistency
     float pidOutput = output;
+    // Write PID output to input registers
     modbus_server_.writeInputRegisters(
         addr_.modPidOutputInp, (uint16_t*)(&pidOutput), 2
     );

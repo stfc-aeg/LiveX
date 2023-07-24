@@ -30,6 +30,7 @@ PIDAddresses pidA_addr = {
   MOD_SETPOINT_A_HOLD,
   MOD_PID_OUTPUT_A_INP,
   MOD_PID_ENABLE_A_COIL,
+  MOD_THERMOCOUPLE_A,
   MOD_KP_A_HOLD,
   MOD_KI_A_HOLD,
   MOD_KD_A_HOLD
@@ -40,6 +41,7 @@ PIDAddresses pidB_addr = {
   MOD_SETPOINT_B_HOLD,
   MOD_PID_OUTPUT_B_INP,
   MOD_PID_ENABLE_B_COIL,
+  MOD_THERMOCOUPLE_B,
   MOD_KP_B_HOLD,
   MOD_KI_B_HOLD,
   MOD_KD_B_HOLD
@@ -123,14 +125,14 @@ long int readThermoCouples()
   }
   // Write both readings
   modbus_server.writeInputRegisters(
-    MOD_THERMOCOUPLE_A, (uint16_t*)(&thermoReadings), 4
-  ); // Written to thermocouple_A, overlapping into B
+    MOD_THERMOCOUPLE_C, (uint16_t*)(&thermoReadings), 4
+  ); // Written to thermocouple_C, overlapping into D
   // Write counter
   modbus_server.writeInputRegisters(
     MOD_COUNTER_INP, (uint16_t*)(&counter), 2
   );
   counter++;
-  Serial.print(counter);
+  Serial.println(counter);
   return millis();
 }
 
