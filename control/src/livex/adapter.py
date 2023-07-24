@@ -384,7 +384,7 @@ class LiveX():
             self.resistor_temp   = self.read_decode_input_reg(self.inputRegAddress)
             self.ambient_temp    = self.read_decode_input_reg(self.inputRegAddress+2)
             self.reading_counter = self.read_decode_input_reg(self.inputRegAddress+4)
-            self.pid_output      = 255 - self.read_decode_input_reg(self.inputRegAddress+6)
+            self.pid_output      = 4095 - self.read_decode_input_reg(self.inputRegAddress+6)
 
             with open('temps.csv', 'a', newline='') as csvfile:
                 temp_writer = csv.DictWriter(csvfile, delimiter=',',fieldnames=self.fieldnames)
