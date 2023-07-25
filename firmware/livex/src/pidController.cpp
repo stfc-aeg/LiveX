@@ -6,12 +6,13 @@
  // Set internal default values on creation.
 PIDController::PIDController(PIDAddresses addr) : myPID_(&input, &output, &setPoint, Kp, Ki, Kd, DIRECT)
 {
+    // Best written as floats for modbus, but PID class requires doubles.
     setPoint = 25.5;
     Kp = 25.5;
     Ki = 5.0;
     Kd = 0.1;
     addr_ = addr;
-    // Best written as floats for modbus, but PID class requires doubles.
+
 }
 
 // Provide controller with thermocouple, modbus, gpio, and write defaults
@@ -21,14 +22,15 @@ void PIDController::initialise(Adafruit_MCP9600& mcp, ModbusTCPServer& modbus_se
     mcp_ = mcp;
     gpio_ = gpio;
 
-    // Write variables to modbus.
+    // Write variables to modbus
+    // PID requires doubles, modbus works best with floats, so cast
     float pidDefaults_[4] =
     {
         static_cast<float>(setPoint),
         static_cast<float>(Kp),
         static_cast<float>(Ki),
         static_cast<float>(Kd)
-    }; // PID requires doubles, modbus works best with floats, so cast
+    }; 
     int tempAddress = addr_.modSetPointHold;
 
     // Separate values as only one holding register can be written to at a time
@@ -55,7 +57,8 @@ long int PIDController::do_PID()
     input = mcp_.readThermocouple();
     setPoint = combineHoldingRegisters(modbus_server_, addr_.modSetPointHold);
     myPID_.Compute();
-    // Circuitry needs reversed output. Could use native PID library reverse
+
+    // Current circuitry requires reversed output. Could use native PID library reverse
     // Output is on a scale of 0-255, hence 255-output
     output = 255 - output;
     output = output * outputMultiplier; // Scale up to 4095

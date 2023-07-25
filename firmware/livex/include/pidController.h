@@ -15,8 +15,8 @@ class PIDController
     double setPoint, input, output;
     double Kp, Ki, Kd;
     bool enabled = true;
-    float outputMultiplier = 16.0588; // 4095/255, 12 bit but PID does 0-255
-    long int tWrite; // time of reading
+    float outputMultiplier = 16.0588; // 4095/255, 12-bit but PID does 0-255
+    long int tWrite; // Time of reading
 
     PID myPID_;
     Adafruit_MCP9600 mcp_;
