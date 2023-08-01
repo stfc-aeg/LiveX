@@ -56,6 +56,7 @@ long int PIDController::do_PID()
 {
     input = mcp_.readThermocouple();
     setPoint = combineHoldingRegisters(modbus_server_, addr_.modSetPointHold);
+    setPoint += gradientModifier;
     myPID_.Compute();
 
     // Current circuitry requires reversed output. Could use native PID library reverse
@@ -90,16 +91,25 @@ void PIDController::check_PID_tunings()
     double newKd = double(combineHoldingRegisters(modbus_server_,addr_.modKdHold));
     if ((newKp != Kp) || (newKi != Ki) || (newKd != Kd)) 
     {
-    myPID_.SetTunings(newKp, newKi, newKd);
-    Kp = newKp;
-    Ki = newKi;
-    Kd = newKd;
+      myPID_.SetTunings(newKp, newKi, newKd);
+      Kp = newKp;
+      Ki = newKi;
+      Kd = newKd;
     }
 }
 
 // Check PID tunings and run PID computation. Return current time
 long int PIDController::run()
 {
-    check_PID_tunings();
-    return do_PID();
+    enabled = check_PID_enabled();
+    if (enabled)
+    {
+      check_PID_tunings();
+      return do_PID();
+    }
+    else
+    {
+      gpio_.analogWrite(PWM_PIN_A, 4095);
+      return millis();
+    }
 }
