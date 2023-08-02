@@ -10,3 +10,13 @@ float combineHoldingRegisters(ModbusTCPServer& modbus_server, int address)
   modbusFloat.registers.low = A;
   return modbusFloat.value;
 }
+
+int floatToHoldingRegisters(ModbusTCPServer& modbus_server, int address, float value)
+{ // Write a float to a pair of modbus addresses. Returns success code of second write.
+  ModbusFloat converter;
+  converter.value = value;
+  
+  // Two writes, as there is no 'writeHoldingRegisters' function. Little-endian word order
+  modbus_server.holdingRegisterWrite(address, converter.registers.low);
+  return modbus_server.holdingRegisterWrite(address+1, converter.registers.high);
+}

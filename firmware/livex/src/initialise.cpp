@@ -105,9 +105,11 @@ void initialiseModbus(ModbusTCPServer& modbus_server, int numInputRegs, int numH
   modbus_server.configureHoldingRegisters(MOD_SETPOINT_A_HOLD, numHoldRegs);
   modbus_server.configureCoils(MOD_PID_ENABLE_A_COIL, numCoils);
 
-  // By default, disable (0) PID heating until explicitly enabled
+  // Default enable values for each control
   modbus_server.coilWrite(MOD_PID_ENABLE_A_COIL, 1);
   modbus_server.coilWrite(MOD_PID_ENABLE_B_COIL, 1);
 
   modbus_server.coilWrite(MOD_GRADIENT_ENABLE_COIL, 1);
+  modbus_server.coilWrite(MOD_AUTOSP_ENABLE_COIL, 1);
+  modbus_server.coilWrite(MOD_AUTOSP_HEATING_COIL, 1);
 }

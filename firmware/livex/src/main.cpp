@@ -3,6 +3,7 @@
 #include <WiFi.h>
 #include <ArduinoRS485.h>
 #include <ArduinoModbus.h>
+#include <cmath>
 
 #include <ExpandedGpio.h>
 #include "pins_is.h"
@@ -153,7 +154,7 @@ long int thermalGradient()
     PID_B.gradientModifier = -gradientModifier;
 
     // Calculation of actual difference between heaters
-    float actual = PID_A.input - PID_B.input;
+    float actual = fabs(PID_A.input - PID_B.input);
 
     // Write display values to modbus
     modbus_server.writeInputRegisters(MOD_GRADIENT_THEORY_INP, (uint16_t*)(&theoretical), 2);
@@ -163,6 +164,48 @@ long int thermalGradient()
   {
     PID_A.gradientModifier = 0;
     PID_B.gradientModifier = 0;
+  }
+  return millis();
+}
+
+long int autoSetPointControl()
+{
+  // Increment setPoint by a fixed amount each second
+  /* Determine if enabled
+     Determine whether cooling
+     Determine rate
+     Increment setPoints (through modbus) by amount
+     Get img/degree even though its useless right now
+     Write out midpoint temp
+  */
+  // Currently 1/s. Consider how this might be done as an average
+
+  if (modbus_server.coilRead(MOD_AUTOSP_ENABLE_COIL))
+  {
+    // Heating (1) or cooling (0)?
+    bool heating = modbus_server.coilRead(MOD_AUTOSP_HEATING_COIL);
+
+    // Rate
+    float rate = combineHoldingRegisters(modbus_server, MOD_AUTOSP_RATE_HOLD);
+    // something here depending on the interval for the function call?
+    // right now, since that is hardcoded, we assume 1/second
+    // but end assumption should be that it runs faster than that
+
+    // Increment setpoints
+    floatToHoldingRegisters(modbus_server, MOD_SETPOINT_A_HOLD, (PID_A.setPoint + rate));
+    floatToHoldingRegisters(modbus_server, MOD_SETPOINT_B_HOLD, (PID_B.setPoint + rate));
+
+    // Get img per degree
+    float imgPerDegree = combineHoldingRegisters(modbus_server, MOD_AUTOSP_IMGDEGREE_HOLD);
+
+    // Calculate midpoint. Fabs in case B is higher temp
+    float midpoint = fabs((PID_A.input + PID_B.input) / 2);
+
+    modbus_server.writeInputRegisters(MOD_AUTOSP_MIDPT_INP, (uint16_t*)(&midpoint), 2);
+  }
+  else
+  {
+    // nothing currently
   }
   return millis();
 }
@@ -215,6 +258,11 @@ void Core0PIDTask(void * pvParameters)
     if ( (millis() - tGradient) >= 1000)
     {
       tGradient = thermalGradient();
+    }
+
+    if ( (millis() - tAutoSetControl) >= 1000)
+    {
+      tAutoSetControl = autoSetPointControl();
     }
 
     // Run PID control if enabled, period 1000ms. If not
