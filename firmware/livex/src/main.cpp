@@ -215,10 +215,6 @@ void Core0PIDTask(void * pvParameters)
     if ( (millis() - tGradient) >= 1000)
     {
       tGradient = thermalGradient();
-      Serial.print("A: ");
-      Serial.println(PID_A.gradientModifier);
-      Serial.print("B: ");
-      Serial.println(PID_B.gradientModifier);
     }
 
     // Run PID control if enabled, period 1000ms. If not
