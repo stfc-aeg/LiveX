@@ -55,15 +55,16 @@ byte ip[] = { 192, 168, 0, 159 };
 byte gateway[] = { 192, 168, 0, 1 };
 byte subnet[] = { 255, 255, 255, 0 };
 
-int numHoldRegs = 16;
-int numInputRegs = 16;
-int numCoils = 2;
+int numHoldRegs = 32;
+int numInputRegs = 32;
+int numCoils = 8;
 
 // PID and Counter setup
 float counter = 0;
 long int tWriteA = millis(); // Timer for write
 long int tWriteB = millis();
-// Output multiplier as 4095/255 does not work. This is close enough for now.
+long int tGradient = millis(); // Timer for gradient check
+long int tAutoSetControl = millis();
 
 // MCP9600 setup
 Adafruit_MCP9600 mcp[] = {Adafruit_MCP9600(), Adafruit_MCP9600()};
@@ -136,6 +137,36 @@ long int readThermoCouples()
   return millis();
 }
 
+long int thermalGradient()
+{
+  if (modbus_server.coilRead(MOD_GRADIENT_ENABLE_COIL))
+  {
+    // Get temperature (K) per mm and mm
+    float wanted = combineHoldingRegisters(modbus_server, MOD_GRADIENT_WANTED_HOLD);
+    float distance = combineHoldingRegisters(modbus_server, MOD_GRADIENT_DISTANCE_HOLD);
+    // Theoretical temperature gradient (k/mm * mm = k)
+    float theoretical = wanted * distance;
+
+    // Apply values
+    float gradientModifier = theoretical/2;
+    PID_A.gradientModifier = gradientModifier;
+    PID_B.gradientModifier = -gradientModifier;
+
+    // Calculation of actual difference between heaters
+    float actual = PID_A.input - PID_B.input;
+
+    // Write display values to modbus
+    modbus_server.writeInputRegisters(MOD_GRADIENT_THEORY_INP, (uint16_t*)(&theoretical), 2);
+    modbus_server.writeInputRegisters(MOD_GRADIENT_ACTUAL_INP, (uint16_t*)(&actual), 2);
+  }
+  else
+  {
+    PID_A.gradientModifier = 0;
+    PID_B.gradientModifier = 0;
+  }
+  return millis();
+}
+
 void loop()
 {
   // Client connections handled on core 1 (loop)
@@ -179,6 +210,15 @@ void Core0PIDTask(void * pvParameters)
     if ( (millis()-tRead) >= 1000 ) 
     {
       tRead = readThermoCouples();
+    }
+
+    if ( (millis() - tGradient) >= 1000)
+    {
+      tGradient = thermalGradient();
+      Serial.print("A: ");
+      Serial.println(PID_A.gradientModifier);
+      Serial.print("B: ");
+      Serial.println(PID_B.gradientModifier);
     }
 
     // Run PID control if enabled, period 1000ms. If not

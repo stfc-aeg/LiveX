@@ -108,4 +108,6 @@ void initialiseModbus(ModbusTCPServer& modbus_server, int numInputRegs, int numH
   // By default, disable (0) PID heating until explicitly enabled
   modbus_server.coilWrite(MOD_PID_ENABLE_A_COIL, 1);
   modbus_server.coilWrite(MOD_PID_ENABLE_B_COIL, 1);
+
+  modbus_server.coilWrite(MOD_GRADIENT_ENABLE_COIL, 1);
 }
