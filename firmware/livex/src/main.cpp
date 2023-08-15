@@ -197,9 +197,6 @@ long int autoSetPointControl()
     // Get img per degree
     float imgPerDegree = combineHoldingRegisters(modbus_server, MOD_AUTOSP_IMGDEGREE_HOLD);
 
-    // fabs in case B is higher temp
-    float midpoint = fabs((PID_A.input + PID_B.input) / 2);
-
     // Calculate midpoint. Fabs in case B is higher temp
     float midpoint = fabs((PID_A.input + PID_B.input) / 2);
 
