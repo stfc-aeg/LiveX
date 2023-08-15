@@ -8,11 +8,11 @@ PIDController::PIDController(PIDAddresses addr) : myPID_(&input, &output, &setPo
 {
     // Best written as floats for modbus, but PID class requires doubles.
     setPoint = 25.5;
+    baseSetPoint = 25.5;
     Kp = 25.5;
     Ki = 5.0;
     Kd = 0.1;
     addr_ = addr;
-
 }
 
 // Provide controller with thermocouple, modbus, gpio, and write defaults
@@ -52,11 +52,11 @@ bool PIDController::check_PID_enabled()
 }
 
 // Get input and setpoint, do PID computation, and save output to a register
-long int PIDController::do_PID()
+void PIDController::do_PID()
 {
     input = mcp_.readThermocouple();
-    setPoint = combineHoldingRegisters(modbus_server_, addr_.modSetPointHold);
-    setPoint += gradientModifier;
+    baseSetPoint = combineHoldingRegisters(modbus_server_, addr_.modSetPointHold);
+    setPoint = baseSetPoint + gradientModifier;
     myPID_.Compute();
 
     // Current circuitry requires reversed output. Could use native PID library reverse
@@ -64,23 +64,20 @@ long int PIDController::do_PID()
     output = 255 - output;
     output = output * outputMultiplier; // Scale up to 4095
 
-    Serial.print("Output value: ");
-    Serial.println(output);
-
     gpio_.analogWrite(PWM_PIN_A, output); // Expanded pin, use custom library
 
+    // Easier to write to/read from register with float than double. consistency
+    float thermoReading = static_cast<float>(input);
     // Write input reading to input registers
-    modbus_server_.writeInputRegisters(
-        addr_.modThermocoupleInp, (uint16_t*)(&input), 2
+    int ret = modbus_server_.writeInputRegisters(
+        addr_.modThermocoupleInp, (uint16_t*)(&thermoReading), 2
     );
 
-    // Easier to write to/read from register with float than double. consistency
     float pidOutput = output;
     // Write PID output to input registers
     modbus_server_.writeInputRegisters(
         addr_.modPidOutputInp, (uint16_t*)(&pidOutput), 2
     );
-    return millis(); // Time since last reading
 }
 
  // Check if PID terms in registers are different, and set them accordingly
@@ -99,7 +96,7 @@ void PIDController::check_PID_tunings()
 }
 
 // Check PID tunings and run PID computation. Return current time
-long int PIDController::run()
+void PIDController::run()
 {
     enabled = check_PID_enabled();
     if (enabled)
@@ -110,6 +107,5 @@ long int PIDController::run()
     else
     {
       gpio_.analogWrite(PWM_PIN_A, 4095);
-      return millis();
     }
 }

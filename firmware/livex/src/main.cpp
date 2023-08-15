@@ -17,7 +17,7 @@
 #include "Adafruit_MCP9600.h"
 #include <PID_v1.h>
 
-#define PWM_PIN_A 0x400d // A0_5
+#define PWM_PIN_A A0_5 // A0_5
 #define PWM_PIN_B 0x4006 // A0_6 // Hypothetical second heater output pin
 
 static bool eth_connected = false;
@@ -60,12 +60,15 @@ int numHoldRegs = 32;
 int numInputRegs = 32;
 int numCoils = 8;
 
-// PID and Counter setup
+// Timers setup
 float counter = 0;
-long int tWriteA = millis(); // Timer for write
-long int tWriteB = millis();
+long int tPID = millis(); // Timer for write
 long int tGradient = millis(); // Timer for gradient check
-long int tAutoSetControl = millis();
+long int tAutosp = millis();
+// Interval/period for these processes to run
+long int intervalPID = 1000;
+long int intervalGradient = 1000;
+long int intervalAutosp = 1000;
 
 // MCP9600 setup
 Adafruit_MCP9600 mcp[] = {Adafruit_MCP9600(), Adafruit_MCP9600()};
@@ -171,14 +174,7 @@ long int thermalGradient()
 long int autoSetPointControl()
 {
   // Increment setPoint by a fixed amount each second
-  /* Determine if enabled
-     Determine whether cooling
-     Determine rate
-     Increment setPoints (through modbus) by amount
-     Get img/degree even though its useless right now
-     Write out midpoint temp
-  */
-  // Currently 1/s. Consider how this might be done as an average
+  // Autosp rate increment should depend on what the interval is for an average rate/second.
 
   if (modbus_server.coilRead(MOD_AUTOSP_ENABLE_COIL))
   {
@@ -187,16 +183,22 @@ long int autoSetPointControl()
 
     // Rate
     float rate = combineHoldingRegisters(modbus_server, MOD_AUTOSP_RATE_HOLD);
-    // something here depending on the interval for the function call?
-    // right now, since that is hardcoded, we assume 1/second
-    // but end assumption should be that it runs faster than that
+
+    if (!heating)
+    { 
+      rate = -rate;
+    }
+    rate = rate * (intervalAutosp/1000); // e.g.: 0.5 * 100/1000 = 0.05 ten times per second
 
     // Increment setpoints
-    floatToHoldingRegisters(modbus_server, MOD_SETPOINT_A_HOLD, (PID_A.setPoint + rate));
-    floatToHoldingRegisters(modbus_server, MOD_SETPOINT_B_HOLD, (PID_B.setPoint + rate));
+    floatToHoldingRegisters(modbus_server, MOD_SETPOINT_A_HOLD, (PID_A.baseSetPoint + rate));
+    floatToHoldingRegisters(modbus_server, MOD_SETPOINT_B_HOLD, (PID_B.baseSetPoint + rate));
 
     // Get img per degree
     float imgPerDegree = combineHoldingRegisters(modbus_server, MOD_AUTOSP_IMGDEGREE_HOLD);
+
+    // fabs in case B is higher temp
+    float midpoint = fabs((PID_A.input + PID_B.input) / 2);
 
     // Calculate midpoint. Fabs in case B is higher temp
     float midpoint = fabs((PID_A.input + PID_B.input) / 2);
@@ -250,26 +252,27 @@ void Core0PIDTask(void * pvParameters)
   for(;;)
   {
     // Read thermocouples if 1000ms have elapsed
-    if ( (millis()-tRead) >= 1000 ) 
+    if ( (millis()-tRead) >= 1000 )
     {
       tRead = readThermoCouples();
     }
 
-    if ( (millis() - tGradient) >= 1000)
+    if ( (millis() - tGradient) >= intervalGradient)
     {
       tGradient = thermalGradient();
     }
 
-    if ( (millis() - tAutoSetControl) >= 1000)
+    if ( (millis() - tAutosp) >= intervalAutosp)
     {
-      tAutoSetControl = autoSetPointControl();
+      tAutosp = autoSetPointControl();
     }
 
     // Run PID control if enabled, period 1000ms. If not
-    if ( (millis() - tWriteA) >= 1000 ) 
+    if ( (millis() - tPID) >= intervalPID ) 
     {
-      tWriteA = PID_A.run();
-      tWriteB = PID_B.run();
+      PID_A.run();
+      PID_B.run();
+      tPID = millis(); // Only need one timer, PIDs have same period
       Serial.println("");
     }
   }

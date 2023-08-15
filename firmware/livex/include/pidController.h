@@ -14,6 +14,7 @@ class PIDController
   public:
     double setPoint, input, output;
     double Kp, Ki, Kd;
+    double baseSetPoint;
     bool enabled = true;
     float outputMultiplier = 16.0588; // 4095/255, 12-bit but PID does 0-255
     long int tWrite; // Time of reading
@@ -29,8 +30,8 @@ class PIDController
 
     void initialise(Adafruit_MCP9600& mcp, ModbusTCPServer& modbus_server, ExpandedGpio& gpio);
 
-    long int run();
-    long int do_PID();
+    void run();
+    void do_PID();
     void check_PID_tunings();
     bool check_PID_enabled();
 };
