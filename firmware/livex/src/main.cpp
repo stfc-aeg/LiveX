@@ -143,69 +143,54 @@ long int readThermoCouples()
 
 long int thermalGradient()
 {
-  if (modbus_server.coilRead(MOD_GRADIENT_ENABLE_COIL))
-  {
-    // Get temperature (K) per mm and mm
-    float wanted = combineHoldingRegisters(modbus_server, MOD_GRADIENT_WANTED_HOLD);
-    float distance = combineHoldingRegisters(modbus_server, MOD_GRADIENT_DISTANCE_HOLD);
-    // Theoretical temperature gradient (k/mm * mm = k)
-    float theoretical = wanted * distance;
+  // Get temperature (K) per mm and mm
+  float wanted = combineHoldingRegisters(modbus_server, MOD_GRADIENT_WANTED_HOLD);
+  float distance = combineHoldingRegisters(modbus_server, MOD_GRADIENT_DISTANCE_HOLD);
+  // Theoretical temperature gradient (k/mm * mm = k)
+  float theoretical = wanted * distance;
 
-    // Apply values
-    float gradientModifier = theoretical/2;
-    PID_A.gradientModifier = gradientModifier;
-    PID_B.gradientModifier = -gradientModifier;
+  // Apply values
+  float gradientModifier = theoretical/2;
+  PID_A.gradientModifier = gradientModifier;
+  PID_B.gradientModifier = -gradientModifier;
 
-    // Calculation of actual difference between heaters
-    float actual = fabs(PID_A.input - PID_B.input);
+  // Calculation of actual difference between heaters
+  float actual = fabs(PID_A.input - PID_B.input);
 
-    // Write display values to modbus
-    modbus_server.writeInputRegisters(MOD_GRADIENT_THEORY_INP, (uint16_t*)(&theoretical), 2);
-    modbus_server.writeInputRegisters(MOD_GRADIENT_ACTUAL_INP, (uint16_t*)(&actual), 2);
-  }
-  else
-  {
-    PID_A.gradientModifier = 0;
-    PID_B.gradientModifier = 0;
-  }
+  // Write relevant values to modbus
+  modbus_server.writeInputRegisters(MOD_GRADIENT_THEORY_INP, (uint16_t*)(&theoretical), 2);
+  modbus_server.writeInputRegisters(MOD_GRADIENT_ACTUAL_INP, (uint16_t*)(&actual), 2);
+  modbus_server.writeInputRegisters(MOD_GRADIENT_MODIFIER_INP, (uint16_t*)(&gradientModifier), 2);
+
   return millis();
 }
 
 long int autoSetPointControl()
-{
-  // Increment setPoint by a fixed amount each second
-  // Autosp rate increment should depend on what the interval is for an average rate/second.
+{ // Increment setPoint by an average rate per second
 
-  if (modbus_server.coilRead(MOD_AUTOSP_ENABLE_COIL))
-  {
-    // Heating (1) or cooling (0)?
-    bool heating = modbus_server.coilRead(MOD_AUTOSP_HEATING_COIL);
+  // Heating (1) or cooling (0)?
+  bool heating = modbus_server.coilRead(MOD_AUTOSP_HEATING_COIL);
 
-    // Rate
-    float rate = combineHoldingRegisters(modbus_server, MOD_AUTOSP_RATE_HOLD);
+  // Rate
+  float rate = combineHoldingRegisters(modbus_server, MOD_AUTOSP_RATE_HOLD);
 
-    if (!heating)
-    { 
-      rate = -rate;
-    }
-    rate = rate * (intervalAutosp/1000); // e.g.: 0.5 * 100/1000 = 0.05 ten times per second
-
-    // Increment setpoints
-    floatToHoldingRegisters(modbus_server, MOD_SETPOINT_A_HOLD, (PID_A.baseSetPoint + rate));
-    floatToHoldingRegisters(modbus_server, MOD_SETPOINT_B_HOLD, (PID_B.baseSetPoint + rate));
-
-    // Get img per degree
-    float imgPerDegree = combineHoldingRegisters(modbus_server, MOD_AUTOSP_IMGDEGREE_HOLD);
-
-    // Calculate midpoint. Fabs in case B is higher temp
-    float midpoint = fabs((PID_A.input + PID_B.input) / 2);
-
-    modbus_server.writeInputRegisters(MOD_AUTOSP_MIDPT_INP, (uint16_t*)(&midpoint), 2);
+  if (!heating)
+  { 
+    rate = -rate;
   }
-  else
-  {
-    // nothing currently
-  }
+
+  // Rate is average K/s, but value depends on PID interval
+  rate = rate * (intervalPID/1000); // e.g.: 0.5 * 20/1000 = 0.01 = 50 times per second
+  PID_A.autospRate = rate;
+  PID_B.autospRate = rate;
+
+  // Get img per degree
+  float imgPerDegree = combineHoldingRegisters(modbus_server, MOD_AUTOSP_IMGDEGREE_HOLD);
+
+  // Calculate midpoint. Fabs in case B is higher temp
+  float midpoint = fabs((PID_A.input + PID_B.input) / 2);
+  modbus_server.writeInputRegisters(MOD_AUTOSP_MIDPT_INP, (uint16_t*)(&midpoint), 2);
+
   return millis();
 }
 

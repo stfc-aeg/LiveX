@@ -19,6 +19,7 @@ class PIDController
     float outputMultiplier = 16.0588; // 4095/255, 12-bit but PID does 0-255
     long int tWrite; // Time of reading
     double gradientModifier = 0;
+    float autospRate = 0;
 
     PID myPID_;
     Adafruit_MCP9600 mcp_;

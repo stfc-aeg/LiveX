@@ -54,18 +54,30 @@ bool PIDController::check_PID_enabled()
 // Get input and setpoint, do PID computation, and save output to a register
 void PIDController::do_PID()
 {
+    // Conditional variable getting
+    bool gradientEnabled = modbus_server_.coilRead(MOD_GRADIENT_ENABLE_COIL);
+    bool autospEnabled = modbus_server_.coilRead(MOD_AUTOSP_ENABLE_COIL);
+
     input = mcp_.readThermocouple();
+
+    // Setpoint handling
     baseSetPoint = combineHoldingRegisters(modbus_server_, addr_.modSetPointHold);
-    setPoint = baseSetPoint + gradientModifier;
+    setPoint = baseSetPoint;
+    if (gradientEnabled)
+    { // Apply thermal gradient modifier
+        setPoint += gradientModifier;
+    }
+
+    // Output calculation and processing
     myPID_.Compute();
 
     // Current circuitry requires reversed output. Could use native PID library reverse
-    // Output is on a scale of 0-255, hence 255-output
-    output = 255 - output;
+    output = 255 - output; // PID library output is on a scale of 0-255
     output = output * outputMultiplier; // Scale up to 4095
 
-    gpio_.analogWrite(PWM_PIN_A, output); // Expanded pin, use custom library
+    gpio_.analogWrite(PWM_PIN_A, output);
 
+    // Write relevant outputs
     // Easier to write to/read from register with float than double. consistency
     float thermoReading = static_cast<float>(input);
     // Write input reading to input registers
@@ -78,6 +90,11 @@ void PIDController::do_PID()
     modbus_server_.writeInputRegisters(
         addr_.modPidOutputInp, (uint16_t*)(&pidOutput), 2
     );
+
+    if (autospEnabled)
+    {
+        floatToHoldingRegisters(modbus_server_, addr_.modSetPointHold, (baseSetPoint+autospRate));
+    }
 }
 
  // Check if PID terms in registers are different, and set them accordingly
