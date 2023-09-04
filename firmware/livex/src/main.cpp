@@ -17,8 +17,8 @@
 #include "Adafruit_MCP9600.h"
 #include <PID_v1.h>
 
-#define PWM_PIN_A A0_5 // A0_5
-#define PWM_PIN_B 0x4006 // A0_6 // Hypothetical second heater output pin
+#define PWM_PIN_A A0_5
+#define PWM_PIN_B A0_6 // Hypothetical second heater output pin
 
 static bool eth_connected = false;
 
@@ -26,6 +26,7 @@ EthernetServer ethServer(502);
 ModbusTCPServer modbus_server;
 ExpandedGpio gpio;
 
+// Addresses for PID objects
 PIDAddresses pidA_addr = {
   PWM_PIN_A,
   MOD_SETPOINT_A_HOLD,
@@ -62,10 +63,10 @@ int numCoils = 8;
 
 // Timers setup
 float counter = 0;
-long int tPID = millis(); // Timer for write
-long int tGradient = millis(); // Timer for gradient check
-long int tAutosp = millis();
-// Interval/period for these processes to run
+long int tPID = millis(); // Timer for PID
+long int tGradient = millis(); // Timer for gradient update
+long int tAutosp = millis(); // Auto set point control
+// Interval/period for each control
 long int intervalPID = 1000;
 long int intervalGradient = 1000;
 long int intervalAutosp = 1000;
@@ -80,7 +81,6 @@ float thermoReadings[2] = { 1, 1 };
 int num_thermoReadings = sizeof(thermoReadings) / sizeof(thermoReadings[0]);
 
 // Functions for reference later
-void update_state(void);
 void Core0PIDTask(void * pvParameters);
 
 void setup()
@@ -111,6 +111,7 @@ void setup()
     0        /* Pin to core 1 */
   );
 
+  // pidController.cpp
   PID_A.initialise(mcp[0], modbus_server, gpio);
   PID_B.initialise(mcp[1], modbus_server, gpio);
 
@@ -132,6 +133,7 @@ long int readThermoCouples()
   modbus_server.writeInputRegisters(
     MOD_THERMOCOUPLE_C_INP, (uint16_t*)(&thermoReadings), 4
   ); // Written to thermocouple_C, overlapping into D
+
   // Write counter
   modbus_server.writeInputRegisters(
     MOD_COUNTER_INP, (uint16_t*)(&counter), 2
@@ -143,8 +145,9 @@ long int readThermoCouples()
 
 long int thermalGradient()
 {
-  // Get temperature (K) per mm and mm
+  // Get temperature (K) per mm
   float wanted = combineHoldingRegisters(modbus_server, MOD_GRADIENT_WANTED_HOLD);
+  // Get distance (mm)
   float distance = combineHoldingRegisters(modbus_server, MOD_GRADIENT_DISTANCE_HOLD);
   // Theoretical temperature gradient (k/mm * mm = k)
   float theoretical = wanted * distance;
@@ -168,14 +171,15 @@ long int thermalGradient()
 long int autoSetPointControl()
 { // Increment setPoint by an average rate per second
 
+  // Get rate
+  float rate = combineHoldingRegisters(modbus_server, MOD_AUTOSP_RATE_HOLD);
+
   // Heating (1) or cooling (0)?
   bool heating = modbus_server.coilRead(MOD_AUTOSP_HEATING_COIL);
 
-  // Rate
-  float rate = combineHoldingRegisters(modbus_server, MOD_AUTOSP_RATE_HOLD);
-
   if (!heating)
   { 
+    // Rate should be a positive value with 'direction' determined by heating option
     rate = -rate;
   }
 
@@ -195,10 +199,7 @@ long int autoSetPointControl()
 }
 
 void loop()
-{
-  // Client connections handled on core 1 (loop)
-  // With pinned tasks, sets off watchdog or core dumps with unhandled exception consistently
-  // Desirable to explicitly run this via pinned task but unreliable
+{ // Client connections handled on core 1 (loop)
 
   // Listen for incoming clients
   EthernetClient client = ethServer.available();
@@ -208,8 +209,6 @@ void loop()
     Serial.println("New client");
     modbus_server.accept(client);
 
-    // `while` structure is not preferable but okay as it has its own core which does not
-    // require other activity. Other options could be considered.
     while (client.connected())
     {
       // Serial.print(".");
@@ -224,16 +223,14 @@ void loop()
 }
 
 void Core0PIDTask(void * pvParameters)
-{
-  // Core 0 task to handle PID looping
-  // Currently deals with one PID control
+{ // Core 0 task to handle device control
   Serial.print("Task 2 running on core ");
   Serial.println(xPortGetCoreID());
   delay(1000);
 
   for(;;)
   {
-    // Read thermocouples if 1000ms have elapsed
+    // Run control after its specified interval
     if ( (millis()-tRead) >= 1000 )
     {
       tRead = readThermoCouples();
@@ -249,7 +246,6 @@ void Core0PIDTask(void * pvParameters)
       tAutosp = autoSetPointControl();
     }
 
-    // Run PID control if enabled, period 1000ms. If not
     if ( (millis() - tPID) >= intervalPID ) 
     {
       PID_A.run();
