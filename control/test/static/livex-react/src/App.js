@@ -66,7 +66,7 @@ function App(props) {
                 </InputGroup>
                 <StatusBox as="span" type="info" label="Setpoint">
                 {(liveXEndPoint.data.gradient?.enable || false) ?
-                  liveXEndPoint.data.pid_a.setpoint - (liveXEndPoint.data.gradient?.modifier || 0)
+                  liveXEndPoint.data.pid_a.setpoint + (liveXEndPoint.data.gradient?.modifier || 0)
                 : liveXEndPoint.data.pid_a?.setpoint || -1}
                 </StatusBox>
               </Stack>
