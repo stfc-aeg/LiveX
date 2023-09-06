@@ -54,7 +54,7 @@ bool PIDController::check_PID_enabled()
 // Get input and setpoint, do PID computation, and save output to a register
 void PIDController::do_PID()
 {
-    // Conditional variable getting
+    // Get enable checks
     bool gradientEnabled = modbus_server_.coilRead(MOD_GRADIENT_ENABLE_COIL);
     bool autospEnabled = modbus_server_.coilRead(MOD_AUTOSP_ENABLE_COIL);
 
@@ -63,23 +63,26 @@ void PIDController::do_PID()
     // Setpoint handling
     baseSetPoint = combineHoldingRegisters(modbus_server_, addr_.modSetPointHold);
     setPoint = baseSetPoint;
+    // Apply thermal gradient modifier if enabled
     if (gradientEnabled)
-    { // Apply thermal gradient modifier
+    {
         setPoint += gradientModifier;
     }
 
     // Output calculation and processing
     myPID_.Compute();
 
-    // Current circuitry requires reversed output. Could use native PID library reverse
+    // Current circuitry requires reversed output. Not permanent
     output = 255 - output; // PID library output is on a scale of 0-255
     output = output * outputMultiplier; // Scale up to 4095
 
-    gpio_.analogWrite(PWM_PIN_A, output);
+    gpio_.analogWrite(addr_.outputPin, output);
 
     // Write relevant outputs
-    // Easier to write to/read from register with float than double. consistency
+
+    // For consistency and ease of read/write, floats are preferable to doubles
     float thermoReading = static_cast<float>(input);
+
     // Write input reading to input registers
     int ret = modbus_server_.writeInputRegisters(
         addr_.modThermocoupleInp, (uint16_t*)(&thermoReading), 2
@@ -91,6 +94,7 @@ void PIDController::do_PID()
         addr_.modPidOutputInp, (uint16_t*)(&pidOutput), 2
     );
 
+    // Increase setpoint if ASPC is enabled
     if (autospEnabled)
     {
         floatToHoldingRegisters(modbus_server_, addr_.modSetPointHold, (baseSetPoint+autospRate));
@@ -103,6 +107,7 @@ void PIDController::check_PID_tunings()
     double newKp = double(combineHoldingRegisters(modbus_server_,addr_.modKpHold));
     double newKi = double(combineHoldingRegisters(modbus_server_,addr_.modKiHold));
     double newKd = double(combineHoldingRegisters(modbus_server_,addr_.modKdHold));
+
     if ((newKp != Kp) || (newKi != Ki) || (newKd != Kd)) 
     {
       myPID_.SetTunings(newKp, newKi, newKd);
@@ -123,6 +128,6 @@ void PIDController::run()
     }
     else
     {
-      gpio_.analogWrite(PWM_PIN_A, 4095);
+      gpio_.analogWrite(addr_.outputPin, 4095);
     }
 }

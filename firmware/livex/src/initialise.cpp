@@ -1,9 +1,8 @@
 #include "initialise.h"
 
+// Run the MCP9600 default setup code. Find devices and set defaults
 void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* mcp_addr)
 {
-  // Run the MCP9600 default setup code. Find devices and set defaults
-
   // Initialise MCP9600(s)
   Serial.println("nano_mcp9600 startup");
 
@@ -12,7 +11,8 @@ void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* 
     Serial.println("\nNow considering new device.");
 
     // Find sensor
-    if (!mcp[idx].begin(mcp_addr[idx])) {
+    if (!mcp[idx].begin(mcp_addr[idx])) 
+    {
       Serial.print("Sensor not found at address 0x");
       Serial.print(mcp_addr[idx], 16);
       Serial.println("Check wiring!");
@@ -64,10 +64,9 @@ void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* 
   }
 }
 
+  // This function initialises Ethernet/ethServer and checks for hardware
 void initialiseEthernet(EthernetServer ethServer, byte* mac, byte* ip, int ethPin)
 {
-  // This function initialises Ethernet/ethServer and checks for hardware
-
   // IS ESP32 module has Ethernet SPI CS on pin 15
   Ethernet.init(ethPin);
   // Start the Ethernet connection and the server
@@ -90,9 +89,9 @@ void initialiseEthernet(EthernetServer ethServer, byte* mac, byte* ip, int ethPi
   }
 }
 
+  // Modbus setup and control default enabling
 void initialiseModbus(ModbusTCPServer& modbus_server, int numInputRegs, int numHoldRegs, int numCoils)
 {
-  // Modbus setup
   if (!modbus_server.begin()) 
   {
     Serial.println("Failed to start Modbus TCP Server!");
@@ -100,7 +99,7 @@ void initialiseModbus(ModbusTCPServer& modbus_server, int numInputRegs, int numH
   }
 
   // Configure and intialise modbus coils/registers
-  // Addresses are the first of each register type. 1, 30001, 40001.
+  // Addresses follow Modbus convention for register type: 1, 30001, 40001.
   modbus_server.configureInputRegisters(MOD_COUNTER_INP, numInputRegs);
   modbus_server.configureHoldingRegisters(MOD_SETPOINT_A_HOLD, numHoldRegs);
   modbus_server.configureCoils(MOD_PID_ENABLE_A_COIL, numCoils);

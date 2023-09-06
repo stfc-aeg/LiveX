@@ -83,6 +83,7 @@ int num_thermoReadings = sizeof(thermoReadings) / sizeof(thermoReadings[0]);
 // Functions for reference later
 void Core0PIDTask(void * pvParameters);
 
+// Initialise wires, devices, and Modbus/gpio
 void setup()
 {
   Serial.begin(9600);
@@ -97,9 +98,9 @@ void setup()
   initialiseModbus(modbus_server, numInputRegs, numHoldRegs, numCoils);
 
   gpio.init();
-  gpio.pinMode(0x400b, OUTPUT); // PIN_Q0_0
-  gpio.pinMode(0x400a, OUTPUT); // PIN_Q0_1
-  gpio.pinMode(0x400d, OUTPUT); // required?
+  gpio.pinMode(Q0_0, OUTPUT); // PIN_Q0_0
+  gpio.pinMode(Q0_1, OUTPUT); // PIN_Q0_1
+  gpio.pinMode(A0_5, OUTPUT); // required?
 
   xTaskCreatePinnedToCore(
     Core0PIDTask,  /* Task function */
@@ -120,6 +121,7 @@ void setup()
   PID_B.myPID_.SetMode(AUTOMATIC);
 }
 
+// Read two MCP9600 thermocouples
 long int readThermoCouples()
 {
   // Read hot junction from each mcp
@@ -129,10 +131,11 @@ long int readThermoCouples()
     Serial.print((String)"Thermocouple reading (" + idx + "): ");
     Serial.println(thermoReadings[idx]);
   }
-  // Write both readings
+
+  // Write both readings (written to thermocouple_C, overlapping to D)
   modbus_server.writeInputRegisters(
     MOD_THERMOCOUPLE_C_INP, (uint16_t*)(&thermoReadings), 4
-  ); // Written to thermocouple_C, overlapping into D
+  );
 
   // Write counter
   modbus_server.writeInputRegisters(
@@ -143,6 +146,7 @@ long int readThermoCouples()
   return millis();
 }
 
+// Calculate and write thermal gradient values
 long int thermalGradient()
 {
   // Get temperature (K) per mm
@@ -168,9 +172,9 @@ long int thermalGradient()
   return millis();
 }
 
+ // Increment setPoint by an average rate per second
 long int autoSetPointControl()
-{ // Increment setPoint by an average rate per second
-
+{
   // Get rate
   float rate = combineHoldingRegisters(modbus_server, MOD_AUTOSP_RATE_HOLD);
 
@@ -198,8 +202,9 @@ long int autoSetPointControl()
   return millis();
 }
 
+// Client connections handled on core 1 (loop)
 void loop()
-{ // Client connections handled on core 1 (loop)
+{
 
   // Listen for incoming clients
   EthernetClient client = ethServer.available();
@@ -211,10 +216,10 @@ void loop()
 
     while (client.connected())
     {
-      // Serial.print(".");
       // Poll for requests while client is connected
       int ret = modbus_server.poll();
-      if (ret) {
+      if (ret) 
+      {
         // Nothing needed here right now.
       }
     }
@@ -222,8 +227,9 @@ void loop()
   }
 }
 
+ // Core 0 task to handle device control
 void Core0PIDTask(void * pvParameters)
-{ // Core 0 task to handle device control
+{
   Serial.print("Task 2 running on core ");
   Serial.println(xPortGetCoreID());
   delay(1000);
@@ -251,7 +257,6 @@ void Core0PIDTask(void * pvParameters)
       PID_A.run();
       PID_B.run();
       tPID = millis(); // Only need one timer, PIDs have same period
-      Serial.println("");
     }
   }
 }

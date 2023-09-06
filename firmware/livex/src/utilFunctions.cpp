@@ -1,7 +1,8 @@
 #include "utilFunctions.h"
 
+// See union ModbusFloat. Stich two ints into one float
 float combineHoldingRegisters(ModbusTCPServer& modbus_server, int address)
-{ // See union ModbusFloat. Stich two ints into one float
+{
   uint16_t A = modbus_server.holdingRegisterRead(address);
   uint16_t B = modbus_server.holdingRegisterRead(address+1);
 
@@ -11,8 +12,9 @@ float combineHoldingRegisters(ModbusTCPServer& modbus_server, int address)
   return modbusFloat.value;
 }
 
+ // Write a float to a pair of modbus addresses. Returns success code of second write.
 int floatToHoldingRegisters(ModbusTCPServer& modbus_server, int address, float value)
-{ // Write a float to a pair of modbus addresses. Returns success code of second write.
+{
   ModbusFloat converter;
   converter.value = value;
   
