@@ -132,6 +132,7 @@ class LiveXAdapter(ApiAdapter):
         """
         self.livex.cleanup()
 
+
 class LiveXError(Exception):
     """Simple exception class to wrap lower-level exceptions."""
 
@@ -165,7 +166,6 @@ class LiveX():
         version_info = get_versions()
 
         # Set the background task counters to zero
-        self.background_ioloop_counter = 0
         self.background_thread_counter = 0
 
         # PID (pid) variables for PID controllers A and B
@@ -189,7 +189,7 @@ class LiveX():
         self.gradient_distance    = self.read_decode_holding_reg(modAddr.gradient_distance_hold)
         self.gradient_actual      = self.read_decode_input_reg(modAddr.gradient_actual_inp)
         self.gradient_theoretical = self.read_decode_input_reg(modAddr.gradient_theory_inp)
-        self.gradient_modifier = self.read_decode_input_reg(modAddr.gradient_modifier_inp)
+        self.gradient_modifier    = self.read_decode_input_reg(modAddr.gradient_modifier_inp)
 
         self.autosp_enable    = self.read_coil(modAddr.autosp_enable_coil)
         self.autosp_heating   = self.read_coil(modAddr.autosp_heating_coil, asInt=True)  # Not bool, used as index
@@ -213,6 +213,8 @@ class LiveX():
             temp_writer = csv.DictWriter(csvfile, delimiter=',', fieldnames=self.fieldnames)
             temp_writer.writeheader()
 
+        # PID param trees use partial functions to prevent code duplication.
+        # A partial generates a new function by fixing some arguments for a given function.
         pid_a = ParameterTree({
             'enable': (lambda: self.pid_enable_a, partial(
                 self.set_pid_enable, pid_enable="pid_enable_a", address=modAddr.pid_enable_a_coil
@@ -273,7 +275,6 @@ class LiveX():
 
         # Build a parameter tree for the background task
         bg_task = ParameterTree({
-            'ioloop_count': (lambda: self.background_ioloop_counter, None),
             'thread_count': (lambda: self.background_thread_counter, None),
             'enable': (lambda: self.background_task_enable, self.set_task_enable),
             'interval': (lambda: self.background_task_interval, self.set_task_interval),
@@ -394,6 +395,7 @@ class LiveX():
             response = self.client.write_coil(address, 0, slave=1)
 
     def set_autosp_enable(self, value):
+        """Set the enable boolean for the auto set point control."""
         self.autosp_enable = bool(value)
 
         if value:
@@ -402,7 +404,7 @@ class LiveX():
             ret = self.client.write_coil(modAddr.autosp_enable_coil, 0, slave=1)
 
     def set_autosp_heating(self, value):
-        logging.debug("VALUE: %s", value)
+        """Set the boolean for auto set point control heating."""
         self.autosp_heating = value
 
         if value:  # 1, heating
@@ -411,22 +413,22 @@ class LiveX():
             self.client.write_coil(modAddr.autosp_heating_coil, 0, slave=1)
 
     def set_autosp_rate(self, value):
+        """Set the rate value for the auto set point control."""
         self.autosp_rate = value
-
         response = self.write_modbus_float(value, modAddr.autosp_rate_hold)
-        logging.debug("rate write status: %s", response)
 
     def set_autosp_imgdegree(self, value):
+        """Set the image acquisition per degree for the auto set point control."""
         self.autosp_imgdegree = value
-
         response = self.write_modbus_float(value, modAddr.autosp_imgdegree_hold)
 
     def set_gradient_distance(self, value):
+        """Set the distance value for the thermal gradient."""
         self.gradient_distance = value
-
         response = self.write_modbus_float(value, modAddr.gradient_distance_hold)
 
     def set_gradient_enable(self, value):
+        """Set the enable boolean for the thermal gradient."""
         self.gradient_enable = bool(value)
 
         if value:
@@ -435,8 +437,8 @@ class LiveX():
             self.client.write_coil(modAddr.gradient_enable_coil, 0, slave=1)
 
     def set_gradient_wanted(self, value):
+        """Set the desired temperature change per mm for the thermal gradient."""
         self.gradient_wanted = value
-
         response = self.write_modbus_float(value, modAddr.gradient_wanted_hold)
 
     def start_background_tasks(self):
@@ -447,33 +449,12 @@ class LiveX():
 
         self.background_task_enable = True
 
-        # Register a periodic callback for the ioloop task and start it
-        self.background_ioloop_task = PeriodicCallback(
-            self.background_ioloop_callback, self.background_task_interval * 1000
-        )
-        # self.background_ioloop_task.start()
-
         # Run the background thread task in the thread execution pool
         self.background_thread_task()
 
     def stop_background_tasks(self):
         """Stop the background tasks."""
         self.background_task_enable = False
-        self.background_ioloop_task.stop()
-
-    def background_ioloop_callback(self):
-        """Run the adapter background IOLoop callback.
-
-        This simply increments the background counter before returning. It is called repeatedly
-        by the periodic callback on the IOLoop.
-        """
-
-        if self.background_ioloop_counter < 10 or self.background_ioloop_counter % 20 == 0:
-            logging.debug(
-                "Background IOLoop task running, count = %d", self.background_ioloop_counter
-            )
-
-        self.background_ioloop_counter += 1
 
     def read_coil(self, address, asInt=False):
         """Read and return the value from the coil at the specified address, optionally as an int."""
@@ -485,7 +466,7 @@ class LiveX():
             return response.bits[0]  # read_coils pads to eight with zeroes.
 
     def read_decode_input_reg(self, address):
-        """Read and decode a float value from a given address (two registers).
+        """Read and decode a float value from a given input register address (two registers).
         Return the decoded value.
         """
         response = self.client.read_input_registers(address, count=2, slave=1)
@@ -496,7 +477,7 @@ class LiveX():
         return value
 
     def read_decode_holding_reg(self, address):
-        """Read and decode a float value from a given address (two registers).
+        """Read and decode a float value from a given holding register address (two registers).
         Return the decoded value.
         """
         response = self.client.read_holding_registers(address, count=2, slave=1)
@@ -507,6 +488,9 @@ class LiveX():
         return value
 
     def write_reg_payload_builder(self, value, byteorder=Endian.Big, wordorder=Endian.Little):
+        """Build a given floating point value into a binary payload for use with Modbus.
+        Return the payload.
+        """
         value = float(value)  # No effect but saves checking variable type
         builder = BinaryPayloadBuilder(byteorder=byteorder, wordorder=wordorder)
         builder.add_32bit_float(value)
@@ -516,6 +500,10 @@ class LiveX():
         return payload
 
     def write_modbus_float(self, value, address):
+        """Write a floating point value to a modbus address (written across two registers).
+        :param value: float to be written.
+        :param address: starting address for write.
+        """
         payload = self.write_reg_payload_builder(value)
         response = self.client.write_registers(
             address, payload, slave=1, skip_encode=True
