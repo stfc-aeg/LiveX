@@ -9,6 +9,7 @@ import tornado
 import time
 import sys
 from concurrent import futures
+from functools import partial
 
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.concurrent import run_on_executor
@@ -22,6 +23,8 @@ from pymodbus.client import ModbusTcpClient
 from pymodbus.payload import BinaryPayloadDecoder
 from pymodbus.payload import BinaryPayloadBuilder
 from pymodbus.constants import Endian
+
+from src.livex.modbusAddresses import modAddr
 
 import csv
 
@@ -129,6 +132,7 @@ class LiveXAdapter(ApiAdapter):
         """
         self.livex.cleanup()
 
+
 class LiveXError(Exception):
     """Simple exception class to wrap lower-level exceptions."""
 
@@ -162,24 +166,45 @@ class LiveX():
         version_info = get_versions()
 
         # Set the background task counters to zero
-        self.background_ioloop_counter = 0
         self.background_thread_counter = 0
 
-        # Relevant addresses
-        self.coilAddress = 0
-        self.inputRegAddress = 30001
-        self.holdingRegAddress = 40001
+        # PID (pid) variables for PID controllers A and B
+        self.pid_enable_a   = bool(self.read_coil(modAddr.pid_enable_a_coil))
+        self.pid_setpoint_a = self.read_decode_holding_reg(modAddr.pid_setpoint_a_hold)
+        self.pid_kp_a       = self.read_decode_holding_reg(modAddr.pid_kp_a_hold)
+        self.pid_ki_a       = self.read_decode_holding_reg(modAddr.pid_ki_a_hold)
+        self.pid_kd_a       = self.read_decode_holding_reg(modAddr.pid_kd_a_hold)
+        self.pid_output_a   = self.read_decode_input_reg(modAddr.pid_output_a_inp)
 
-        # Value setup
-        self.resistor_temp   = 0
-        self.ambient_temp   = 0
-        self.pid_output = 0
+        self.pid_enable_b   = bool(self.read_coil(modAddr.pid_enable_b_coil))
+        self.pid_setpoint_b = self.read_decode_holding_reg(modAddr.pid_setpoint_b_hold)
+        self.pid_kp_b       = self.read_decode_holding_reg(modAddr.pid_kp_b_hold)
+        self.pid_ki_b       = self.read_decode_holding_reg(modAddr.pid_ki_b_hold)
+        self.pid_kd_b       = self.read_decode_holding_reg(modAddr.pid_kd_b_hold)
+        self.pid_output_b   = self.read_decode_input_reg(modAddr.pid_output_b_inp)
+
+        # Gradient (gradient) and Auto set point (autosp) variables
+        self.gradient_enable      = bool(self.read_coil(modAddr.gradient_enable_coil))
+        self.gradient_wanted      = self.read_decode_holding_reg(modAddr.gradient_wanted_hold)
+        self.gradient_distance    = self.read_decode_holding_reg(modAddr.gradient_distance_hold)
+        self.gradient_actual      = self.read_decode_input_reg(modAddr.gradient_actual_inp)
+        self.gradient_theoretical = self.read_decode_input_reg(modAddr.gradient_theory_inp)
+        self.gradient_modifier    = self.read_decode_input_reg(modAddr.gradient_modifier_inp)
+
+        self.autosp_enable    = self.read_coil(modAddr.autosp_enable_coil)
+        self.autosp_heating   = self.read_coil(modAddr.autosp_heating_coil, asInt=True)  # Not bool, used as index
+        self.heating_options  = ["Cooling", "Heating"]
+        self.autosp_rate      = self.read_decode_holding_reg(modAddr.autosp_rate_hold)
+        self.autosp_midpt     = self.read_decode_input_reg(modAddr.autosp_midpt_inp)
+        self.autosp_imgdegree = self.read_decode_holding_reg(modAddr.autosp_imgdegree_hold)
+
+        # Other display controls
+        self.thermocouple_a = self.read_decode_input_reg(modAddr.thermocouple_a_inp)
+        self.thermocouple_b = self.read_decode_input_reg(modAddr.thermocouple_b_inp)
+        self.thermocouple_c = 0  # nothing to read, no thermocouple
+        self.thermocouple_d = 0  # nothing to read, no thermocouple
+
         self.reading_counter = 0
-        self.setpoint = 25.0
-        self.pid_enable = True
-        self.Kp = 25.0
-        self.Ki = 5.0
-        self.Kd = 0.0
 
         # csv log
         self.fieldnames = ['resistor','ambient','setpoint','output']
@@ -188,21 +213,68 @@ class LiveX():
             temp_writer = csv.DictWriter(csvfile, delimiter=',', fieldnames=self.fieldnames)
             temp_writer.writeheader()
 
-        pid_loop = ParameterTree({
-            'setpoint': (lambda: self.setpoint, self.set_setpoint),
-            'pid_enable': (lambda: self.pid_enable, self.set_pid_enable),
-            'proportional': (lambda: self.Kp, self.set_proportional_term),
-            'integral': (lambda: self.Ki, self.set_integral_term),
-            'derivative': (lambda: self.Kd, self.set_derivative_term),
-            'pid_output': (lambda: self.pid_output, None),
-            'resistor_temp': (lambda: self.resistor_temp, None),
-            'ambient_temp': (lambda: self.ambient_temp, None),
-            'reading_counter': (lambda: self.reading_counter, None)
+        # PID param trees use partial functions to prevent code duplication.
+        # A partial generates a new function by fixing some arguments for a given function.
+        pid_a = ParameterTree({
+            'enable': (lambda: self.pid_enable_a, partial(
+                self.set_pid_enable, pid_enable="pid_enable_a", address=modAddr.pid_enable_a_coil
+            )),
+            'setpoint': (lambda: self.pid_setpoint_a, partial(
+                self.set_pid_setpoint, setpoint="pid_setpoint_a", address=modAddr.pid_setpoint_a_hold
+            )),
+            'proportional': (lambda: self.pid_kp_a, partial(
+                self.set_pid_proportional, Kp="pid_kp_a", address=modAddr.pid_kp_a_hold
+            )),
+            'integral': (lambda: self.pid_ki_a, partial(
+                self.set_pid_integral, Ki="pid_ki_a", address=modAddr.pid_ki_a_hold
+            )),
+            'derivative': (lambda: self.pid_kd_a, partial(
+                self.set_pid_derivative, Kd="pid_kd_a", address=modAddr.pid_kd_a_hold
+            )),
+            'temperature': (lambda: self.thermocouple_a, None),
+            'output': (lambda: self.pid_output_a, None)
+        })
+
+        pid_b = ParameterTree({
+            'enable': (lambda: self.pid_enable_b, partial(
+                self.set_pid_enable, pid_enable="pid_enable_b", address=modAddr.pid_enable_b_coil
+            )),
+            'setpoint': (lambda: self.pid_setpoint_b, partial(
+                self.set_pid_setpoint, setpoint="pid_setpoint_b", address=modAddr.pid_setpoint_b_hold
+            )),
+            'proportional': (lambda: self.pid_kp_b, partial(
+                self.set_pid_proportional, Kp="pid_kp_b", address=modAddr.pid_kp_b_hold)
+            ),
+            'integral': (lambda: self.pid_ki_b, partial(
+                self.set_pid_integral, Ki="pid_ki_b", address=modAddr.pid_ki_b_hold
+            )),
+            'derivative': (lambda: self.pid_kd_b, partial(
+                self.set_pid_derivative, Kd="pid_kd_b", address=modAddr.pid_kd_b_hold
+            )),
+            'temperature': (lambda: self.thermocouple_b, None),
+            'output': (lambda: self.pid_output_b, None)
+        })
+
+        thermal_gradient = ParameterTree({
+            'enable': (lambda: self.gradient_enable, self.set_gradient_enable),
+            'wanted': (lambda: self.gradient_wanted, self.set_gradient_wanted),
+            'distance': (lambda: self.gradient_distance, self.set_gradient_distance),
+            'actual': (lambda: self.gradient_actual, None),
+            'theoretical': (lambda: self.gradient_theoretical, None),
+            'modifier': (lambda: self.gradient_modifier, None)
+        })
+
+        autosp = ParameterTree({
+            'enable': (lambda: self.autosp_enable, self.set_autosp_enable),
+            'heating': (lambda: self.autosp_heating, self.set_autosp_heating),
+            'heating_options': (lambda: self.heating_options, None), 
+            'rate': (lambda: self.autosp_rate, self.set_autosp_rate),
+            'img_per_degree': (lambda: self.autosp_imgdegree, self.set_autosp_imgdegree),
+            'midpt_temp': (lambda: self.autosp_midpt, None)
         })
 
         # Build a parameter tree for the background task
         bg_task = ParameterTree({
-            'ioloop_count': (lambda: self.background_ioloop_counter, None),
             'thread_count': (lambda: self.background_thread_counter, None),
             'enable': (lambda: self.background_task_enable, self.set_task_enable),
             'interval': (lambda: self.background_task_interval, self.set_task_interval),
@@ -214,7 +286,10 @@ class LiveX():
             'tornado_version': tornado.version,
             'server_uptime': (self.get_server_uptime, None),
             'background_task': bg_task,
-            'pid_loop': pid_loop
+            'pid_a': pid_a,
+            'pid_b': pid_b,
+            'autosp': autosp,
+            'gradient': thermal_gradient
         })
 
         # Launch the background task if enabled in options
@@ -275,41 +350,96 @@ class LiveX():
             else:
                 self.stop_background_tasks()
 
-    def set_setpoint(self, setpoint):
-        """Set the setpoint"""
-        self.setpoint = setpoint
-        payload = self.write_reg_payload_builder(setpoint)
-        response = self.client.write_registers(
-            self.holdingRegAddress, payload, slave=1, skip_encode=True
-        )
+    def set_pid_setpoint(self, value, setpoint, address):
+        """Set the setpoint of PID A or B.
+        :param setpoint: "pid_setpoint_a" or "pid_setpoint_b"
+        :param address: address to write setpoint to
+        """
+        setattr(self, setpoint, value)
+        response = self.write_modbus_float(value, address)
 
-    def set_proportional_term(self, value):
-        self.Kp = value
-        payload = self.write_reg_payload_builder(value)
-        response = self.client.write_registers(
-            self.holdingRegAddress+2, payload, slave=1, skip_encode=True
-        )
+    def set_pid_proportional(self, value, Kp, address):
+        """Set the proportional term of PID A or B.
+        :param Kp: "pid_ki_a" or "pid_ki_b". self.<attribute> to edit
+        :param address: address to write value to
+        """
+        setattr(self, Kp, value)
+        response = self.write_modbus_float(value, address)
 
-    def set_integral_term(self, value):
-        self.Ki = value
-        payload = self.write_reg_payload_builder(value)
-        response = self.client.write_registers(
-            self.holdingRegAddress+4, payload, slave=1, skip_encode=True
-        )
+    def set_pid_integral(self, value, Ki, address):
+        """Set the integral term of PID A or B.
+        :param Ki: "pid_ki_a" or "pid_ki_b". self.<attribute> to edit
+        :param address: address to write value to
+        """
+        setattr(self, Ki, value)
+        response = self.write_modbus_float(value, address)
+    
+    def set_pid_derivative(self, value, Kd, address):
+        """Set the derivative term of PID A or B.
+        :param Kd: "pid_kd_b" or "pid_kd_b". self.<attribute> to edit
+        :param address: address to write value to
+        """
+        setattr(self, Kd, value)
+        response = self.write_modbus_float(value, address)
 
-    def set_derivative_term(self, value):
-        self.Kd = value
-        payload = self.write_reg_payload_builder(value)
-        response = self.client.write_registers(
-            self.holdingRegAddress+6, payload, slave=1, skip_encode=True
-        )
+    def set_pid_enable(self, value, pid_enable, address):
+        """Set the enable boolean for PID A or B.
+        :param pid_enable: "pid_enable_a" or "pid_enable_b". self.<attribute> to edit
+        :param address: address to write value to (pid_enable_a/b_coil)
+        """
+        setattr(self, pid_enable, bool(value))
 
-    def set_pid_enable(self, enable):
-        self.pid_enable = bool(enable)
-        if self.pid_enable:
-            response = self.client.write_register(self.holdingRegAddress+8, 1, slave=1)
+        if getattr(self, pid_enable):
+            response = self.client.write_coil(address, 1, slave=1)
         else:
-            response = self.client.write_register(self.holdingRegAddress+8, 0, slave=1)
+            response = self.client.write_coil(address, 0, slave=1)
+
+    def set_autosp_enable(self, value):
+        """Set the enable boolean for the auto set point control."""
+        self.autosp_enable = bool(value)
+
+        if value:
+            ret = self.client.write_coil(modAddr.autosp_enable_coil, 1, slave=1)
+        else:
+            ret = self.client.write_coil(modAddr.autosp_enable_coil, 0, slave=1)
+
+    def set_autosp_heating(self, value):
+        """Set the boolean for auto set point control heating."""
+        self.autosp_heating = value
+
+        if value:  # 1, heating
+            self.client.write_coil(modAddr.autosp_heating_coil, 1, slave=1)
+        else:      # 0, cooling
+            self.client.write_coil(modAddr.autosp_heating_coil, 0, slave=1)
+
+    def set_autosp_rate(self, value):
+        """Set the rate value for the auto set point control."""
+        self.autosp_rate = value
+        response = self.write_modbus_float(value, modAddr.autosp_rate_hold)
+
+    def set_autosp_imgdegree(self, value):
+        """Set the image acquisition per degree for the auto set point control."""
+        self.autosp_imgdegree = value
+        response = self.write_modbus_float(value, modAddr.autosp_imgdegree_hold)
+
+    def set_gradient_distance(self, value):
+        """Set the distance value for the thermal gradient."""
+        self.gradient_distance = value
+        response = self.write_modbus_float(value, modAddr.gradient_distance_hold)
+
+    def set_gradient_enable(self, value):
+        """Set the enable boolean for the thermal gradient."""
+        self.gradient_enable = bool(value)
+
+        if value:
+            self.client.write_coil(modAddr.gradient_enable_coil, 1, slave=1)
+        else:
+            self.client.write_coil(modAddr.gradient_enable_coil, 0, slave=1)
+
+    def set_gradient_wanted(self, value):
+        """Set the desired temperature change per mm for the thermal gradient."""
+        self.gradient_wanted = value
+        response = self.write_modbus_float(value, modAddr.gradient_wanted_hold)
 
     def start_background_tasks(self):
         """Start the background tasks."""
@@ -319,36 +449,24 @@ class LiveX():
 
         self.background_task_enable = True
 
-        # Register a periodic callback for the ioloop task and start it
-        self.background_ioloop_task = PeriodicCallback(
-            self.background_ioloop_callback, self.background_task_interval * 1000
-        )
-        # self.background_ioloop_task.start()
-
         # Run the background thread task in the thread execution pool
         self.background_thread_task()
 
     def stop_background_tasks(self):
         """Stop the background tasks."""
         self.background_task_enable = False
-        self.background_ioloop_task.stop()
 
-    def background_ioloop_callback(self):
-        """Run the adapter background IOLoop callback.
+    def read_coil(self, address, asInt=False):
+        """Read and return the value from the coil at the specified address, optionally as an int."""
+        response = self.client.read_coils(address, count=1, slave=1)
 
-        This simply increments the background counter before returning. It is called repeatedly
-        by the periodic callback on the IOLoop.
-        """
-
-        if self.background_ioloop_counter < 10 or self.background_ioloop_counter % 20 == 0:
-            logging.debug(
-                "Background IOLoop task running, count = %d", self.background_ioloop_counter
-            )
-
-        self.background_ioloop_counter += 1
+        if asInt:
+            return (1 if response.bits[0] else 0)  # 1 if true, 0 if not
+        else:
+            return response.bits[0]  # read_coils pads to eight with zeroes.
 
     def read_decode_input_reg(self, address):
-        """Read and decode a float value from a given address (two registers).
+        """Read and decode a float value from a given input register address (two registers).
         Return the decoded value.
         """
         response = self.client.read_input_registers(address, count=2, slave=1)
@@ -358,7 +476,21 @@ class LiveX():
         value = decoder.decode_32bit_float()
         return value
 
+    def read_decode_holding_reg(self, address):
+        """Read and decode a float value from a given holding register address (two registers).
+        Return the decoded value.
+        """
+        response = self.client.read_holding_registers(address, count=2, slave=1)
+        decoder = BinaryPayloadDecoder.fromRegisters(
+            response.registers, wordorder=Endian.Little, byteorder=Endian.Big
+        )
+        value = decoder.decode_32bit_float()
+        return value
+
     def write_reg_payload_builder(self, value, byteorder=Endian.Big, wordorder=Endian.Little):
+        """Build a given floating point value into a binary payload for use with Modbus.
+        Return the payload.
+        """
         value = float(value)  # No effect but saves checking variable type
         builder = BinaryPayloadBuilder(byteorder=byteorder, wordorder=wordorder)
         builder.add_32bit_float(value)
@@ -366,7 +498,17 @@ class LiveX():
 
         logging.debug(payload)
         return payload
-        # return builder.to_registers()
+
+    def write_modbus_float(self, value, address):
+        """Write a floating point value to a modbus address (written across two registers).
+        :param value: float to be written.
+        :param address: starting address for write.
+        """
+        payload = self.write_reg_payload_builder(value)
+        response = self.client.write_registers(
+            address, payload, slave=1, skip_encode=True
+        )
+        return response
 
     @run_on_executor
     def background_thread_task(self):
@@ -381,16 +523,24 @@ class LiveX():
             sleep_interval = self.background_task_interval
             time.sleep(sleep_interval)
 
-            self.resistor_temp   = self.read_decode_input_reg(self.inputRegAddress)
-            self.ambient_temp    = self.read_decode_input_reg(self.inputRegAddress+2)
-            self.reading_counter = self.read_decode_input_reg(self.inputRegAddress+4)
-            self.pid_output      = 4095 - self.read_decode_input_reg(self.inputRegAddress+6)
+            # Need to get any value that can be updated by the device.
+            # This is almost exclusively the contents of input registers, with the exception of
+            # setpoints, which can be modified with the gradient and autosp controls.
 
-            with open('temps.csv', 'a', newline='') as csvfile:
-                temp_writer = csv.DictWriter(csvfile, delimiter=',',fieldnames=self.fieldnames)
-                temp_writer.writerow(
-                    {'resistor': str(self.resistor_temp), 'ambient': str(self.ambient_temp),'setpoint': str(self.setpoint), 'output': self.pid_output}
-                )
+            self.thermocouple_a  = self.read_decode_input_reg(modAddr.thermocouple_a_inp)
+            self.thermocouple_b  = self.read_decode_input_reg(modAddr.thermocouple_b_inp)
+            self.reading_counter = self.read_decode_input_reg(modAddr.counter_inp)
+            self.pid_output_a    = 4095 - self.read_decode_input_reg(modAddr.pid_output_a_inp)
+            self.pid_output_b    = 4095 - self.read_decode_input_reg(modAddr.pid_output_b_inp)
+
+            self.gradient_actual      = self.read_decode_input_reg(modAddr.gradient_actual_inp)
+            self.gradient_theoretical = self.read_decode_input_reg(modAddr.gradient_theory_inp)
+            self.gradient_modifier    = self.read_decode_input_reg(modAddr.gradient_modifier_inp)
+
+            self.autosp_midpt = self.read_decode_input_reg(modAddr.autosp_midpt_inp)
+
+            self.pid_setpoint_a = self.read_decode_holding_reg(modAddr.pid_setpoint_a_hold)
+            self.pid_setpoint_b = self.read_decode_holding_reg(modAddr.pid_setpoint_b_hold)
 
             self.background_thread_counter += 1
 
