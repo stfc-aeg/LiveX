@@ -3,17 +3,22 @@
 #include <WiFi.h>
 #include <ArduinoRS485.h>
 #include <ArduinoModbus.h>
+#include <cmath>
 
 #include <ExpandedGpio.h>
 #include "pins_is.h"
 #include "initialise.h"
+#include "modbusAddresses.h"
+#include "pidController.h"
+#include "utilFunctions.h"
 
 #include <Adafruit_I2CDevice.h>
 #include <Adafruit_I2CRegister.h>
 #include "Adafruit_MCP9600.h"
 #include <PID_v1.h>
 
-#define PWM_PIN 0x400d // A0_5
+#define PWM_PIN_A A0_5
+#define PWM_PIN_B A0_6 // Hypothetical second heater output pin
 
 static bool eth_connected = false;
 
@@ -21,29 +26,50 @@ EthernetServer ethServer(502);
 ModbusTCPServer modbus_server;
 ExpandedGpio gpio;
 
+// Addresses for PID objects
+PIDAddresses pidA_addr = {
+  PWM_PIN_A,
+  MOD_SETPOINT_A_HOLD,
+  MOD_PID_OUTPUT_A_INP,
+  MOD_PID_ENABLE_A_COIL,
+  MOD_THERMOCOUPLE_A_INP,
+  MOD_KP_A_HOLD,
+  MOD_KI_A_HOLD,
+  MOD_KD_A_HOLD
+};
+
+PIDAddresses pidB_addr = {
+  PWM_PIN_B,
+  MOD_SETPOINT_B_HOLD,
+  MOD_PID_OUTPUT_B_INP,
+  MOD_PID_ENABLE_B_COIL,
+  MOD_THERMOCOUPLE_B_INP,
+  MOD_KP_B_HOLD,
+  MOD_KI_B_HOLD,
+  MOD_KD_B_HOLD
+};
+
+PIDController PID_A(pidA_addr);
+PIDController PID_B(pidB_addr);
+
 byte mac[] = { 0x10, 0x97, 0xbd, 0xca, 0xea, 0x14 };
 byte ip[] = { 192, 168, 0, 159 };
 byte gateway[] = { 192, 168, 0, 1 };
 byte subnet[] = { 255, 255, 255, 0 };
 
-// Modbus register values
-const int inputRegAddress = 30001;
-const int numInputRegs = 16;
-const int holdingRegAddress = 40001;
-const int numHoldRegs = 16;
+int numHoldRegs = 32;
+int numInputRegs = 32;
+int numCoils = 8;
 
-// PID and Counter setup
+// Timers setup
 float counter = 0;
-long int tWrite = millis(); // Timer for write
-// Output multiplier as 4095/255 does not work. This is close enough for now.
-float outputMultiplier = 16.0588;
-
-double setPoint, input, output;
-double Kp = 25;
-double Ki = 5;
-double Kd = 0;
-bool loop_PID = false;
-PID myPID(&input, &output, &setPoint, Kp,Ki,Kd, DIRECT);
+long int tPID = millis(); // Timer for PID
+long int tGradient = millis(); // Timer for gradient update
+long int tAutosp = millis(); // Auto set point control
+// Interval/period for each control
+long int intervalPID = 1000;
+long int intervalGradient = 1000;
+long int intervalAutosp = 1000;
 
 // MCP9600 setup
 Adafruit_MCP9600 mcp[] = {Adafruit_MCP9600(), Adafruit_MCP9600()};
@@ -55,9 +81,9 @@ float thermoReadings[2] = { 1, 1 };
 int num_thermoReadings = sizeof(thermoReadings) / sizeof(thermoReadings[0]);
 
 // Functions for reference later
-void update_state(void);
 void Core0PIDTask(void * pvParameters);
 
+// Initialise wires, devices, and Modbus/gpio
 void setup()
 {
   Serial.begin(9600);
@@ -66,19 +92,15 @@ void setup()
   // I2C initialisation to ensure it is established before I2C calls made
   Wire.begin();
 
+  // initialise.cpp
   initialiseEthernet(ethServer, mac, ip, PIN_SPI_SS_ETHERNET_LIB);
-
   initialiseThermocouples(mcp, num_mcp, mcp_addr);
-
-  initialiseModbus(modbus_server, inputRegAddress, numInputRegs, holdingRegAddress, numHoldRegs);
-
-    // PID mode
-  myPID.SetMode(AUTOMATIC);
+  initialiseModbus(modbus_server, numInputRegs, numHoldRegs, numCoils);
 
   gpio.init();
-  gpio.pinMode(0x400b, OUTPUT); // PIN_Q0_0
-  gpio.pinMode(0x400a, OUTPUT); // PIN_Q0_1
-  gpio.pinMode(0x400d, OUTPUT); // required?
+  gpio.pinMode(Q0_0, OUTPUT); // PIN_Q0_0
+  gpio.pinMode(Q0_1, OUTPUT); // PIN_Q0_1
+  gpio.pinMode(A0_5, OUTPUT); // required?
 
   xTaskCreatePinnedToCore(
     Core0PIDTask,  /* Task function */
@@ -89,8 +111,17 @@ void setup()
     NULL,     /* Handle        */
     0        /* Pin to core 1 */
   );
+
+  // pidController.cpp
+  PID_A.initialise(mcp[0], modbus_server, gpio);
+  PID_B.initialise(mcp[1], modbus_server, gpio);
+
+  // PID mode
+  PID_A.myPID_.SetMode(AUTOMATIC);
+  PID_B.myPID_.SetMode(AUTOMATIC);
 }
 
+// Read two MCP9600 thermocouples
 long int readThermoCouples()
 {
   // Read hot junction from each mcp
@@ -100,89 +131,80 @@ long int readThermoCouples()
     Serial.print((String)"Thermocouple reading (" + idx + "): ");
     Serial.println(thermoReadings[idx]);
   }
-  // Write both readings
+
+  // Write both readings (written to thermocouple_C, overlapping to D)
   modbus_server.writeInputRegisters(
-    inputRegAddress, (uint16_t*)(&thermoReadings), 4
+    MOD_THERMOCOUPLE_C_INP, (uint16_t*)(&thermoReadings), 4
   );
+
   // Write counter
   modbus_server.writeInputRegisters(
-    inputRegAddress+4, (uint16_t*)(&counter), 2
+    MOD_COUNTER_INP, (uint16_t*)(&counter), 2
   );
   counter++;
-  Serial.print(counter);
+  Serial.println(counter);
   return millis();
 }
 
-union ModbusFloat
-{ // This union allows two 16-bit ints to be read back as a 32-bit float
-    float value;
-    struct 
-    {
-        uint16_t low;
-        uint16_t high;
-    } registers;
-};
-
-float combineHoldingRegisters(int address)
-{ // See union ModbusFloat. Stich two ints into one float
-  uint16_t A = modbus_server.holdingRegisterRead(address);
-  uint16_t B = modbus_server.holdingRegisterRead(address+1);
-
-  ModbusFloat modbusFloat;
-  modbusFloat.registers.high = B; // little-endian
-  modbusFloat.registers.low = A;
-  return modbusFloat.value;
-}
-
-long int do_PID()
+// Calculate and write thermal gradient values
+long int thermalGradient()
 {
-  /* PID loop for one thermocouple
-  Read thermocouple, get setpoint, compute PID, handle output, write it
-  */
-  input = mcp[0].readThermocouple();
-  // Get setpoint here in case it has changed
-  setPoint = combineHoldingRegisters(holdingRegAddress);
-  myPID.Compute();
-  // Circuitry needs reversed output. Could use native PID library reverse
-  // Output is on a scale of 0-255, hence 255-output
-  output = 255 - output;
-  output = output * outputMultiplier; // Scale up to 4095
-  Serial.print("Output value: ");
-  Serial.println(output);
+  // Get temperature (K) per mm
+  float wanted = combineHoldingRegisters(modbus_server, MOD_GRADIENT_WANTED_HOLD);
+  // Get distance (mm)
+  float distance = combineHoldingRegisters(modbus_server, MOD_GRADIENT_DISTANCE_HOLD);
+  // Theoretical temperature gradient (k/mm * mm = k)
+  float theoretical = wanted * distance;
 
-  gpio.analogWrite(PWM_PIN, output); // Expanded pin, use custom library
+  // Apply values
+  float gradientModifier = theoretical/2;
+  PID_A.gradientModifier = gradientModifier;
+  PID_B.gradientModifier = -gradientModifier;
 
-  // Easier to write to/read from register with float than double. consistency
-  float pidOutput = output;
-  modbus_server.writeInputRegisters(
-    inputRegAddress+6, (uint16_t*)(&pidOutput), 2
-  );
-  return millis(); // Time since last reading
+  // Calculation of actual difference between heaters
+  float actual = fabs(PID_A.input - PID_B.input);
+
+  // Write relevant values to modbus
+  modbus_server.writeInputRegisters(MOD_GRADIENT_THEORY_INP, (uint16_t*)(&theoretical), 2);
+  modbus_server.writeInputRegisters(MOD_GRADIENT_ACTUAL_INP, (uint16_t*)(&actual), 2);
+  modbus_server.writeInputRegisters(MOD_GRADIENT_MODIFIER_INP, (uint16_t*)(&gradientModifier), 2);
+
+  return millis();
 }
 
-void check_PID_tunings()
-{ // Check if any are different, and set them if so
-  double newKp = double(combineHoldingRegisters(holdingRegAddress+2));
-  double newKi = double(combineHoldingRegisters(holdingRegAddress+4));
-  double newKd = double(combineHoldingRegisters(holdingRegAddress+6));
-  if ((newKp != Kp) || (newKi != Ki) || (newKd != Kd)) {
-    myPID.SetTunings(newKp, newKi, newKd);
-    Kp = newKp;
-    Ki = newKi;
-    Kd = newKd;
+ // Increment setPoint by an average rate per second
+long int autoSetPointControl()
+{
+  // Get rate
+  float rate = combineHoldingRegisters(modbus_server, MOD_AUTOSP_RATE_HOLD);
+
+  // Heating (1) or cooling (0)?
+  bool heating = modbus_server.coilRead(MOD_AUTOSP_HEATING_COIL);
+
+  if (!heating)
+  { 
+    // Rate should be a positive value with 'direction' determined by heating option
+    rate = -rate;
   }
+
+  // Rate is average K/s, but value depends on PID interval
+  rate = rate * (intervalPID/1000); // e.g.: 0.5 * 20/1000 = 0.01 = 50 times per second
+  PID_A.autospRate = rate;
+  PID_B.autospRate = rate;
+
+  // Get img per degree
+  float imgPerDegree = combineHoldingRegisters(modbus_server, MOD_AUTOSP_IMGDEGREE_HOLD);
+
+  // Calculate midpoint. Fabs in case B is higher temp
+  float midpoint = fabs((PID_A.input + PID_B.input) / 2);
+  modbus_server.writeInputRegisters(MOD_AUTOSP_MIDPT_INP, (uint16_t*)(&midpoint), 2);
+
+  return millis();
 }
 
-bool check_pid_enabled()
-{ // If value = 0, false
-  return modbus_server.holdingRegisterRead(holdingRegAddress+8);
-}
-
+// Client connections handled on core 1 (loop)
 void loop()
 {
-  // Client connections handled on core 1 (loop)
-  // With pinned tasks, sets off watchdog or core dumps with unhandled exception consistently
-  // Desirable to explicitly run this via pinned task but unreliable
 
   // Listen for incoming clients
   EthernetClient client = ethServer.available();
@@ -192,14 +214,12 @@ void loop()
     Serial.println("New client");
     modbus_server.accept(client);
 
-    // `while` structure is not preferable but okay as it has its own core which does not
-    // require other activity. Other options could be considered.
     while (client.connected())
     {
-      // Serial.print(".");
       // Poll for requests while client is connected
       int ret = modbus_server.poll();
-      if (ret) {
+      if (ret) 
+      {
         // Nothing needed here right now.
       }
     }
@@ -207,38 +227,36 @@ void loop()
   }
 }
 
+ // Core 0 task to handle device control
 void Core0PIDTask(void * pvParameters)
 {
-  // Core 0 task to handle PID looping
-  // Currently deals with one PID control
   Serial.print("Task 2 running on core ");
   Serial.println(xPortGetCoreID());
   delay(1000);
 
   for(;;)
   {
-    // Read thermocouples if 1000ms have elapsed
-    if ( (millis()-tRead) >= 1000 ) 
+    // Run control after its specified interval
+    if ( (millis()-tRead) >= 1000 )
     {
       tRead = readThermoCouples();
     }
 
-    // Run if enabled, period 1000ms. If not
-    if ( (millis() - tWrite) >= 1000 ) 
+    if ( (millis() - tGradient) >= intervalGradient)
     {
-      loop_PID = check_pid_enabled();
+      tGradient = thermalGradient();
+    }
 
-      if (loop_PID == true)
-      { // PID tunings checked each run
-        check_PID_tunings();
-        tWrite = do_PID();
-      }
-      else 
-      { // If no PID enabled, write max output (reversed, 0).
-        gpio.analogWrite(PWM_PIN, 4095);
-        tWrite = millis();
-      }
-      Serial.println("");
+    if ( (millis() - tAutosp) >= intervalAutosp)
+    {
+      tAutosp = autoSetPointControl();
+    }
+
+    if ( (millis() - tPID) >= intervalPID ) 
+    {
+      PID_A.run();
+      PID_B.run();
+      tPID = millis(); // Only need one timer, PIDs have same period
     }
   }
 }

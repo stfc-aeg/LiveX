@@ -1,9 +1,8 @@
 #include "initialise.h"
 
+// Run the MCP9600 default setup code. Find devices and set defaults
 void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* mcp_addr)
 {
-  // Run the MCP9600 default setup code. Find devices and set defaults
-
   // Initialise MCP9600(s)
   Serial.println("nano_mcp9600 startup");
 
@@ -12,7 +11,8 @@ void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* 
     Serial.println("\nNow considering new device.");
 
     // Find sensor
-    if (!mcp[idx].begin(mcp_addr[idx])) {
+    if (!mcp[idx].begin(mcp_addr[idx])) 
+    {
       Serial.print("Sensor not found at address 0x");
       Serial.print(mcp_addr[idx], 16);
       Serial.println("Check wiring!");
@@ -64,10 +64,9 @@ void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* 
   }
 }
 
+  // This function initialises Ethernet/ethServer and checks for hardware
 void initialiseEthernet(EthernetServer ethServer, byte* mac, byte* ip, int ethPin)
 {
-  // This function initialises Ethernet/ethServer and checks for hardware
-
   // IS ESP32 module has Ethernet SPI CS on pin 15
   Ethernet.init(ethPin);
   // Start the Ethernet connection and the server
@@ -90,10 +89,9 @@ void initialiseEthernet(EthernetServer ethServer, byte* mac, byte* ip, int ethPi
   }
 }
 
-void initialiseModbus(ModbusTCPServer& modbus_server, int inputRegAddress, int numInputRegs, int holdingRegAddress, int numHoldRegs)
+  // Modbus setup and control default enabling
+void initialiseModbus(ModbusTCPServer& modbus_server, int numInputRegs, int numHoldRegs, int numCoils)
 {
-
-  // Modbus setup
   if (!modbus_server.begin()) 
   {
     Serial.println("Failed to start Modbus TCP Server!");
@@ -101,21 +99,16 @@ void initialiseModbus(ModbusTCPServer& modbus_server, int inputRegAddress, int n
   }
 
   // Configure and intialise modbus coils/registers
-  modbus_server.configureInputRegisters(inputRegAddress, numInputRegs);
-  modbus_server.configureHoldingRegisters(holdingRegAddress, numHoldRegs);
+  // Addresses follow Modbus convention for register type: 1, 30001, 40001.
+  modbus_server.configureInputRegisters(MOD_COUNTER_INP, numInputRegs);
+  modbus_server.configureHoldingRegisters(MOD_SETPOINT_A_HOLD, numHoldRegs);
+  modbus_server.configureCoils(MOD_PID_ENABLE_A_COIL, numCoils);
 
-  // Write in default PID values to modbus
-  float pidDefaults[4] = {25, 25.1, 5.5, 0.1}; // setPoint, Kp, Ki, Kd
-  int tempHoldAddr = holdingRegAddress;
+  // Default enable values for each control
+  modbus_server.coilWrite(MOD_PID_ENABLE_A_COIL, 1);
+  modbus_server.coilWrite(MOD_PID_ENABLE_B_COIL, 1);
 
-  for(float term : pidDefaults)
-  {
-    // Registers hold 16 bits. Floats are written over two registers
-    uint16_t* elems = (uint16_t*)&term;
-    for (int i = 0; i<2; i++)
-    {
-      modbus_server.holdingRegisterWrite(tempHoldAddr+i, elems[i]);
-    }
-    tempHoldAddr = tempHoldAddr +2;
-  }
+  modbus_server.coilWrite(MOD_GRADIENT_ENABLE_COIL, 1);
+  modbus_server.coilWrite(MOD_AUTOSP_ENABLE_COIL, 1);
+  modbus_server.coilWrite(MOD_AUTOSP_HEATING_COIL, 1);
 }
