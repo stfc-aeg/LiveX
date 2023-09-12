@@ -146,7 +146,7 @@ long int readThermoCouples()
   return millis();
 }
 
-// Calculate and write thermal gradient values
+// Thermal gradient is based off of midpoint of heater setpoints and overrides them
 long int thermalGradient()
 {
   // Get temperature (K) per mm
@@ -155,19 +155,43 @@ long int thermalGradient()
   float distance = combineHoldingRegisters(modbus_server, MOD_GRADIENT_DISTANCE_HOLD);
   // Theoretical temperature gradient (k/mm * mm = k)
   float theoretical = wanted * distance;
-
-  // Apply values
   float gradientModifier = theoretical/2;
-  PID_A.gradientModifier = gradientModifier;
-  PID_B.gradientModifier = -gradientModifier;
 
-  // Calculation of actual difference between heaters
+  // Calculate midpoint and 
+  float setPointA = combineHoldingRegisters(modbus_server, MOD_SETPOINT_A_HOLD);
+  float setPointB = combineHoldingRegisters(modbus_server, MOD_SETPOINT_B_HOLD);
+  float midpoint = (setPointA + setPointB) / 2.0;
+
+  float signA, signB;
+
+  // Identify if heater is above or below midpoint to determine gradient direction
+  if (PID_A.setPoint == PID_B.setPoint)
+  {
+    // If setpoints are the same, calculations will divide by zero. Arbitrary gradient direction
+    signA = 1.0;
+    signB = -1.0;
+  }
+  else
+  {
+    // (+/-value) / value = +/-1
+    signA = (PID_A.setPoint - midpoint)/(fabs(PID_A.setPoint - midpoint));
+    signB = (PID_B.setPoint - midpoint)/(fabs(PID_B.setPoint - midpoint));
+  }
+
+  // Calculate gradient target setpoints
+  PID_A.gradientSetPoint = midpoint + (signA * gradientModifier);
+  PID_B.gradientSetPoint = midpoint + (signB * gradientModifier);
+
+  // Actual temperature difference
   float actual = fabs(PID_A.input - PID_B.input);
 
   // Write relevant values to modbus
   modbus_server.writeInputRegisters(MOD_GRADIENT_THEORY_INP, (uint16_t*)(&theoretical), 2);
   modbus_server.writeInputRegisters(MOD_GRADIENT_ACTUAL_INP, (uint16_t*)(&actual), 2);
-  modbus_server.writeInputRegisters(MOD_GRADIENT_MODIFIER_INP, (uint16_t*)(&gradientModifier), 2);
+
+  // Write gradient target setpoints for UI use
+  modbus_server.writeInputRegisters(MOD_GRADIENT_SETPOINT_A_INP, (uint16_t*)(&PID_A.gradientSetPoint), 2);
+  modbus_server.writeInputRegisters(MOD_GRADIENT_SETPOINT_B_INP, (uint16_t*)(&PID_B.gradientSetPoint), 2);
 
   return millis();
 }

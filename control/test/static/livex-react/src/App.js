@@ -65,9 +65,11 @@ function App(props) {
                   <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_a/setpoint"></EndPointFormControl>
                 </InputGroup>
                 <StatusBox as="span" type="info" label="Setpoint">
-                {(liveXEndPoint.data.gradient?.enable || false) ?
-                  liveXEndPoint.data.pid_a.setpoint + (liveXEndPoint.data.gradient?.modifier || 0)
-                : liveXEndPoint.data.pid_a?.setpoint || -1}
+                {(liveXEndPoint.data.gradient?.enable ||
+                  false) ?
+                  liveXEndPoint.data.pid_a?.gradient_setpoint || -2 :
+                  liveXEndPoint.data.pid_a?.setpoint || -1
+                }
                 </StatusBox>
               </Stack>
             </Row>
@@ -117,9 +119,11 @@ function App(props) {
                 <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_b/setpoint"></EndPointFormControl>
               </InputGroup>
               <StatusBox type="info" label="Setpoint">
-              {(liveXEndPoint.data.gradient?.enable || false) ?
-                  liveXEndPoint.data.pid_b.setpoint - (liveXEndPoint.data.gradient?.modifier || 0)
-                : liveXEndPoint.data.pid_b?.setpoint || -1}
+              {(liveXEndPoint.data.gradient?.enable ||
+                  false) ?
+                  liveXEndPoint.data.pid_b?.gradient_setpoint || -2 :
+                  liveXEndPoint.data.pid_b?.setpoint || -1
+                }
               </StatusBox>
             </Col>
             <Col>

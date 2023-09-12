@@ -61,12 +61,12 @@ void PIDController::do_PID()
     input = mcp_.readThermocouple();
 
     // Setpoint handling
-    baseSetPoint = combineHoldingRegisters(modbus_server_, addr_.modSetPointHold);
-    setPoint = baseSetPoint;
-    // Apply thermal gradient modifier if enabled
+    setPoint = combineHoldingRegisters(modbus_server_, addr_.modSetPointHold);
+
+    // Override with gradient setpoint if enabled
     if (gradientEnabled)
     {
-        setPoint += gradientModifier;
+        setPoint = gradientSetPoint;
     }
 
     // Output calculation and processing
@@ -97,7 +97,7 @@ void PIDController::do_PID()
     // Increase setpoint if ASPC is enabled
     if (autospEnabled)
     {
-        floatToHoldingRegisters(modbus_server_, addr_.modSetPointHold, (baseSetPoint+autospRate));
+        floatToHoldingRegisters(modbus_server_, addr_.modSetPointHold, (setPoint+autospRate));
     }
 }
 

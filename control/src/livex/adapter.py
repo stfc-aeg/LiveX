@@ -175,6 +175,7 @@ class LiveX():
         self.pid_ki_a       = self.read_decode_holding_reg(modAddr.pid_ki_a_hold)
         self.pid_kd_a       = self.read_decode_holding_reg(modAddr.pid_kd_a_hold)
         self.pid_output_a   = self.read_decode_input_reg(modAddr.pid_output_a_inp)
+        self.pid_gradient_setpoint_a = self.read_decode_input_reg(modAddr.gradient_setpoint_a_inp)
 
         self.pid_enable_b   = bool(self.read_coil(modAddr.pid_enable_b_coil))
         self.pid_setpoint_b = self.read_decode_holding_reg(modAddr.pid_setpoint_b_hold)
@@ -182,6 +183,7 @@ class LiveX():
         self.pid_ki_b       = self.read_decode_holding_reg(modAddr.pid_ki_b_hold)
         self.pid_kd_b       = self.read_decode_holding_reg(modAddr.pid_kd_b_hold)
         self.pid_output_b   = self.read_decode_input_reg(modAddr.pid_output_b_inp)
+        self.pid_gradient_setpoint_b = self.read_decode_input_reg(modAddr.gradient_setpoint_b_inp)
 
         # Gradient (gradient) and Auto set point (autosp) variables
         self.gradient_enable      = bool(self.read_coil(modAddr.gradient_enable_coil))
@@ -189,7 +191,6 @@ class LiveX():
         self.gradient_distance    = self.read_decode_holding_reg(modAddr.gradient_distance_hold)
         self.gradient_actual      = self.read_decode_input_reg(modAddr.gradient_actual_inp)
         self.gradient_theoretical = self.read_decode_input_reg(modAddr.gradient_theory_inp)
-        self.gradient_modifier    = self.read_decode_input_reg(modAddr.gradient_modifier_inp)
 
         self.autosp_enable    = self.read_coil(modAddr.autosp_enable_coil)
         self.autosp_heating   = self.read_coil(modAddr.autosp_heating_coil, asInt=True)  # Not bool, used as index
@@ -222,6 +223,11 @@ class LiveX():
             'setpoint': (lambda: self.pid_setpoint_a, partial(
                 self.set_pid_setpoint, setpoint="pid_setpoint_a", address=modAddr.pid_setpoint_a_hold
             )),
+            'gradient_setpoint': (lambda: self.pid_gradient_setpoint_a, partial(
+                self.set_pid_gradient_setpoint,
+                setpoint="pid_gradient_setpoint_a",
+                address=modAddr.gradient_setpoint_a_inp
+            )),
             'proportional': (lambda: self.pid_kp_a, partial(
                 self.set_pid_proportional, Kp="pid_kp_a", address=modAddr.pid_kp_a_hold
             )),
@@ -242,6 +248,11 @@ class LiveX():
             'setpoint': (lambda: self.pid_setpoint_b, partial(
                 self.set_pid_setpoint, setpoint="pid_setpoint_b", address=modAddr.pid_setpoint_b_hold
             )),
+            'gradient_setpoint': (lambda: self.pid_gradient_setpoint_b, partial(
+                self.set_pid_gradient_setpoint,
+                setpoint="pid_gradient_setpoint_b",
+                address=modAddr.gradient_setpoint_b_inp
+            )),
             'proportional': (lambda: self.pid_kp_b, partial(
                 self.set_pid_proportional, Kp="pid_kp_b", address=modAddr.pid_kp_b_hold)
             ),
@@ -261,7 +272,6 @@ class LiveX():
             'distance': (lambda: self.gradient_distance, self.set_gradient_distance),
             'actual': (lambda: self.gradient_actual, None),
             'theoretical': (lambda: self.gradient_theoretical, None),
-            'modifier': (lambda: self.gradient_modifier, None)
         })
 
         autosp = ParameterTree({
@@ -354,6 +364,12 @@ class LiveX():
         """Set the setpoint of PID A or B.
         :param setpoint: "pid_setpoint_a" or "pid_setpoint_b"
         :param address: address to write setpoint to
+        """
+        setattr(self, setpoint, value)
+        response = self.write_modbus_float(value, address)
+
+    def set_pid_gradient_setpoint(self, value, setpoint, address):
+        """
         """
         setattr(self, setpoint, value)
         response = self.write_modbus_float(value, address)
@@ -535,7 +551,9 @@ class LiveX():
 
             self.gradient_actual      = self.read_decode_input_reg(modAddr.gradient_actual_inp)
             self.gradient_theoretical = self.read_decode_input_reg(modAddr.gradient_theory_inp)
-            self.gradient_modifier    = self.read_decode_input_reg(modAddr.gradient_modifier_inp)
+
+            self.pid_gradient_setpoint_a = self.read_decode_input_reg(modAddr.gradient_setpoint_a_inp)
+            self.pid_gradient_setpoint_b = self.read_decode_input_reg(modAddr.gradient_setpoint_b_inp)
 
             self.autosp_midpt = self.read_decode_input_reg(modAddr.autosp_midpt_inp)
 
