@@ -4,7 +4,7 @@
 void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* mcp_addr)
 {
   // Initialise MCP9600(s)
-  Serial.println("nano_mcp9600 startup");
+  Serial.println("mcp9600 startup");
 
   for (int idx = 0; idx < num_mcp; idx++)
   {

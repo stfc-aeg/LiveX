@@ -29,10 +29,10 @@ class PIDController
 
     PIDController(PIDAddresses addr);
 
-    void initialise(Adafruit_MCP9600& mcp, ModbusTCPServer& modbus_server, ExpandedGpio& gpio);
+    void initialise(ModbusTCPServer& modbus_server, ExpandedGpio& gpio);
 
-    void run();
-    void do_PID();
+    void run(double reading);
+    void do_PID(double reading);
     void check_PID_tunings();
     bool check_PID_enabled();
 };

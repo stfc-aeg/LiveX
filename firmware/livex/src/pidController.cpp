@@ -16,10 +16,9 @@ PIDController::PIDController(PIDAddresses addr) : myPID_(&input, &output, &setPo
 }
 
 // Provide controller with thermocouple, modbus, gpio, and write defaults
-void PIDController::initialise(Adafruit_MCP9600& mcp, ModbusTCPServer& modbus_server, ExpandedGpio& gpio)
+void PIDController::initialise(ModbusTCPServer& modbus_server, ExpandedGpio& gpio)
 {
     modbus_server_ = modbus_server;
-    mcp_ = mcp;
     gpio_ = gpio;
 
     // Write variables to modbus
@@ -52,13 +51,13 @@ bool PIDController::check_PID_enabled()
 }
 
 // Get input and setpoint, do PID computation, and save output to a register
-void PIDController::do_PID()
+void PIDController::do_PID(double reading)
 {
     // Get enable checks
     bool gradientEnabled = modbus_server_.coilRead(MOD_GRADIENT_ENABLE_COIL);
     bool autospEnabled = modbus_server_.coilRead(MOD_AUTOSP_ENABLE_COIL);
 
-    input = mcp_.readThermocouple();
+    input = reading;
 
     // Setpoint handling
     setPoint = combineHoldingRegisters(modbus_server_, addr_.modSetPointHold);
@@ -118,13 +117,13 @@ void PIDController::check_PID_tunings()
 }
 
 // Check PID tunings and run PID computation. Return current time
-void PIDController::run()
+void PIDController::run(double reading)
 {
     enabled = check_PID_enabled();
     if (enabled)
     {
       check_PID_tunings();
-      return do_PID();
+      do_PID(reading);
     }
     else
     {
