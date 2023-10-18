@@ -14,10 +14,12 @@ import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import Stack from 'react-bootstrap/Stack';
+import Button from 'react-bootstrap/Button';
 
 const EndpointDropdown = WithEndpoint(DropdownSelector);
 const EndPointToggle = WithEndpoint(ToggleSwitch);
 const EndPointFormControl = WithEndpoint(Form.Control);
+const EndPointButton = WithEndpoint(Button);
 
 function App(props) {
 
@@ -26,6 +28,10 @@ function App(props) {
   return (
     <OdinApp title="LiveX Controls" navLinks={["controls", "monitoring", "cameras"]}>
     <Container>
+      <EndPointButton endpoint={liveXEndPoint} value={true} fullpath="status/reconnect" event_type="click" >
+        Reconnect
+        {liveXEndPoint.data.status?.connected || 'cannot find'}
+      </EndPointButton>
       <TitleCard title="Upper Heater (A) Controls">
       <Container>
         <Row>
