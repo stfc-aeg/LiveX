@@ -70,6 +70,8 @@ long int tAutosp = millis(); // Auto set point control
 long int intervalPID = 1000;
 long int intervalGradient = 1000;
 long int intervalAutosp = 1000;
+long int connectionTimer;
+long int connectionTimeout = 30000;
 
 // MCP9600 setup
 Adafruit_MCP9600 mcp[] = {Adafruit_MCP9600(), Adafruit_MCP9600()};
@@ -224,7 +226,6 @@ void autoSetPointControl()
 // Client connections handled on core 1 (loop)
 void loop()
 {
-
   // Listen for incoming clients
   EthernetClient client = ethServer.available();
 
@@ -243,6 +244,17 @@ void loop()
       }
     }
     Serial.println("Client disconnected");
+    connectionTimer = millis();
+  }
+
+  // Disable heaters if no connection for 30 seconds. Checked only if no current connection.
+  long int elapsedTime = millis() - connectionTimer;
+  if (elapsedTime > connectionTimeout)
+  {
+    modbus_server.coilWrite(MOD_PID_ENABLE_A_COIL, 0);
+    modbus_server.coilWrite(MOD_PID_ENABLE_B_COIL, 0);
+    // Reset timer so writing doesn't occur every single loop
+    connectionTimer = millis();
   }
 }
 
