@@ -20,6 +20,8 @@
 #define PWM_PIN_A A0_5
 #define PWM_PIN_B A0_6 // Hypothetical second heater output pin
 
+const bool DEBUG = false;
+
 static bool eth_connected = false;
 
 EthernetServer ethServer(502);
@@ -130,8 +132,12 @@ void readThermoCouples()
   for (int idx = 0; idx < num_mcp; idx++)
   {
     thermoReadings[idx] = mcp[idx].readThermocouple();
-    Serial.print((String)"Thermocouple reading (" + idx + "): ");
-    Serial.println(thermoReadings[idx]);
+
+    if (DEBUG)
+    {
+      Serial.print((String)"Thermocouple reading (" + idx + "): ");
+      Serial.println(thermoReadings[idx]);
+    }
   }
 
   // Write both readings (written to thermocouple_C, overlapping to D)
@@ -193,6 +199,14 @@ void thermalGradient()
   // Write gradient target setpoints for UI use
   modbus_server.writeInputRegisters(MOD_GRADIENT_SETPOINT_A_INP, (uint16_t*)(&PID_A.gradientSetPoint), 2);
   modbus_server.writeInputRegisters(MOD_GRADIENT_SETPOINT_B_INP, (uint16_t*)(&PID_B.gradientSetPoint), 2);
+
+  if (DEBUG)
+  {
+    Serial.print("gradient midpoint: ");
+    Serial.println(midpoint);
+    Serial.print("gradient modifier: ");
+    Serial.println(gradientModifier);
+  }
 }
 
  // Increment setPoint by an average rate per second
@@ -221,6 +235,14 @@ void autoSetPointControl()
   // Calculate midpoint. Fabs in case B is higher temp
   float midpoint = fabs((PID_A.input + PID_B.input) / 2);
   modbus_server.writeInputRegisters(MOD_AUTOSP_MIDPT_INP, (uint16_t*)(&midpoint), 2);
+
+  if (DEBUG)
+  {
+    Serial.print("Autosp rate: ");
+    Serial.print(rate);
+    Serial.print(" | interval: ");
+    Serial.print(intervalPID/1000);
+  }
 }
 
 // Client connections handled on core 1 (loop)
