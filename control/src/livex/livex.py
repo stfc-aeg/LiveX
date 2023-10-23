@@ -137,9 +137,9 @@ class LiveX():
         status = ParameterTree({
             'odin_version': version_info['version'],
             'server_uptime': (self.get_server_uptime, None),
-            'connected_uptime': (self.connected_uptime, None),
-            'connected': (self.connected, None),
-            'reconnect': (self.reconnect, self.initialise_modbus_clients)
+            'connected_uptime': (lambda: self.connected_uptime, None),
+            'connected': (lambda: self.connected, None),
+            'reconnect': (lambda: self.reconnect, self.initialise_modbus_clients)
         })
 
         # Store all information in a parameter tree
@@ -162,8 +162,7 @@ class LiveX():
         self.client = ModbusTcpClient('192.168.0.159')
 
         self.client.connect()
-
-        logging.debug("#### SOCKET ####? %s", self.client.is_socket_open())
+        self.connected = True
 
         self.pid_a.initialise_modbus_client(self.client)
         self.pid_b.initialise_modbus_client(self.client)
