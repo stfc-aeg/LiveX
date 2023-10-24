@@ -297,9 +297,9 @@ class LiveX():
             # logging.debug("connectedness: %s", self.client.connected)
             time.sleep(self.background_task_interval)
 
-            if self.client.is_socket_open():
+            if self.connected:
 
-                logging.debug("socket is open")
+                logging.debug("Reading from Modbus")
 
                 sleep_interval = self.background_task_interval
 
@@ -313,8 +313,8 @@ class LiveX():
 
                     self.reading_counter = read_decode_input_reg(self.client, modAddr.counter_inp)
 
-                    self.pid_a.output    = 4095 - read_decode_input_reg(self.client, modAddr.pid_output_a_inp)
-                    self.pid_b.output    = 4095 - read_decode_input_reg(self.client, modAddr.pid_output_b_inp)
+                    self.pid_a.output    = read_decode_input_reg(self.client, modAddr.pid_output_a_inp)
+                    self.pid_b.output    = read_decode_input_reg(self.client, modAddr.pid_output_b_inp)
 
                     self.gradient_actual      = read_decode_input_reg(self.client, modAddr.gradient_actual_inp)
                     self.gradient_theoretical = read_decode_input_reg(self.client, modAddr.gradient_theory_inp)
@@ -328,8 +328,7 @@ class LiveX():
                     self.pid_b.setpoint = read_decode_holding_reg(self.client, modAddr.pid_setpoint_b_hold)
                 except:
                     self.client.close()
-                    logging.debug("Some Modbus error, ending connection")
-                    logging.debug("still socket? %s", self.client.is_socket_open())
+                    logging.debug("Modbus communication error, pausing reads")
                     self.connected = False
                     # self.reconnect = False
                     time.sleep(sleep_interval)
@@ -337,7 +336,7 @@ class LiveX():
                 self.background_thread_counter += 1
 
             else:
-                logging.debug("socket is not open")
+                logging.debug("Awaiting reconnection")
                 # self.connected = False
                 # logging.debug("No Modbus connection. Waiting.")
 

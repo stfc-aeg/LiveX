@@ -273,6 +273,7 @@ void loop()
   long int elapsedTime = millis() - connectionTimer;
   if (elapsedTime > connectionTimeout)
   {
+    Serial.println("Timeout: no connection. Disabling PID behaviour (write 0).");
     modbus_server.coilWrite(MOD_PID_ENABLE_A_COIL, 0);
     modbus_server.coilWrite(MOD_PID_ENABLE_B_COIL, 0);
     // Reset timer so writing doesn't occur every single loop

@@ -71,14 +71,11 @@ void PIDController::do_PID(double reading)
     // Output calculation and processing
     myPID_.Compute();
 
-    // Current circuitry requires reversed output. Not permanent
-    output = 255 - output; // PID library output is on a scale of 0-255
-    output = output * outputMultiplier; // Scale up to 4095
+    output = output * outputMultiplier; // PID library output is on a scale of 0-255. Scale to 4095
 
     gpio_.analogWrite(addr_.outputPin, output);
 
     // Write relevant outputs
-
     // For consistency and ease of read/write, floats are preferable to doubles
     float thermoReading = static_cast<float>(input);
 
@@ -127,6 +124,6 @@ void PIDController::run(double reading)
     }
     else
     {
-      gpio_.analogWrite(addr_.outputPin, 4095);
+      gpio_.analogWrite(addr_.outputPin, 0);
     }
 }
