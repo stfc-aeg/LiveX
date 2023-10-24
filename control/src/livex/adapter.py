@@ -22,8 +22,8 @@ from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types,
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from odin._version import get_versions
 
-from src.livex.modbusAddresses import modAddr
-from src.livex.livex import LiveX, LiveXError
+from livex.modbusAddresses import modAddr
+from livex.livex import LiveX, LiveXError
 
 import csv
 

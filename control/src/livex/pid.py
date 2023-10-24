@@ -16,10 +16,9 @@ from odin._version import get_versions
 from pymodbus.client import ModbusTcpClient
 from pymodbus.payload import BinaryPayloadDecoder
 from pymodbus.payload import BinaryPayloadBuilder
-from pymodbus.constants import Endian
 
-from src.livex.modbusAddresses import modAddr
-from src.livex.util import read_coil, read_decode_input_reg, read_decode_holding_reg, write_modbus_float
+from livex.modbusAddresses import modAddr
+from livex.util import read_coil, read_decode_input_reg, read_decode_holding_reg, write_modbus_float
 
 class PID():
 
