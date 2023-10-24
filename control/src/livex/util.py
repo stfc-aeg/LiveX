@@ -28,7 +28,7 @@ def read_decode_input_reg(client, address):
     """
     response = client.read_input_registers(address, count=2, slave=1)
     decoder = BinaryPayloadDecoder.fromRegisters(
-        response.registers, wordorder=Endian.Little, byteorder=Endian.Big
+        response.registers, wordorder=Endian.LITTLE, byteorder=Endian.BIG
     )
     value = decoder.decode_32bit_float()
     return value
@@ -39,12 +39,12 @@ def read_decode_holding_reg(client, address):
     """
     response = client.read_holding_registers(address, count=2, slave=1)
     decoder = BinaryPayloadDecoder.fromRegisters(
-        response.registers, wordorder=Endian.Little, byteorder=Endian.Big
+        response.registers, wordorder=Endian.LITTLE, byteorder=Endian.BIG
     )
     value = decoder.decode_32bit_float()
     return value
 
-def write_modbus_float(client, value, address, byteorder=Endian.Big, wordorder=Endian.Little):
+def write_modbus_float(client, value, address, byteorder=Endian.BIG, wordorder=Endian.LITTLE):
     """Write a floating point value to a modbus address (written across two registers).
     :param client: ModbusTcpClient
     :param value: float to be written.
