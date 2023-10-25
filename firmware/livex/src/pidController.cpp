@@ -71,6 +71,7 @@ void PIDController::do_PID(double reading)
     // Output calculation and processing
     myPID_.Compute();
 
+    // output = 255 - output;
     output = output * outputMultiplier; // PID library output is on a scale of 0-255. Scale to 4095
 
     gpio_.analogWrite(addr_.outputPin, output);
