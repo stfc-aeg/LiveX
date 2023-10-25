@@ -8,6 +8,9 @@ from pymodbus.payload import BinaryPayloadDecoder
 from pymodbus.payload import BinaryPayloadBuilder
 from pymodbus.constants import Endian
 
+import logging
+import math
+
 class LiveXError(Exception):
     """Simple exception class to wrap lower-level exceptions."""
     pass
@@ -31,6 +34,10 @@ def read_decode_input_reg(client, address):
         response.registers, wordorder=Endian.LITTLE, byteorder=Endian.BIG
     )
     value = decoder.decode_32bit_float()
+
+    if math.isnan(value):  # Error is hard to reproduce but good to account for
+        logging.debug("ISNAN")
+        return -1.0
     return value
 
 def read_decode_holding_reg(client, address):
@@ -42,6 +49,10 @@ def read_decode_holding_reg(client, address):
         response.registers, wordorder=Endian.LITTLE, byteorder=Endian.BIG
     )
     value = decoder.decode_32bit_float()
+
+    if math.isnan(value):
+        logging.debug("ISNAN")
+        return -1.0
     return value
 
 def write_modbus_float(client, value, address, byteorder=Endian.BIG, wordorder=Endian.LITTLE):
