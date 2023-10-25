@@ -166,6 +166,13 @@ function App(props) {
                 <InputGroup.Text>Distance (mm)</InputGroup.Text>
                 <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="gradient/distance" disabled={connectedPuttingDisable}></EndPointFormControl>
               </InputGroup>
+              High: 
+              <EndpointDropdown endpoint={liveXEndPoint} event_type="select" fullpath="gradient/high_heater" buttonText={liveXEndPoint.data.gradient?.high_heater_options[liveXEndPoint.data.gradient.high_heater] || "Unknown"} disabled={connectedPuttingDisable}>
+              {liveXEndPoint.data.gradient?.high_heater_options ? liveXEndPoint.data.gradient.high_heater_options.map(
+              (selection, index) => (
+              <Dropdown.Item eventKey={index} key={index}>{selection}</Dropdown.Item>
+              )) : <></> }
+              </EndpointDropdown>
             </Col>
           </Row>
         </Container>

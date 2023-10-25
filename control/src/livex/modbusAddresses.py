@@ -16,6 +16,7 @@ class modAddr():
     autosp_heating_coil  = 5
     motor_enable_coil    = 6
     motor_direction_coil = 7
+    gradient_high_coil   = 8
 
     # Input registers (read-only, from device) start at 30001-39999
     counter_inp      = 30001

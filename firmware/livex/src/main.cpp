@@ -171,18 +171,18 @@ void thermalGradient()
 
   float signA, signB;
 
-  // Identify if heater is above or below midpoint to determine gradient direction
-  if (PID_A.setPoint == PID_B.setPoint)
+  // High heater is A (0) or B (1)?
+  bool high = modbus_server.coilRead(MOD_GRADIENT_HIGH_COIL);
+
+  if (!high)  // 0 = A = false
   {
-    // If setpoints are the same, calculations will divide by zero. Arbitrary gradient direction
     signA = 1.0;
     signB = -1.0;
   }
-  else
+  else if (high)  // 1 = B = true
   {
-    // (+/-value) / value = +/-1
-    signA = (PID_A.setPoint - midpoint)/(fabs(PID_A.setPoint - midpoint));
-    signB = (PID_B.setPoint - midpoint)/(fabs(PID_B.setPoint - midpoint));
+    signA = -1.0;
+    signB = 1.0;
   }
 
   // Calculate gradient target setpoints

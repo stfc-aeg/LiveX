@@ -111,4 +111,6 @@ void initialiseModbus(ModbusTCPServer& modbus_server, int numInputRegs, int numH
   modbus_server.coilWrite(MOD_GRADIENT_ENABLE_COIL, 0);
   modbus_server.coilWrite(MOD_AUTOSP_ENABLE_COIL, 0);
   modbus_server.coilWrite(MOD_AUTOSP_HEATING_COIL, 1);
+
+  modbus_server.coilWrite(MOD_GRADIENT_HIGH_COIL, 0);
 }

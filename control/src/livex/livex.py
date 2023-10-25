@@ -84,11 +84,13 @@ class LiveX():
         self.pid_b = PID(self.client, self.addresses_b)
 
         # Gradient (gradient) and Auto set point (autosp) variables
-        self.gradient_enable      = bool(read_coil(self.client, modAddr.gradient_enable_coil))
-        self.gradient_wanted      = read_decode_holding_reg(self.client, modAddr.gradient_wanted_hold)
-        self.gradient_distance    = read_decode_holding_reg(self.client, modAddr.gradient_distance_hold)
-        self.gradient_actual      = read_decode_input_reg(self.client, modAddr.gradient_actual_inp)
-        self.gradient_theoretical = read_decode_input_reg(self.client, modAddr.gradient_theory_inp)
+        self.gradient_enable       = bool(read_coil(self.client, modAddr.gradient_enable_coil))
+        self.gradient_wanted       = read_decode_holding_reg(self.client, modAddr.gradient_wanted_hold)
+        self.gradient_distance     = read_decode_holding_reg(self.client, modAddr.gradient_distance_hold)
+        self.gradient_actual       = read_decode_input_reg(self.client, modAddr.gradient_actual_inp)
+        self.gradient_theoretical  = read_decode_input_reg(self.client, modAddr.gradient_theory_inp)
+        self.gradient_high         = read_coil(self.client, modAddr.gradient_high_coil, asInt=True)  # Not bool, used as index
+        self.gradient_high_options = ["A", "B"]
 
         self.autosp_enable    = read_coil(self.client, modAddr.autosp_enable_coil)
         self.autosp_heating   = read_coil(self.client, modAddr.autosp_heating_coil, asInt=True)  # Not bool, used as index
@@ -115,6 +117,8 @@ class LiveX():
             'distance': (lambda: self.gradient_distance, self.set_gradient_distance),
             'actual': (lambda: self.gradient_actual, None),
             'theoretical': (lambda: self.gradient_theoretical, None),
+            'high_heater': (lambda: self.gradient_high, self.set_gradient_high),
+            'high_heater_options': (lambda: self.gradient_high_options, None)
         })
 
         autosp = ParameterTree({
@@ -237,6 +241,15 @@ class LiveX():
             self.client.write_coil(modAddr.autosp_heating_coil, 1, slave=1)
         else:      # 0, cooling
             self.client.write_coil(modAddr.autosp_heating_coil, 0, slave=1)
+
+    def set_gradient_high(self, value):
+        """Set the boolean for thermal gradient high heater."""
+        self.gradient_high = value
+
+        if value:  # 1, heater B
+            self.client.write_coil(modAddr.gradient_high_coil, 1, slave=1)
+        else:
+            self.client.write_coil(modAddr.gradient_high_coil, 0, slave=1)
 
     def set_autosp_rate(self, value):
         """Set the rate value for the auto set point control."""
