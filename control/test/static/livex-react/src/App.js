@@ -14,24 +14,33 @@ import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import Stack from 'react-bootstrap/Stack';
+import Button from 'react-bootstrap/Button';
 
 const EndpointDropdown = WithEndpoint(DropdownSelector);
 const EndPointToggle = WithEndpoint(ToggleSwitch);
 const EndPointFormControl = WithEndpoint(Form.Control);
+const EndPointButton = WithEndpoint(Button);
 
 function App(props) {
 
   const liveXEndPoint = useAdapterEndpoint('livex', 'http://localhost:8888', 1000);
+  // Disable if NOT connected or if putting. Workaround for odin-react not treating manual disable tags as OR
+  const connectedPuttingDisable = (!(liveXEndPoint.data.status?.connected || false)) || (liveXEndPoint.loading == "putting")
 
   return (
     <OdinApp title="LiveX Controls" navLinks={["controls", "monitoring", "cameras"]}>
     <Container>
-      <TitleCard title="Upper Heater (A) Controls">
+      <EndPointButton endpoint={liveXEndPoint} value={true} fullpath="status/reconnect" event_type="click" 
+      disabled={!connectedPuttingDisable}>
+        {liveXEndPoint.data.status?.connected ? 'Connected' : 'Reconnect'}
+      </EndPointButton>
+
+      <TitleCard title="Upper Heater (A) Controls" type="warning">
       <Container>
         <Row>
           <Col xs={8}>
             <EndPointToggle endpoint={liveXEndPoint} fullpath="pid_a/enable" event_type="click"
-            checked={liveXEndPoint.data.pid_a?.enable || false} label="Enable">
+            checked={liveXEndPoint.data.pid_a?.enable || false} label="Enable" disabled={connectedPuttingDisable}>
             </EndPointToggle>
           </Col>
           <Col>
@@ -44,17 +53,17 @@ function App(props) {
           <Col xs={4}>
             <InputGroup>
               <InputGroup.Text>Proportional</InputGroup.Text>
-              <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_a/proportional"></EndPointFormControl>
+              <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_a/proportional" disabled={connectedPuttingDisable}></EndPointFormControl>
             </InputGroup>
 
             <InputGroup>
               <InputGroup.Text>Integral</InputGroup.Text>
-              <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_a/integral"></EndPointFormControl>
+              <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_a/integral" disabled={connectedPuttingDisable}></EndPointFormControl>
             </InputGroup>
 
             <InputGroup>
               <InputGroup.Text>Derivative</InputGroup.Text>
-              <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_a/derivative"></EndPointFormControl>
+              <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_a/derivative" disabled={connectedPuttingDisable}></EndPointFormControl>
             </InputGroup>
           </Col>
           <Col>
@@ -62,12 +71,14 @@ function App(props) {
               <Stack>
                 <InputGroup>
                   <InputGroup.Text>Set Pt.</InputGroup.Text>
-                  <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_a/setpoint"></EndPointFormControl>
+                  <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_a/setpoint" disabled={connectedPuttingDisable}></EndPointFormControl>
                 </InputGroup>
                 <StatusBox as="span" type="info" label="Setpoint">
-                {(liveXEndPoint.data.gradient?.enable || false) ?
-                  liveXEndPoint.data.pid_a.setpoint + (liveXEndPoint.data.gradient?.modifier || 0)
-                : liveXEndPoint.data.pid_a?.setpoint || -1}
+                {(liveXEndPoint.data.gradient?.enable ||
+                  false) ?
+                  liveXEndPoint.data.pid_a?.gradient_setpoint || -2 :
+                  liveXEndPoint.data.pid_a?.setpoint || -1
+                }
                 </StatusBox>
               </Stack>
             </Row>
@@ -86,7 +97,7 @@ function App(props) {
           <Row>
             <Col xs={8}>
               <EndPointToggle endpoint={liveXEndPoint} fullpath="pid_b/enable" event_type="click"
-                checked={liveXEndPoint.data.pid_b?.enable || false} label="Enable">
+                checked={liveXEndPoint.data.pid_b?.enable || false} label="Enable" disabled={connectedPuttingDisable}>
               </EndPointToggle>
             </Col>
             <Col>
@@ -98,28 +109,30 @@ function App(props) {
             <Col xs={4}>
               <InputGroup>
                 <InputGroup.Text>Proportional Term</InputGroup.Text>
-                <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_b/proportional"></EndPointFormControl>
+                <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_b/proportional" disabled={connectedPuttingDisable}></EndPointFormControl>
               </InputGroup>
 
               <InputGroup>
                 <InputGroup.Text>Integral Term</InputGroup.Text>
-                <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_b/integral"></EndPointFormControl>
+                <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_b/integral" disabled={connectedPuttingDisable}></EndPointFormControl>
               </InputGroup>
 
               <InputGroup>
                 <InputGroup.Text>Derivative Term</InputGroup.Text>
-                <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_b/derivative"></EndPointFormControl>
+                <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_b/derivative" disabled={connectedPuttingDisable}></EndPointFormControl>
               </InputGroup>
             </Col>
             <Col>
               <InputGroup>
                 <InputGroup.Text>Set Pt.</InputGroup.Text>
-                <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_b/setpoint"></EndPointFormControl>
+                <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="pid_b/setpoint" disabled={connectedPuttingDisable}></EndPointFormControl>
               </InputGroup>
               <StatusBox type="info" label="Setpoint">
-              {(liveXEndPoint.data.gradient?.enable || false) ?
-                  liveXEndPoint.data.pid_b.setpoint - (liveXEndPoint.data.gradient?.modifier || 0)
-                : liveXEndPoint.data.pid_b?.setpoint || -1}
+              {(liveXEndPoint.data.gradient?.enable ||
+                  false) ?
+                  liveXEndPoint.data.pid_b?.gradient_setpoint || -2 :
+                  liveXEndPoint.data.pid_b?.setpoint || -1
+                }
               </StatusBox>
             </Col>
             <Col>
@@ -135,7 +148,7 @@ function App(props) {
           <Row>
             <Col>
               <EndPointToggle endpoint={liveXEndPoint} fullpath="gradient/enable" event_type="click"
-          checked={liveXEndPoint.data.gradient?.enable || false} label="Enable"></EndPointToggle>
+          checked={liveXEndPoint.data.gradient?.enable || false} label="Enable" disabled={connectedPuttingDisable}></EndPointToggle>
             </Col>
           </Row>
           <Row>
@@ -146,13 +159,20 @@ function App(props) {
             <Col>
               <InputGroup>
                 <InputGroup.Text>Wanted (K/mm)</InputGroup.Text>
-                <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="gradient/wanted"></EndPointFormControl>
+                <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="gradient/wanted" disabled={connectedPuttingDisable}></EndPointFormControl>
               </InputGroup>
         
               <InputGroup>
                 <InputGroup.Text>Distance (mm)</InputGroup.Text>
-                <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="gradient/distance"></EndPointFormControl>
+                <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="gradient/distance" disabled={connectedPuttingDisable}></EndPointFormControl>
               </InputGroup>
+              High: 
+              <EndpointDropdown endpoint={liveXEndPoint} event_type="select" fullpath="gradient/high_heater" buttonText={liveXEndPoint.data.gradient?.high_heater_options[liveXEndPoint.data.gradient.high_heater] || "Unknown"} disabled={connectedPuttingDisable}>
+              {liveXEndPoint.data.gradient?.high_heater_options ? liveXEndPoint.data.gradient.high_heater_options.map(
+              (selection, index) => (
+              <Dropdown.Item eventKey={index} key={index}>{selection}</Dropdown.Item>
+              )) : <></> }
+              </EndpointDropdown>
             </Col>
           </Row>
         </Container>
@@ -163,7 +183,7 @@ function App(props) {
           <Row>
             <Col>
               <EndPointToggle endpoint={liveXEndPoint} fullpath="autosp/enable" event_type="click" 
-                checked={liveXEndPoint.data.autosp?.enable || false} label="Enable">
+                checked={liveXEndPoint.data.autosp?.enable || false} label="Enable" disabled={connectedPuttingDisable}>
               </EndPointToggle>
             </Col>
           </Row>
@@ -173,7 +193,7 @@ function App(props) {
               </StatusBox>
             </Col>
             <Col>
-              <EndpointDropdown endpoint={liveXEndPoint} event_type="select" fullpath="autosp/heating" buttonText={liveXEndPoint.data.autosp?.heating_options[liveXEndPoint.data.autosp.heating] || "Unknown"}>
+              <EndpointDropdown endpoint={liveXEndPoint} event_type="select" fullpath="autosp/heating" buttonText={liveXEndPoint.data.autosp?.heating_options[liveXEndPoint.data.autosp.heating] || "Unknown"} disabled={connectedPuttingDisable}>
               {liveXEndPoint.data.autosp?.heating_options ? liveXEndPoint.data.autosp.heating_options.map(
               (selection, index) => (
               <Dropdown.Item eventKey={index} key={index}>{selection}</Dropdown.Item>
@@ -185,7 +205,7 @@ function App(props) {
                 <InputGroup.Text>
                    Rate (K/s)
                 </InputGroup.Text>
-                <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="autosp/rate"></EndPointFormControl>
+                <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="autosp/rate" disabled={connectedPuttingDisable}></EndPointFormControl>
               </InputGroup>
             </Col>
           </Row>
@@ -195,7 +215,7 @@ function App(props) {
                 <InputGroup.Text>
                   Img Aquisition Per Degree (Img/K)
                 </InputGroup.Text>
-                <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="autosp/img_per_degree"></EndPointFormControl>
+                <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="autosp/img_per_degree" disabled={connectedPuttingDisable}></EndPointFormControl>
               </InputGroup>
             </Col>
           </Row>

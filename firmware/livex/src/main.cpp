@@ -20,6 +20,8 @@
 #define PWM_PIN_A A0_5
 #define PWM_PIN_B A0_6 // Hypothetical second heater output pin
 
+const bool DEBUG = false;
+
 static bool eth_connected = false;
 
 EthernetServer ethServer(502);
@@ -70,6 +72,8 @@ long int tAutosp = millis(); // Auto set point control
 long int intervalPID = 1000;
 long int intervalGradient = 1000;
 long int intervalAutosp = 1000;
+long int connectionTimer;
+long int connectionTimeout = 30000;
 
 // MCP9600 setup
 Adafruit_MCP9600 mcp[] = {Adafruit_MCP9600(), Adafruit_MCP9600()};
@@ -113,8 +117,8 @@ void setup()
   );
 
   // pidController.cpp
-  PID_A.initialise(mcp[0], modbus_server, gpio);
-  PID_B.initialise(mcp[1], modbus_server, gpio);
+  PID_A.initialise(modbus_server, gpio);
+  PID_B.initialise(modbus_server, gpio);
 
   // PID mode
   PID_A.myPID_.SetMode(AUTOMATIC);
@@ -122,14 +126,18 @@ void setup()
 }
 
 // Read two MCP9600 thermocouples
-long int readThermoCouples()
+void readThermoCouples()
 {
   // Read hot junction from each mcp
   for (int idx = 0; idx < num_mcp; idx++)
   {
     thermoReadings[idx] = mcp[idx].readThermocouple();
-    Serial.print((String)"Thermocouple reading (" + idx + "): ");
-    Serial.println(thermoReadings[idx]);
+
+    if (DEBUG)
+    {
+      Serial.print((String)"Thermocouple reading (" + idx + "): ");
+      Serial.println(thermoReadings[idx]);
+    }
   }
 
   // Write both readings (written to thermocouple_C, overlapping to D)
@@ -143,11 +151,10 @@ long int readThermoCouples()
   );
   counter++;
   Serial.println(counter);
-  return millis();
 }
 
-// Calculate and write thermal gradient values
-long int thermalGradient()
+// Thermal gradient is based off of midpoint of heater setpoints and overrides them
+void thermalGradient()
 {
   // Get temperature (K) per mm
   float wanted = combineHoldingRegisters(modbus_server, MOD_GRADIENT_WANTED_HOLD);
@@ -155,25 +162,55 @@ long int thermalGradient()
   float distance = combineHoldingRegisters(modbus_server, MOD_GRADIENT_DISTANCE_HOLD);
   // Theoretical temperature gradient (k/mm * mm = k)
   float theoretical = wanted * distance;
-
-  // Apply values
   float gradientModifier = theoretical/2;
-  PID_A.gradientModifier = gradientModifier;
-  PID_B.gradientModifier = -gradientModifier;
 
-  // Calculation of actual difference between heaters
+  // Calculate midpoint and 
+  float setPointA = combineHoldingRegisters(modbus_server, MOD_SETPOINT_A_HOLD);
+  float setPointB = combineHoldingRegisters(modbus_server, MOD_SETPOINT_B_HOLD);
+  float midpoint = (setPointA + setPointB) / 2.0;
+
+  float signA, signB;
+
+  // High heater is A (0) or B (1)?
+  bool high = modbus_server.coilRead(MOD_GRADIENT_HIGH_COIL);
+
+  if (!high)  // 0 = A = false
+  {
+    signA = 1.0;
+    signB = -1.0;
+  }
+  else if (high)  // 1 = B = true
+  {
+    signA = -1.0;
+    signB = 1.0;
+  }
+
+  // Calculate gradient target setpoints
+  PID_A.gradientSetPoint = midpoint + (signA * gradientModifier);
+  PID_B.gradientSetPoint = midpoint + (signB * gradientModifier);
+
+  // Actual temperature difference
   float actual = fabs(PID_A.input - PID_B.input);
 
   // Write relevant values to modbus
   modbus_server.writeInputRegisters(MOD_GRADIENT_THEORY_INP, (uint16_t*)(&theoretical), 2);
   modbus_server.writeInputRegisters(MOD_GRADIENT_ACTUAL_INP, (uint16_t*)(&actual), 2);
-  modbus_server.writeInputRegisters(MOD_GRADIENT_MODIFIER_INP, (uint16_t*)(&gradientModifier), 2);
 
-  return millis();
+  // Write gradient target setpoints for UI use
+  modbus_server.writeInputRegisters(MOD_GRADIENT_SETPOINT_A_INP, (uint16_t*)(&PID_A.gradientSetPoint), 2);
+  modbus_server.writeInputRegisters(MOD_GRADIENT_SETPOINT_B_INP, (uint16_t*)(&PID_B.gradientSetPoint), 2);
+
+  if (DEBUG)
+  {
+    Serial.print("gradient midpoint: ");
+    Serial.println(midpoint);
+    Serial.print("gradient modifier: ");
+    Serial.println(gradientModifier);
+  }
 }
 
  // Increment setPoint by an average rate per second
-long int autoSetPointControl()
+void autoSetPointControl()
 {
   // Get rate
   float rate = combineHoldingRegisters(modbus_server, MOD_AUTOSP_RATE_HOLD);
@@ -188,7 +225,7 @@ long int autoSetPointControl()
   }
 
   // Rate is average K/s, but value depends on PID interval
-  rate = rate * (intervalPID/1000); // e.g.: 0.5 * 20/1000 = 0.01 = 50 times per second
+  rate = rate * (static_cast<float>(intervalPID)/1000); // e.g.: 0.5 * 20/1000 = 0.01 = 50 times per second
   PID_A.autospRate = rate;
   PID_B.autospRate = rate;
 
@@ -199,13 +236,18 @@ long int autoSetPointControl()
   float midpoint = fabs((PID_A.input + PID_B.input) / 2);
   modbus_server.writeInputRegisters(MOD_AUTOSP_MIDPT_INP, (uint16_t*)(&midpoint), 2);
 
-  return millis();
+  if (DEBUG)
+  {
+    Serial.print("Autosp rate: ");
+    Serial.print(rate);
+    Serial.print(" | interval: ");
+    Serial.print(intervalPID/1000);
+  }
 }
 
 // Client connections handled on core 1 (loop)
 void loop()
 {
-
   // Listen for incoming clients
   EthernetClient client = ethServer.available();
 
@@ -224,6 +266,18 @@ void loop()
       }
     }
     Serial.println("Client disconnected");
+    connectionTimer = millis();
+  }
+
+  // Disable heaters if no connection for 30 seconds. Checked only if no current connection.
+  long int elapsedTime = millis() - connectionTimer;
+  if (elapsedTime > connectionTimeout)
+  {
+    Serial.println("Timeout: no connection. Disabling PID behaviour (write 0).");
+    modbus_server.coilWrite(MOD_PID_ENABLE_A_COIL, 0);
+    modbus_server.coilWrite(MOD_PID_ENABLE_B_COIL, 0);
+    // Reset timer so writing doesn't occur every single loop
+    connectionTimer = millis();
   }
 }
 
@@ -236,27 +290,38 @@ void Core0PIDTask(void * pvParameters)
 
   for(;;)
   {
+     // Get 'current' time
+    long int now = millis();
+
     // Run control after its specified interval
-    if ( (millis()-tRead) >= 1000 )
+    if ( (now-tRead) >= 1000 )
     {
-      tRead = readThermoCouples();
+      tRead = millis(); // Timers read before as runtime should not influence call period
+      readThermoCouples();
     }
 
-    if ( (millis() - tGradient) >= intervalGradient)
+    if ( (now - tGradient) >= intervalGradient)
     {
-      tGradient = thermalGradient();
+      tGradient = millis();
+      thermalGradient();
     }
 
-    if ( (millis() - tAutosp) >= intervalAutosp)
+    if ( (now - tAutosp) >= intervalAutosp)
     {
-      tAutosp = autoSetPointControl();
+      tAutosp = millis();
+      autoSetPointControl();
     }
 
-    if ( (millis() - tPID) >= intervalPID ) 
+    if ( (now - tPID) >= intervalPID )
     {
-      PID_A.run();
-      PID_B.run();
       tPID = millis(); // Only need one timer, PIDs have same period
+
+      double readingA = mcp[0].readThermocouple(); // First thermocouple for A
+      double readingB = mcp[1].readThermocouple(); // Second thermocouple for B
+
+      PID_A.run(readingA);
+      PID_B.run(readingB);
+      Serial.println("");
     }
   }
 }

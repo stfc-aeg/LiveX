@@ -4,7 +4,7 @@
 void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* mcp_addr)
 {
   // Initialise MCP9600(s)
-  Serial.println("nano_mcp9600 startup");
+  Serial.println("mcp9600 startup");
 
   for (int idx = 0; idx < num_mcp; idx++)
   {
@@ -105,10 +105,12 @@ void initialiseModbus(ModbusTCPServer& modbus_server, int numInputRegs, int numH
   modbus_server.configureCoils(MOD_PID_ENABLE_A_COIL, numCoils);
 
   // Default enable values for each control
-  modbus_server.coilWrite(MOD_PID_ENABLE_A_COIL, 1);
-  modbus_server.coilWrite(MOD_PID_ENABLE_B_COIL, 1);
+  modbus_server.coilWrite(MOD_PID_ENABLE_A_COIL, 0);
+  modbus_server.coilWrite(MOD_PID_ENABLE_B_COIL, 0);
 
-  modbus_server.coilWrite(MOD_GRADIENT_ENABLE_COIL, 1);
-  modbus_server.coilWrite(MOD_AUTOSP_ENABLE_COIL, 1);
+  modbus_server.coilWrite(MOD_GRADIENT_ENABLE_COIL, 0);
+  modbus_server.coilWrite(MOD_AUTOSP_ENABLE_COIL, 0);
   modbus_server.coilWrite(MOD_AUTOSP_HEATING_COIL, 1);
+
+  modbus_server.coilWrite(MOD_GRADIENT_HIGH_COIL, 0);
 }

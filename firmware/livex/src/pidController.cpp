@@ -16,10 +16,9 @@ PIDController::PIDController(PIDAddresses addr) : myPID_(&input, &output, &setPo
 }
 
 // Provide controller with thermocouple, modbus, gpio, and write defaults
-void PIDController::initialise(Adafruit_MCP9600& mcp, ModbusTCPServer& modbus_server, ExpandedGpio& gpio)
+void PIDController::initialise(ModbusTCPServer& modbus_server, ExpandedGpio& gpio)
 {
     modbus_server_ = modbus_server;
-    mcp_ = mcp;
     gpio_ = gpio;
 
     // Write variables to modbus
@@ -52,34 +51,32 @@ bool PIDController::check_PID_enabled()
 }
 
 // Get input and setpoint, do PID computation, and save output to a register
-void PIDController::do_PID()
+void PIDController::do_PID(double reading)
 {
     // Get enable checks
     bool gradientEnabled = modbus_server_.coilRead(MOD_GRADIENT_ENABLE_COIL);
     bool autospEnabled = modbus_server_.coilRead(MOD_AUTOSP_ENABLE_COIL);
 
-    input = mcp_.readThermocouple();
+    input = reading;
 
     // Setpoint handling
-    baseSetPoint = combineHoldingRegisters(modbus_server_, addr_.modSetPointHold);
-    setPoint = baseSetPoint;
-    // Apply thermal gradient modifier if enabled
+    setPoint = combineHoldingRegisters(modbus_server_, addr_.modSetPointHold);
+
+    // Override with gradient setpoint if enabled
     if (gradientEnabled)
     {
-        setPoint += gradientModifier;
+        setPoint = gradientSetPoint;
     }
 
     // Output calculation and processing
     myPID_.Compute();
 
-    // Current circuitry requires reversed output. Not permanent
-    output = 255 - output; // PID library output is on a scale of 0-255
-    output = output * outputMultiplier; // Scale up to 4095
+    // output = 255 - output;
+    output = output * outputMultiplier; // PID library output is on a scale of 0-255. Scale to 4095
 
     gpio_.analogWrite(addr_.outputPin, output);
 
     // Write relevant outputs
-
     // For consistency and ease of read/write, floats are preferable to doubles
     float thermoReading = static_cast<float>(input);
 
@@ -97,7 +94,7 @@ void PIDController::do_PID()
     // Increase setpoint if ASPC is enabled
     if (autospEnabled)
     {
-        floatToHoldingRegisters(modbus_server_, addr_.modSetPointHold, (baseSetPoint+autospRate));
+        floatToHoldingRegisters(modbus_server_, addr_.modSetPointHold, (setPoint+autospRate));
     }
 }
 
@@ -118,16 +115,16 @@ void PIDController::check_PID_tunings()
 }
 
 // Check PID tunings and run PID computation. Return current time
-void PIDController::run()
+void PIDController::run(double reading)
 {
     enabled = check_PID_enabled();
     if (enabled)
     {
       check_PID_tunings();
-      return do_PID();
+      do_PID(reading);
     }
     else
     {
-      gpio_.analogWrite(addr_.outputPin, 4095);
+      gpio_.analogWrite(addr_.outputPin, 0);
     }
 }
