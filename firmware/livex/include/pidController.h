@@ -32,7 +32,8 @@ class PIDController
     void initialise(ModbusTCPServer& modbus_server, ExpandedGpio& gpio);
 
     void run(double reading);
-    void do_PID(double reading);
+    void do_PID();
+    void write_temperature();
     void check_PID_tunings();
     bool check_PID_enabled();
 };
