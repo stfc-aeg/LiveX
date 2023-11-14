@@ -44,7 +44,7 @@ function App(props) {
             </EndPointToggle>
           </Col>
           <Col>
-            <StatusBox type="info" label="PID OUT.">{(liveXEndPoint.data.pid_a?.output || -1).toFixed(2)}
+            <StatusBox type="info" label="PID OUT.">{(liveXEndPoint.data.pid_a?.output || 0).toFixed(2)}
             </StatusBox>
           </Col>
 
@@ -77,14 +77,14 @@ function App(props) {
                 {(liveXEndPoint.data.gradient?.enable ||
                   false) ?
                   liveXEndPoint.data.pid_a?.gradient_setpoint || -2 :
-                  liveXEndPoint.data.pid_a?.setpoint || -1
+                  liveXEndPoint.data.pid_a?.setpoint || 0
                 }
                 </StatusBox>
               </Stack>
             </Row>
           </Col>
           <Col>
-            <StatusBox type="info" label="TEMP.">{liveXEndPoint.data.pid_a?.temperature || -1}
+            <StatusBox type="info" label="TEMP.">{liveXEndPoint.data.pid_a?.temperature || 0}
             </StatusBox>
           </Col>
         </Row>
@@ -101,7 +101,7 @@ function App(props) {
               </EndPointToggle>
             </Col>
             <Col>
-              <StatusBox type="info" label="PID OUT.">{(liveXEndPoint.data.pid_b?.output || -1).toFixed(2)}
+              <StatusBox type="info" label="PID OUT.">{(liveXEndPoint.data.pid_b?.output || 0).toFixed(2)}
               </StatusBox>
             </Col>
           </Row>
@@ -131,12 +131,12 @@ function App(props) {
               {(liveXEndPoint.data.gradient?.enable ||
                   false) ?
                   liveXEndPoint.data.pid_b?.gradient_setpoint || -2 :
-                  liveXEndPoint.data.pid_b?.setpoint || -1
+                  liveXEndPoint.data.pid_b?.setpoint || 0
                 }
               </StatusBox>
             </Col>
             <Col>
-              <StatusBox type="info" label="TEMP.">{liveXEndPoint.data.pid_b?.temperature || -1}
+              <StatusBox type="info" label="TEMP.">{liveXEndPoint.data.pid_b?.temperature || 0}
               </StatusBox>
             </Col>
           </Row>
@@ -153,8 +153,8 @@ function App(props) {
           </Row>
           <Row>
             <Col>
-              <StatusBox type="info" label="Actual">{liveXEndPoint.data.gradient?.actual || -1}</StatusBox>
-              <StatusBox type="info" label="Theoretical">{liveXEndPoint.data.gradient?.theoretical || -1}</StatusBox>
+              <StatusBox type="info" label="Actual">{liveXEndPoint.data.gradient?.actual || 0}</StatusBox>
+              <StatusBox type="info" label="Theoretical">{liveXEndPoint.data.gradient?.theoretical || 0}</StatusBox>
             </Col>
             <Col>
               <InputGroup>
@@ -189,7 +189,7 @@ function App(props) {
           </Row>
           <Row>
             <Col>
-              <StatusBox type="info" label="Mid Pt. TEMP.">{liveXEndPoint.data.autosp?.midpt_temp || -1}
+              <StatusBox type="info" label="Mid Pt. TEMP.">{liveXEndPoint.data.autosp?.midpt_temp || 0}
               </StatusBox>
             </Col>
             <Col>
