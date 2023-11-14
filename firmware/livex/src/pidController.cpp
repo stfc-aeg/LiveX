@@ -51,13 +51,11 @@ bool PIDController::check_PID_enabled()
 }
 
 // Get input and setpoint, do PID computation, and save output to a register
-void PIDController::do_PID(double reading)
+void PIDController::do_PID()
 {
     // Get enable checks
     bool gradientEnabled = modbus_server_.coilRead(MOD_GRADIENT_ENABLE_COIL);
     bool autospEnabled = modbus_server_.coilRead(MOD_AUTOSP_ENABLE_COIL);
-
-    input = reading;
 
     // Setpoint handling
     setPoint = combineHoldingRegisters(modbus_server_, addr_.modSetPointHold);
@@ -76,15 +74,6 @@ void PIDController::do_PID(double reading)
 
     gpio_.analogWrite(addr_.outputPin, output);
 
-    // Write relevant outputs
-    // For consistency and ease of read/write, floats are preferable to doubles
-    float thermoReading = static_cast<float>(input);
-
-    // Write input reading to input registers
-    int ret = modbus_server_.writeInputRegisters(
-        addr_.modThermocoupleInp, (uint16_t*)(&thermoReading), 2
-    );
-
     float pidOutput = output;
     // Write PID output to input registers
     modbus_server_.writeInputRegisters(
@@ -96,6 +85,17 @@ void PIDController::do_PID(double reading)
     {
         floatToHoldingRegisters(modbus_server_, addr_.modSetPointHold, (setPoint+autospRate));
     }
+}
+
+// Write thermocouple value to input register
+void PIDController::write_temperature()
+{
+    float thermoReading = static_cast<float>(input);
+
+    // Write input reading to input registers
+    int ret = modbus_server_.writeInputRegisters(
+        addr_.modThermocoupleInp, (uint16_t*)(&thermoReading), 2
+    );
 }
 
  // Check if PID terms in registers are different, and set them accordingly
@@ -117,11 +117,14 @@ void PIDController::check_PID_tunings()
 // Check PID tunings and run PID computation. Return current time
 void PIDController::run(double reading)
 {
+    input = reading;  // PID input is thermocouple reading
+    write_temperature();  // Want to know temperature regardless of PID activation
+
     enabled = check_PID_enabled();
     if (enabled)
     {
       check_PID_tunings();
-      do_PID(reading);
+      do_PID();
     }
     else
     {
