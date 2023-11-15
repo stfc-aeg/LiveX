@@ -5,8 +5,9 @@ import 'odin-react/dist/index.css'
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 import React, { useState } from "react";
-import {TitleCard, ToggleSwitch, DropdownSelector, StatusBox, OdinApp} from 'odin-react';
-import {WithEndpoint, useAdapterEndpoint} from 'odin-react';
+import { TitleCard, ToggleSwitch, DropdownSelector, StatusBox, OdinApp, OdinGraph } from 'odin-react';
+import { WithEndpoint, useAdapterEndpoint } from 'odin-react';
+import TemperatureGraph from './components/TemperatureGraph';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Form from 'react-bootstrap/Form';
 import Dropdown from 'react-bootstrap/Dropdown';
@@ -29,7 +30,9 @@ function App(props) {
 
   return (
     <OdinApp title="LiveX Controls" navLinks={["controls", "monitoring", "cameras"]}>
+    <Col>
     <Container>
+      <Col>
       <EndPointButton endpoint={liveXEndPoint} value={true} fullpath="status/reconnect" event_type="click" 
       disabled={!connectedPuttingDisable}>
         {liveXEndPoint.data.status?.connected ? 'Connected' : 'Reconnect'}
@@ -220,9 +223,13 @@ function App(props) {
             </Col>
           </Row>
         </Container>
-
       </TitleCard>
+      </Col>
     </Container>
+    </Col>
+    <Col>
+    <TemperatureGraph liveXEndPoint={liveXEndPoint}></TemperatureGraph>
+    </Col>
     </OdinApp>
   );
 }

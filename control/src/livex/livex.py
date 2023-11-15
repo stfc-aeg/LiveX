@@ -105,6 +105,9 @@ class LiveX():
         self.thermocouple_c = 0  # nothing to read, no thermocouple
         self.thermocouple_d = 0  # nothing to read, no thermocouple
 
+        self.tcouple_a_array = []
+        self.tcouple_b_array = []
+
         self.reading_counter = 0
 
         self.connected = True
@@ -130,6 +133,11 @@ class LiveX():
             'midpt_temp': (lambda: self.autosp_midpt, None)
         })
 
+        temperature_graph = ParameterTree({
+            'thermocouple_a': (lambda: self.tcouple_a_array, None),
+            'thermocouple_b': (lambda: self.tcouple_b_array, None)
+        })
+
         # Build a parameter tree for the background task
         bg_task = ParameterTree({
             'thread_count': (lambda: self.background_thread_counter, None),
@@ -152,7 +160,8 @@ class LiveX():
             'pid_a': self.pid_a.pid_tree,
             'pid_b': self.pid_b.pid_tree,
             'autosp': autosp,
-            'gradient': thermal_gradient
+            'gradient': thermal_gradient,
+            'temperature_graph': temperature_graph
         })
 
         # Launch the background task if enabled in options
@@ -322,6 +331,8 @@ class LiveX():
                 try:
                     self.pid_a.thermocouple = read_decode_input_reg(self.client, modAddr.thermocouple_a_inp)
                     self.pid_b.thermocouple = read_decode_input_reg(self.client, modAddr.thermocouple_b_inp)
+                    self.tcouple_a_array.append(self.pid_a.thermocouple)
+                    self.tcouple_b_array.append(self.pid_b.thermocouple)
 
                     self.reading_counter = read_decode_input_reg(self.client, modAddr.counter_inp)
 
