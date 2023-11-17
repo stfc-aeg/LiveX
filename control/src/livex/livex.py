@@ -105,8 +105,16 @@ class LiveX():
         self.thermocouple_c = 0  # nothing to read, no thermocouple
         self.thermocouple_d = 0  # nothing to read, no thermocouple
 
-        self.tcouple_a_array = []
-        self.tcouple_b_array = []
+        # Graph handling
+        self.data_collection_frequency = 1  # data collections per second
+        self.temp_graph_minutes = 1
+        self.temp_graph_range = -60*self.temp_graph_minutes*self.data_collection_frequency  # Index from end
+
+        # Arrays for graphs. Right now, 'a' and 'b' refer to thermocouples for PID A and B
+        self.graph_arrays = {
+            'a': [],
+            'b': []
+        }
 
         self.reading_counter = 0
 
@@ -134,8 +142,10 @@ class LiveX():
         })
 
         temperature_graph = ParameterTree({
-            'thermocouple_a': (lambda: self.tcouple_a_array, None),
-            'thermocouple_b': (lambda: self.tcouple_b_array, None)
+            'thermocouple_a': (lambda: self.graph_arrays['a'][self.temp_graph_range:-1], None),
+            'thermocouple_b': (lambda: self.graph_arrays['b'][self.temp_graph_range:-1], None),
+            'view_minutes': (lambda: self.temp_graph_minutes, self.set_temp_graph_minutes),
+            'reset_history': (lambda: False, self.reset_data_history)
         })
 
         # Build a parameter tree for the background task
@@ -289,6 +299,17 @@ class LiveX():
         self.gradient_wanted = value
         response = write_modbus_float(self.client, value, modAddr.gradient_wanted_hold)
 
+    def set_temp_graph_minutes(self, value):
+        """Set the number of minutes viewed on the temperature monitor."""
+        self.temp_graph_minutes = value
+
+        self.temp_graph_range = -60*self.temp_graph_minutes*self.data_collection_frequency  # Index from end
+
+    def reset_data_history(self, value):
+        """Reset the data collected."""
+        for key, value in self.graph_arrays.items():
+            value.clear()
+
     def start_background_tasks(self):
         """Start the background tasks."""
         logging.debug(
@@ -331,8 +352,10 @@ class LiveX():
                 try:
                     self.pid_a.thermocouple = read_decode_input_reg(self.client, modAddr.thermocouple_a_inp)
                     self.pid_b.thermocouple = read_decode_input_reg(self.client, modAddr.thermocouple_b_inp)
-                    self.tcouple_a_array.append(self.pid_a.thermocouple)
-                    self.tcouple_b_array.append(self.pid_b.thermocouple)
+                    self.graph_arrays['a'].append(self.pid_a.thermocouple)
+                    self.graph_arrays['b'].append(self.pid_b.thermocouple)
+                    # self.tcouple_a_array.append(self.pid_a.thermocouple)
+                    # self.tcouple_b_array.append(self.pid_b.thermocouple)
 
                     self.reading_counter = read_decode_input_reg(self.client, modAddr.counter_inp)
 
