@@ -8,7 +8,7 @@
 #include <ExpandedGpio.h>
 #include "pins_is.h"
 #include "initialise.h"
-#include "modbusAddresses.h"
+#include "config.h"
 #include "pidController.h"
 #include "utilFunctions.h"
 
@@ -19,8 +19,6 @@
 
 #define PWM_PIN_A A0_5
 #define PWM_PIN_B A0_6 // Hypothetical second heater output pin
-
-const bool DEBUG = false;
 
 static bool eth_connected = false;
 
@@ -59,21 +57,13 @@ byte ip[] = { 192, 168, 0, 159 };
 byte gateway[] = { 192, 168, 0, 1 };
 byte subnet[] = { 255, 255, 255, 0 };
 
-int numHoldRegs = 32;
-int numInputRegs = 32;
-int numCoils = 8;
-
 // Timers setup
 float counter = 0;
 long int tPID = millis(); // Timer for PID
 long int tGradient = millis(); // Timer for gradient update
 long int tAutosp = millis(); // Auto set point control
-// Interval/period for each control
-long int intervalPID = 1000;
-long int intervalGradient = 1000;
-long int intervalAutosp = 1000;
 long int connectionTimer;
-long int connectionTimeout = 30000;
+
 
 // MCP9600 setup
 Adafruit_MCP9600 mcp[] = {Adafruit_MCP9600(), Adafruit_MCP9600()};
@@ -99,7 +89,7 @@ void setup()
   // initialise.cpp
   initialiseEthernet(ethServer, mac, ip, PIN_SPI_SS_ETHERNET_LIB);
   initialiseThermocouples(mcp, num_mcp, mcp_addr);
-  initialiseModbus(modbus_server, numInputRegs, numHoldRegs, numCoils);
+  initialiseModbus(modbus_server, MOD_NUM_INP, MOD_NUM_HOLD, MOD_NUM_COIL);
 
   gpio.init();
   gpio.pinMode(Q0_0, OUTPUT); // PIN_Q0_0
@@ -225,7 +215,7 @@ void autoSetPointControl()
   }
 
   // Rate is average K/s, but value depends on PID interval
-  rate = rate * (static_cast<float>(intervalPID)/1000); // e.g.: 0.5 * 20/1000 = 0.01 = 50 times per second
+  rate = rate * (static_cast<float>(INTERVAL_PID)/1000); // e.g.: 0.5 * 20/1000 = 0.01 = 50 times per second
   PID_A.autospRate = rate;
   PID_B.autospRate = rate;
 
@@ -241,7 +231,7 @@ void autoSetPointControl()
     Serial.print("Autosp rate: ");
     Serial.print(rate);
     Serial.print(" | interval: ");
-    Serial.print(intervalPID/1000);
+    Serial.print(INTERVAL_PID/1000);
   }
 }
 
@@ -271,7 +261,7 @@ void loop()
 
   // Disable heaters if no connection for 30 seconds. Checked only if no current connection.
   long int elapsedTime = millis() - connectionTimer;
-  if (elapsedTime > connectionTimeout)
+  if (elapsedTime > INTERVAL_TIMEOUT)
   {
     Serial.println("Timeout: no connection. Disabling PID behaviour (write 0).");
     modbus_server.coilWrite(MOD_PID_ENABLE_A_COIL, 0);
@@ -294,25 +284,25 @@ void Core0PIDTask(void * pvParameters)
     long int now = millis();
 
     // Run control after its specified interval
-    if ( (now-tRead) >= 1000 )
+    if ( (now-tRead) >= INTERVAL_THERMOCOUPLES )
     {
       tRead = millis(); // Timers read before as runtime should not influence call period
       readThermoCouples();
     }
 
-    if ( (now - tGradient) >= intervalGradient)
+    if ( (now - tGradient) >= INTERVAL_GRADIENT)
     {
       tGradient = millis();
       thermalGradient();
     }
 
-    if ( (now - tAutosp) >= intervalAutosp)
+    if ( (now - tAutosp) >= INTERVAL_AUTOSP)
     {
       tAutosp = millis();
       autoSetPointControl();
     }
 
-    if ( (now - tPID) >= intervalPID )
+    if ( (now - tPID) >= INTERVAL_PID )
     {
       tPID = millis(); // Only need one timer, PIDs have same period
 

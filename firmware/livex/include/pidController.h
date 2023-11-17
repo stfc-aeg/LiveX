@@ -1,7 +1,7 @@
 #ifndef PIDCONTROLLER_H
 #define PIDCONTROLLER_H
 
-#include "modbusAddresses.h"
+#include "config.h"
 #include <PID_v1.h>
 #include "Adafruit_MCP9600.h"
 #include <ArduinoRS485.h>

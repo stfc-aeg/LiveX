@@ -3,7 +3,7 @@
 
 #include <ArduinoRS485.h>
 #include <ArduinoModbus.h>
-#include "modbusAddresses.h"
+#include "config.h"
 
 union ModbusFloat
 { // This union allows two 16-bit ints to be read back as a 32-bit float

@@ -2,7 +2,7 @@ class modAddr():
     """Source class for accessing modbus addresses in one location.
     Format is as follows:
     `control_purpose_<optional specifier>_registerType`
-    Names match that of modbusAddresses.h, without the mod_prefix
+    Names match that of config.h, without the mod_prefix
     """
 
     def __init__(self):

@@ -1,6 +1,24 @@
-#ifndef MODBUS_ADDRESSES_H
-#define MODBUS_ADDRESSES_H
+#ifndef CONFIG_H
+#define CONFIG_H
 
+#define DEBUG false
+
+// Intervals
+// Speed at which specified function runs in ms
+#define INTERVAL_PID 1000  // PID iteration
+#define INTERVAL_GRADIENT 1000  // Recalculate thermal gradient
+#define INTERVAL_AUTOSP 1000  // Recalculate autosp rate
+#define INTERVAL_THERMOCOUPLES 1000  // Read thermcouples
+#define INTERVAL_TIMEOUT 30000
+
+// Modbus setup/addresses
+
+// Number of each register type
+#define MOD_NUM_HOLD 32
+#define MOD_NUM_INP 32
+#define MOD_NUM_COIL 8
+
+// Register addresses
 // coils start at 00001-09999
 #define MOD_PID_ENABLE_A_COIL 1
 #define MOD_PID_ENABLE_B_COIL 2
@@ -10,6 +28,7 @@
 #define MOD_MOTOR_ENABLE_COIL 6
 #define MOD_MOTOR_DIRECTION_COIL 7
 #define MOD_GRADIENT_HIGH_COIL 8
+
 // input registers start at 30001-39999
 #define MOD_COUNTER_INP 30001
 #define MOD_PID_OUTPUT_A_INP 30003
