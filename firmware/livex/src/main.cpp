@@ -11,6 +11,7 @@
 #include "config.h"
 #include "pidController.h"
 #include "utilFunctions.h"
+#include "modbusServerController.h"
 
 #include <Adafruit_I2CDevice.h>
 #include <Adafruit_I2CRegister.h>
@@ -23,7 +24,7 @@
 static bool eth_connected = false;
 
 EthernetServer ethServer(502);
-ModbusTCPServer modbus_server;
+ModbusServerController modbus_server;
 ExpandedGpio gpio;
 
 // Addresses for PID objects
@@ -285,9 +286,9 @@ void Core0PIDTask(void * pvParameters)
 
     if ( (now - tGradient) >= INTERVAL_MODIFIERS)
     {
+      tGradient = millis();
       thermalGradient();
       autoSetPointControl();
-      tGradient = millis();
     }
 
     if ( (now - tPID) >= INTERVAL_PID )
