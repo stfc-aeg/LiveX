@@ -12,7 +12,7 @@ float combineHoldingRegisters(ModbusTCPServer& modbus_server, int address)
   return modbusFloat.value;
 }
 
- // Write a float to a pair of modbus addresses. Returns success code of second write.
+// Write a float to a pair of modbus addresses. Returns success code of second write.
 int floatToHoldingRegisters(ModbusTCPServer& modbus_server, int address, float value)
 {
   ModbusFloat converter;

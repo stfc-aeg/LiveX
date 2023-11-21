@@ -8,6 +8,7 @@
 #define INTERVAL_PID 1000  // PID iteration
 #define INTERVAL_GRADIENT 1000  // Recalculate thermal gradient
 #define INTERVAL_AUTOSP 1000  // Recalculate autosp rate
+#define INTERVAL_MODIFIERS 1000  // Gradient and auto set point control interval
 #define INTERVAL_THERMOCOUPLES 1000  // Read thermcouples
 #define INTERVAL_TIMEOUT 30000
 

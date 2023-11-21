@@ -140,7 +140,7 @@ void readThermoCouples()
     MOD_COUNTER_INP, (uint16_t*)(&counter), 2
   );
   counter++;
-  Serial.println(counter);
+  // Serial.println(counter);
 }
 
 // Thermal gradient is based off of midpoint of heater setpoints and overrides them
@@ -283,23 +283,11 @@ void Core0PIDTask(void * pvParameters)
      // Get 'current' time
     long int now = millis();
 
-    // Run control after its specified interval
-    if ( (now-tRead) >= INTERVAL_THERMOCOUPLES )
+    if ( (now - tGradient) >= INTERVAL_MODIFIERS)
     {
-      tRead = millis(); // Timers read before as runtime should not influence call period
-      readThermoCouples();
-    }
-
-    if ( (now - tGradient) >= INTERVAL_GRADIENT)
-    {
-      tGradient = millis();
       thermalGradient();
-    }
-
-    if ( (now - tAutosp) >= INTERVAL_AUTOSP)
-    {
-      tAutosp = millis();
       autoSetPointControl();
+      tGradient = millis();
     }
 
     if ( (now - tPID) >= INTERVAL_PID )
@@ -311,7 +299,12 @@ void Core0PIDTask(void * pvParameters)
 
       PID_A.run(readingA);
       PID_B.run(readingB);
-      Serial.println("");
+
+      // Check enables
+      // Get setPoint
+      // write PID output
+
+      // Serial.println("");
     }
   }
 }
