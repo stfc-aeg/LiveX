@@ -14,8 +14,6 @@ class ModbusServerController : public ModbusTCPServer
     int numHoldRegs  = MOD_NUM_HOLD;
     int numCoils     = MOD_NUM_COIL;
 
-    ModbusTCPServer modbus_server_;
-
     ModbusServerController();
     void initialiseModbus();
 
