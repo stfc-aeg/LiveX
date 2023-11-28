@@ -7,9 +7,23 @@
 #include <ArduinoRS485.h>
 #include <ArduinoModbus.h>
 #include <ExpandedGpio.h>
-#include "utilFunctions.h"
+// #include "modbusServerController.h"
 
-class PIDController 
+// Addresses utilised by a PIDController
+struct PIDAddresses
+{
+  int outputPin;
+  int modSetPointHold;
+  int modPidOutputInp;
+  int modPidEnableCoil;
+  int modThermocoupleInp;
+  int modKpHold;
+  int modKiHold;
+  int modKdHold;
+};
+
+
+class PIDController
 {
   public:
     double setPoint, input, output;
@@ -30,7 +44,6 @@ class PIDController
     PIDController(PIDAddresses addr);
     void initialise(ModbusTCPServer& modbus_server, ExpandedGpio& gpio);
 
-    void testRun();
     void run();
     void check_PID_tunings(double newKp, double newKi, double newKd);
 };

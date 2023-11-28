@@ -10,7 +10,6 @@
 #include "initialise.h"
 #include "config.h"
 #include "pidController.h"
-#include "utilFunctions.h"
 #include "modbusServerController.h"
 
 #include <Adafruit_I2CDevice.h>
@@ -196,7 +195,7 @@ void thermalGradient()
   }
 }
 
- // Increment setPoint by an average rate per second
+// Increment setPoint by an average rate per second
 void autoSetPointControl()
 {
   // Get rate

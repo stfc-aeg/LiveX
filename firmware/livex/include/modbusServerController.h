@@ -4,7 +4,6 @@
 #include <ArduinoRS485.h>
 #include <ArduinoModbus.h>
 #include "config.h"
-#include "utilFunctions.h"
 
 class ModbusServerController : public ModbusTCPServer
 {
@@ -23,6 +22,17 @@ class ModbusServerController : public ModbusTCPServer
     int readBool(int address);
     int floatToInputRegisters(int address, float value, int numRegisters=2);
     int floatToHoldingRegisters(int address, float value);
+};
+
+// Necessary structure for easy Modbus reading
+union ModbusFloat
+{ // This union allows two 16-bit ints to be read back as a 32-bit float
+  float value;
+  struct 
+  {
+    uint16_t low;
+    uint16_t high;
+} registers;
 };
 
 #endif
