@@ -18,6 +18,7 @@ PIDController::PIDController(PIDAddresses addr) : myPID_(&input, &output, &setPo
 // Provide controller with thermocouple, modbus, gpio, and write defaults
 void PIDController::initialise(ModbusTCPServer& modbus_server, ExpandedGpio& gpio)
 {
+    // this section should be out of the PID control but implementation is unclear
     modbus_server_ = modbus_server;
     gpio_ = gpio;
 
@@ -38,96 +39,30 @@ void PIDController::initialise(ModbusTCPServer& modbus_server, ExpandedGpio& gpi
         uint16_t* elems = (uint16_t*)&term;
         for (int i = 0; i<2; i++)
         {
-            modbus_server.holdingRegisterWrite(tempAddress+i, elems[i]);
+            modbus_server_.holdingRegisterWrite(tempAddress+i, elems[i]);
         }
         tempAddress += 2;
     }
+
+    // PID mode
+    myPID_.SetMode(AUTOMATIC);
 }
 
-// Check if the enable coil for this controller is true (1) or false (0)
-bool PIDController::check_PID_enabled()
+void PIDController::run()
 {
-    return modbus_server_.coilRead(addr_.modPidEnableCoil);
-}
-
-// Get input and setpoint, do PID computation, and save output to a register
-void PIDController::do_PID()
-{
-    // Get enable checks
-    bool gradientEnabled = modbus_server_.coilRead(MOD_GRADIENT_ENABLE_COIL);
-    bool autospEnabled = modbus_server_.coilRead(MOD_AUTOSP_ENABLE_COIL);
-
-    // Setpoint handling
-    setPoint = combineHoldingRegisters(modbus_server_, addr_.modSetPointHold);
-
-    // Override with gradient setpoint if enabled
-    if (gradientEnabled)
-    {
-        setPoint = gradientSetPoint;
-    }
-
-    // Output calculation and processing
     myPID_.Compute();
-
-    // output = 255 - output;
-    output = output * outputMultiplier; // PID library output is on a scale of 0-255. Scale to 4095
-
-    gpio_.analogWrite(addr_.outputPin, output);
-
-    float pidOutput = output;
-    // Write PID output to input registers
-    modbus_server_.writeInputRegisters(
-        addr_.modPidOutputInp, (uint16_t*)(&pidOutput), 2
-    );
-
-    // Increase setpoint if ASPC is enabled
-    if (autospEnabled)
-    {
-        floatToHoldingRegisters(modbus_server_, addr_.modSetPointHold, (setPoint+autospRate));
-    }
-}
-
-// Write thermocouple value to input register
-void PIDController::write_temperature()
-{
-    float thermoReading = static_cast<float>(input);
-
-    // Write input reading to input registers
-    int ret = modbus_server_.writeInputRegisters(
-        addr_.modThermocoupleInp, (uint16_t*)(&thermoReading), 2
-    );
+    // PID output is scale of 0-255. ESP3258PLC has 12-bit output
+    output = output * outputMultiplier;
 }
 
  // Check if PID terms in registers are different, and set them accordingly
-void PIDController::check_PID_tunings()
+void PIDController::check_PID_tunings(double newKp, double newKi, double newKd)
 {
-    double newKp = double(combineHoldingRegisters(modbus_server_,addr_.modKpHold));
-    double newKi = double(combineHoldingRegisters(modbus_server_,addr_.modKiHold));
-    double newKd = double(combineHoldingRegisters(modbus_server_,addr_.modKdHold));
-
     if ((newKp != Kp) || (newKi != Ki) || (newKd != Kd)) 
     {
       myPID_.SetTunings(newKp, newKi, newKd);
       Kp = newKp;
       Ki = newKi;
       Kd = newKd;
-    }
-}
-
-// Check PID tunings and run PID computation. Return current time
-void PIDController::run(double reading)
-{
-    input = reading;  // PID input is thermocouple reading
-    write_temperature();  // Want to know temperature regardless of PID activation
-
-    enabled = check_PID_enabled();
-    if (enabled)
-    {
-      check_PID_tunings();
-      do_PID();
-    }
-    else
-    {
-      gpio_.analogWrite(addr_.outputPin, 0);
     }
 }
