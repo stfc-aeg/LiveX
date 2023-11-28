@@ -88,29 +88,3 @@ void initialiseEthernet(EthernetServer ethServer, byte* mac, byte* ip, int ethPi
     Serial.println("Ethernet cable is not connected.");
   }
 }
-
-  // Modbus setup and control default enabling
-void initialiseModbus(ModbusTCPServer& modbus_server, int numInputRegs, int numHoldRegs, int numCoils)
-{
-  if (!modbus_server.begin()) 
-  {
-    Serial.println("Failed to start Modbus TCP Server!");
-    while (1);
-  }
-
-  // Configure and intialise modbus coils/registers
-  // Addresses follow Modbus convention for register type: 1, 30001, 40001.
-  modbus_server.configureInputRegisters(MOD_COUNTER_INP, numInputRegs);
-  modbus_server.configureHoldingRegisters(MOD_SETPOINT_A_HOLD, numHoldRegs);
-  modbus_server.configureCoils(MOD_PID_ENABLE_A_COIL, numCoils);
-
-  // Default enable values for each control
-  modbus_server.coilWrite(MOD_PID_ENABLE_A_COIL, 0);
-  modbus_server.coilWrite(MOD_PID_ENABLE_B_COIL, 0);
-
-  modbus_server.coilWrite(MOD_GRADIENT_ENABLE_COIL, 0);
-  modbus_server.coilWrite(MOD_AUTOSP_ENABLE_COIL, 0);
-  modbus_server.coilWrite(MOD_AUTOSP_HEATING_COIL, 1);
-
-  modbus_server.coilWrite(MOD_GRADIENT_HIGH_COIL, 0);
-}
