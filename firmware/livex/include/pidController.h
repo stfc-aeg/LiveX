@@ -36,12 +36,9 @@ class PIDController
 
     PID myPID_;
     Adafruit_MCP9600 mcp_;
-    ModbusTCPServer modbus_server_;
-    ExpandedGpio gpio_;
     PIDAddresses addr_;
 
     PIDController(PIDAddresses addr);
-    void initialise(ModbusTCPServer& modbus_server, ExpandedGpio& gpio);
 
     void run();
     void check_PID_tunings(double newKp, double newKi, double newKd);

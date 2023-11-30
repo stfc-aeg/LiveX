@@ -88,3 +88,24 @@ void initialiseEthernet(EthernetServer ethServer, byte* mac, byte* ip, int ethPi
     Serial.println("Ethernet cable is not connected.");
   }
 }
+
+void writePIDDefaults(ModbusServerController& modbus_server, PIDController PID)
+{
+      // Write variables to modbus
+    // PID requires doubles, modbus works best with floats, so cast
+    float pidDefaults_[4] =
+    {
+        static_cast<float>(PID.setPoint),
+        static_cast<float>(PID.Kp),
+        static_cast<float>(PID.Ki),
+        static_cast<float>(PID.Kd)
+    }; 
+    int tempAddress = PID.addr_.modSetPointHold;
+
+    // Separate values as only one holding register can be written to at a time
+    for (float term : pidDefaults_)
+    {
+        modbus_server.floatToHoldingRegisters(tempAddress, term);
+        tempAddress += 2;
+    }
+}

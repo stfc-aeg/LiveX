@@ -64,7 +64,6 @@ long int tGradient = millis(); // Timer for gradient update
 long int tAutosp = millis(); // Auto set point control
 long int connectionTimer;
 
-
 // MCP9600 setup
 Adafruit_MCP9600 mcp[] = {Adafruit_MCP9600(), Adafruit_MCP9600()};
 const unsigned int num_mcp = sizeof(mcp) / sizeof(mcp[0]);
@@ -90,6 +89,8 @@ void setup()
   initialiseEthernet(ethServer, mac, ip, PIN_SPI_SS_ETHERNET_LIB);
   initialiseThermocouples(mcp, num_mcp, mcp_addr);
   modbus_server.initialiseModbus();
+  writePIDDefaults(modbus_server, PID_A);
+  writePIDDefaults(modbus_server, PID_B);
 
   gpio.init();
   gpio.pinMode(Q0_0, OUTPUT); // PIN_Q0_0
@@ -105,10 +106,6 @@ void setup()
     NULL,     /* Handle        */
     0        /* Pin to core 1 */
   );
-
-  // pidController.cpp
-  PID_A.initialise(modbus_server, gpio);
-  PID_B.initialise(modbus_server, gpio);
 }
 
 // Read two MCP9600 thermocouples
