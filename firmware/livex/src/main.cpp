@@ -231,42 +231,6 @@ void autoSetPointControl()
   }
 }
 
-// Client connections handled on core 1 (loop)
-void loop()
-{
-  // Listen for incoming clients
-  EthernetClient client = ethServer.available();
-
-  if (client)
-  {
-    Serial.println("New client");
-    modbus_server.accept(client);
-
-    while (client.connected())
-    {
-      // Poll for requests while client is connected
-      int ret = modbus_server.poll();
-      if (ret) 
-      {
-        // Nothing needed here right now.
-      }
-    }
-    Serial.println("Client disconnected");
-    connectionTimer = millis();
-  }
-
-  // Disable heaters if no connection for 30 seconds. Checked only if no current connection.
-  long int elapsedTime = millis() - connectionTimer;
-  if (elapsedTime > INTERVAL_TIMEOUT)
-  {
-    Serial.println("Timeout: no connection. Disabling PID behaviour (write 0).");
-    modbus_server.coilWrite(MOD_PID_ENABLE_A_COIL, 0);
-    modbus_server.coilWrite(MOD_PID_ENABLE_B_COIL, 0);
-    // Reset timer so writing doesn't occur every single loop
-    connectionTimer = millis();
-  }
-}
-
 void runPID(String pid)
 {
   PIDController* PID = nullptr;
@@ -323,6 +287,42 @@ void runPID(String pid)
   else
   {
     gpio.analogWrite(addr.outputPin, 0);
+  }
+}
+
+// Client connections handled on core 1 (loop)
+void loop()
+{
+  // Listen for incoming clients
+  EthernetClient client = ethServer.available();
+
+  if (client)
+  {
+    Serial.println("New client");
+    modbus_server.accept(client);
+
+    while (client.connected())
+    {
+      // Poll for requests while client is connected
+      int ret = modbus_server.poll();
+      if (ret) 
+      {
+        // Nothing needed here right now.
+      }
+    }
+    Serial.println("Client disconnected");
+    connectionTimer = millis();
+  }
+
+  // Disable heaters if no connection for 30 seconds. Checked only if no current connection.
+  long int elapsedTime = millis() - connectionTimer;
+  if (elapsedTime > INTERVAL_TIMEOUT)
+  {
+    Serial.println("Timeout: no connection. Disabling PID behaviour (write 0).");
+    modbus_server.coilWrite(MOD_PID_ENABLE_A_COIL, 0);
+    modbus_server.coilWrite(MOD_PID_ENABLE_B_COIL, 0);
+    // Reset timer so writing doesn't occur every single loop
+    connectionTimer = millis();
   }
 }
 
