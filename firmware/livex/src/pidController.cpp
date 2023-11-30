@@ -22,6 +22,9 @@ void PIDController::initialise(ModbusTCPServer& modbus_server, ExpandedGpio& gpi
     modbus_server_ = modbus_server;
     gpio_ = gpio;
 
+    // Set PID output range to match ESP3258PLC PWM
+    myPID_.SetOutputLimits(0, 4095);
+
     // Write variables to modbus
     // PID requires doubles, modbus works best with floats, so cast
     float pidDefaults_[4] =
@@ -51,8 +54,6 @@ void PIDController::initialise(ModbusTCPServer& modbus_server, ExpandedGpio& gpi
 void PIDController::run()
 {
     myPID_.Compute();
-    // PID output is scale of 0-255. ESP3258PLC has 12-bit output
-    output = output * outputMultiplier;
 }
 
  // Check if PID terms in registers are different, and set them accordingly

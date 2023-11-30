@@ -30,7 +30,6 @@ class PIDController
     double Kp, Ki, Kd;
     double baseSetPoint;
     bool enabled = true;
-    float outputMultiplier = 16.0588; // 4095/255, 12-bit but PID does 0-255
     long int tWrite; // Time of reading
     float gradientSetPoint = 0;
     float autospRate = 0;
