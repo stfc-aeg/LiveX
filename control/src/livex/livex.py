@@ -106,15 +106,15 @@ class LiveX():
         self.thermocouple_d = 0  # nothing to read, no thermocouple
 
         # Graph handling
-        self.data_collection_frequency = 1  # data collections per second
-        self.temp_graph_minutes = 1
+        self.data_collection_frequency = 50  # Not hardcoding this causes error. To be fixed
+        self.temp_graph_minutes = 1  # Minutes to show
         self.temp_graph_range = -60*self.temp_graph_minutes*self.data_collection_frequency  # Index from end
 
         # Arrays for graphs. Right now, 'a' and 'b' refer to thermocouples for PID A and B
         self.graph_arrays = {
             'a': [],
             'b': []
-        }
+        }  # Todo: new system for this. clogs up tree with high data collection frequency
 
         self.reading_counter = 0
 
@@ -228,20 +228,7 @@ class LiveX():
         self.client.close()
         self.stop_background_tasks()
 
-    def set_task_interval(self, interval):
-        """Set the background task interval."""
-        logging.debug("Setting background task interval to %f", interval)
-        self.background_task_interval = float(interval)
-        
-    def set_task_enable(self, enable):
-        """Set the background task enable."""
-        enable = bool(enable)
-
-        if enable != self.background_task_enable:
-            if enable:
-                self.start_background_tasks()
-            else:
-                self.stop_background_tasks()
+    # Auto set point control
 
     def set_autosp_enable(self, value):
         """Set the enable boolean for the auto set point control."""
@@ -261,15 +248,6 @@ class LiveX():
         else:      # 0, cooling
             self.client.write_coil(modAddr.autosp_heating_coil, 0, slave=1)
 
-    def set_gradient_high(self, value):
-        """Set the boolean for thermal gradient high heater."""
-        self.gradient_high = value
-
-        if value:  # 1, heater B
-            self.client.write_coil(modAddr.gradient_high_coil, 1, slave=1)
-        else:
-            self.client.write_coil(modAddr.gradient_high_coil, 0, slave=1)
-
     def set_autosp_rate(self, value):
         """Set the rate value for the auto set point control."""
         self.autosp_rate = value
@@ -280,10 +258,7 @@ class LiveX():
         self.autosp_imgdegree = value
         response = write_modbus_float(self.client, value, modAddr.autosp_imgdegree_hold)
 
-    def set_gradient_distance(self, value):
-        """Set the distance value for the thermal gradient."""
-        self.gradient_distance = value
-        response = write_modbus_float(self.client, value, modAddr.gradient_distance_hold)
+    # Thermal gradient
 
     def set_gradient_enable(self, value):
         """Set the enable boolean for the thermal gradient."""
@@ -294,10 +269,26 @@ class LiveX():
         else:
             self.client.write_coil(modAddr.gradient_enable_coil, 0, slave=1)
 
+    def set_gradient_distance(self, value):
+        """Set the distance value for the thermal gradient."""
+        self.gradient_distance = value
+        response = write_modbus_float(self.client, value, modAddr.gradient_distance_hold)
+
     def set_gradient_wanted(self, value):
         """Set the desired temperature change per mm for the thermal gradient."""
         self.gradient_wanted = value
         response = write_modbus_float(self.client, value, modAddr.gradient_wanted_hold)
+
+    def set_gradient_high(self, value):
+        """Set the boolean for thermal gradient high heater."""
+        self.gradient_high = value
+
+        if value:  # 1, heater B
+            self.client.write_coil(modAddr.gradient_high_coil, 1, slave=1)
+        else:
+            self.client.write_coil(modAddr.gradient_high_coil, 0, slave=1)
+
+    # Graph management
 
     def set_temp_graph_minutes(self, value):
         """Set the number of minutes viewed on the temperature monitor."""
@@ -309,6 +300,23 @@ class LiveX():
         """Reset the data collected."""
         for key, value in self.graph_arrays.items():
             value.clear()
+
+    # Background tasks
+
+    def set_task_enable(self, enable):
+        """Set the background task enable."""
+        enable = bool(enable)
+
+        if enable != self.background_task_enable:
+            if enable:
+                self.start_background_tasks()
+            else:
+                self.stop_background_tasks()
+
+    def set_task_interval(self, interval):
+        """Set the background task interval."""
+        logging.debug("Setting background task interval to %f", interval)
+        self.background_task_interval = float(interval)
 
     def start_background_tasks(self):
         """Start the background tasks."""
@@ -336,12 +344,11 @@ class LiveX():
 
         while self.background_task_enable:
 
-            # logging.debug("connectedness: %s", self.client.connected)
             time.sleep(self.background_task_interval)
 
             if self.connected:
 
-                logging.debug("Reading from Modbus")
+                # logging.debug("Reading from Modbus")
 
                 sleep_interval = self.background_task_interval
 
@@ -354,8 +361,6 @@ class LiveX():
                     self.pid_b.thermocouple = read_decode_input_reg(self.client, modAddr.thermocouple_b_inp)
                     self.graph_arrays['a'].append(self.pid_a.thermocouple)
                     self.graph_arrays['b'].append(self.pid_b.thermocouple)
-                    # self.tcouple_a_array.append(self.pid_a.thermocouple)
-                    # self.tcouple_b_array.append(self.pid_b.thermocouple)
 
                     self.reading_counter = read_decode_input_reg(self.client, modAddr.counter_inp)
 
@@ -382,8 +387,7 @@ class LiveX():
                 self.background_thread_counter += 1
 
             else:
-                logging.debug("Awaiting reconnection")
-                # self.connected = False
-                # logging.debug("No Modbus connection. Waiting.")
+                # logging.debug("Awaiting reconnection")
+                pass
 
         logging.debug("Background thread task stopping")
