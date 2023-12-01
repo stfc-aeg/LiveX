@@ -29,17 +29,13 @@ class PIDController
     double setPoint, input, output;
     double Kp, Ki, Kd;
     double baseSetPoint;
-    bool enabled = true;
-    long int tWrite; // Time of reading
     float gradientSetPoint = 0;
     float autospRate = 0;
 
     PID myPID_;
-    Adafruit_MCP9600 mcp_;
     PIDAddresses addr_;
 
     PIDController(PIDAddresses addr);
-
     void run();
     void check_PID_tunings(double newKp, double newKi, double newKd);
 };
