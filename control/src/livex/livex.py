@@ -9,6 +9,8 @@ from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.concurrent import run_on_executor
 from tornado.escape import json_decode
 
+import numpy as np
+
 from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from odin._version import get_versions
@@ -112,15 +114,31 @@ class LiveX():
 
         # Arrays for graphs. Right now, 'a' and 'b' refer to thermocouples for PID A and B
         self.graph_arrays = {
-            'a': [],
-            'b': []
-        }  # Todo: new system for this. clogs up tree with high data collection frequency
+            'pid': {
+                'a': np.array([]),
+                'b': np.array([]),
+                'time': np.array([])
+            },  # Easy way to coordinate entries and time
+        }
 
         self.reading_counter = 0
 
         self.connected = True
         self.reconnect = False
         self.connected_uptime = 0
+
+        # Motor controls
+        self.motor_direction = 1
+        self.motor_speed = 1.0
+        self.motor_enable = 1
+        self.motor_lvdt = 5.0  # not using yet
+
+        motor = ParameterTree({
+            'enable': (lambda: self.motor_enable, self.set_motor_enable),
+            'direction': (lambda: self.motor_direction, self.set_motor_direction),
+            'speed': (lambda: self.motor_speed, self.set_motor_speed),
+            'lvdt': (lambda: self.motor_lvdt, None)
+        })
 
         thermal_gradient = ParameterTree({
             'enable': (lambda: self.gradient_enable, self.set_gradient_enable),
@@ -142,8 +160,8 @@ class LiveX():
         })
 
         temperature_graph = ParameterTree({
-            'thermocouple_a': (lambda: self.graph_arrays['a'][self.temp_graph_range:-1], None),
-            'thermocouple_b': (lambda: self.graph_arrays['b'][self.temp_graph_range:-1], None),
+            'thermocouple_a': (lambda: self.graph_arrays['pid']['a'][self.temp_graph_range:].tolist(), None),  # np arrays are not JSON serialisable
+            'thermocouple_b': (lambda: self.graph_arrays['pid']['b'][self.temp_graph_range:].tolist(), None),
             'view_minutes': (lambda: self.temp_graph_minutes, self.set_temp_graph_minutes),
             'reset_history': (lambda: False, self.reset_data_history)
         })
@@ -171,6 +189,7 @@ class LiveX():
             'pid_b': self.pid_b.pid_tree,
             'autosp': autosp,
             'gradient': thermal_gradient,
+            'motor': motor,
             'temperature_graph': temperature_graph
         })
 
@@ -301,6 +320,32 @@ class LiveX():
         for key, value in self.graph_arrays.items():
             value.clear()
 
+    # Motor Controls
+
+    def set_motor_enable(self, value):
+        """Set motor enable boolean."""
+        self.motor_enable = value
+
+        if value:  # 1, enabled
+            self.client.write_coil(modAddr.motor_enable_coil, 1, slave=1)
+        else:
+            self.client.write_coil(modAddr.motor_enable_coil, 0, slave=1)
+
+    def set_motor_direction(self, value):
+        """Set motor direction boolean."""
+        self.motor_direction = value
+
+        if value:  # 1, up
+            self.client.write_coil(modAddr.motor_direction_coil, 1, slave=1)
+        else:  # 0, down
+            self.client.write_coil(modAddr.motor_direction_coil, 0, slave=1)
+
+    def set_motor_speed(self, value):
+        """Set motor speed holding register."""
+        self.motor_speed = value
+
+        write_modbus_float(self.client, value, modAddr.motor_speed_hold)
+
     # Background tasks
 
     def set_task_enable(self, enable):
@@ -359,8 +404,11 @@ class LiveX():
                 try:
                     self.pid_a.thermocouple = read_decode_input_reg(self.client, modAddr.thermocouple_a_inp)
                     self.pid_b.thermocouple = read_decode_input_reg(self.client, modAddr.thermocouple_b_inp)
-                    self.graph_arrays['a'].append(self.pid_a.thermocouple)
-                    self.graph_arrays['b'].append(self.pid_b.thermocouple)
+                    # self.graph_arrays['a'].append(self.pid_a.thermocouple)
+                    # self.graph_arrays['b'].append(self.pid_b.thermocouple)
+
+                    self.graph_arrays['pid']['a'] = np.append(self.graph_arrays['pid']['a'], self.pid_a.thermocouple)
+                    self.graph_arrays['pid']['b'] = np.append(self.graph_arrays['pid']['b'], self.pid_b.thermocouple)
 
                     self.reading_counter = read_decode_input_reg(self.client, modAddr.counter_inp)
 
