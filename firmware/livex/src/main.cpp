@@ -19,6 +19,8 @@
 
 #define PWM_PIN_A A0_5
 #define PWM_PIN_B A0_6 // Hypothetical second heater output pin
+#define MOTOR_DIRECTION_PIN Q1_6
+#define MOTOR_PWM_PIN Q1_7
 
 static bool eth_connected = false;
 
@@ -60,8 +62,8 @@ byte subnet[] = { 255, 255, 255, 0 };
 // Timers setup
 float counter = 0;
 long int tPID = millis(); // Timer for PID
-long int tGradient = millis(); // Timer for gradient update
-long int tAutosp = millis(); // Auto set point control
+long int tModifiers = millis(); // Timer for gradient update
+long int tMotor = millis(); // Auto set point control
 long int connectionTimer;
 
 // MCP9600 setup
@@ -93,9 +95,11 @@ void setup()
   writePIDDefaults(modbus_server, PID_B);
 
   gpio.init();
-  gpio.pinMode(Q0_0, OUTPUT); // PIN_Q0_0
-  gpio.pinMode(Q0_1, OUTPUT); // PIN_Q0_1
-  gpio.pinMode(A0_5, OUTPUT); // required?
+  // PID
+  gpio.pinMode(A0_5, OUTPUT);
+  // Motor stuff
+  gpio.pinMode(Q1_6, OUTPUT);
+  gpio.pinMode(Q1_7, OUTPUT); 
 
   xTaskCreatePinnedToCore(
     Core0PIDTask,  /* Task function */
@@ -335,9 +339,9 @@ void Core0PIDTask(void * pvParameters)
      // Get 'current' time
     long int now = millis();
 
-    if ( (now - tGradient) >= INTERVAL_MODIFIERS)
+    if ( (now - tModifiers) >= INTERVAL_MODIFIERS)
     {
-      tGradient = millis();
+      tModifiers = millis();
       thermalGradient();
       autoSetPointControl();
     }
@@ -356,6 +360,27 @@ void Core0PIDTask(void * pvParameters)
 
       runPID("A");
       runPID("B");
+    }
+
+    if ( (now - tMotor) >= INTERVAL_MOTOR)
+    {
+      if (modbus_server.readBool(MOD_MOTOR_ENABLE_COIL))
+      {
+        tMotor = millis();
+        bool direction = modbus_server.readBool(MOD_MOTOR_DIRECTION_COIL);
+        direction *= 4095; // Either 4095 (max out) or 0 (no out)
+
+        float speed = modbus_server.combineHoldingRegisters(MOD_MOTOR_SPEED_HOLD); // exactly how this is calculated is TBC
+
+        // analogWrite does PWM
+        gpio.digitalWrite(MOTOR_DIRECTION_PIN, direction);
+        gpio.analogWrite(MOTOR_PWM_PIN, speed);
+      }
+      else
+      {
+        // Write 0 (no motor) if motor control disabled
+        gpio.analogWrite(MOTOR_PWM_PIN, 0);
+      }
     }
   }
 }

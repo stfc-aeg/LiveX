@@ -24,9 +24,11 @@ const EndPointButton = WithEndpoint(Button);
 
 function App(props) {
 
-  const liveXEndPoint = useAdapterEndpoint('livex', 'http://localhost:8888', 1000);
+  const liveXEndPoint = useAdapterEndpoint('livex', 'http://localhost:8888', 100);
   // Disable if NOT connected or if putting. Workaround for odin-react not treating manual disable tags as OR
   const connectedPuttingDisable = (!(liveXEndPoint.data.status?.connected || false)) || (liveXEndPoint.loading == "putting")
+
+  const motorDirections = ['Down', 'Up'];
 
   return (
     <OdinApp title="LiveX Controls" navLinks={["controls", "monitoring", "cameras"]}>
@@ -219,6 +221,41 @@ function App(props) {
                   Img Aquisition Per Degree (Img/K)
                 </InputGroup.Text>
                 <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="autosp/img_per_degree" disabled={connectedPuttingDisable}></EndPointFormControl>
+              </InputGroup>
+            </Col>
+          </Row>
+        </Container>
+      </TitleCard>
+
+
+      <TitleCard title="Motor Controls">
+        <Container>
+          <Row>
+            <Col>
+              <EndPointToggle endpoint={liveXEndPoint} fullpath="motor/enable" event_type="click" 
+                checked={liveXEndPoint.data.motor?.enable || false} label="Enable" disabled={connectedPuttingDisable}>
+              </EndPointToggle>
+            </Col>
+          </Row>
+          <Row>
+            <Col>
+              <StatusBox type="info" label="LVDT (mm)">{liveXEndPoint.data.motor?.lvdt || 0}
+              </StatusBox>
+            </Col>
+            <Col>
+              <EndpointDropdown endpoint={liveXEndPoint} event_type="select" fullpath="motor/direction" buttonText={motorDirections[liveXEndPoint.data.motor?.direction] || "Unknown"} disabled={connectedPuttingDisable}>
+              {motorDirections ? motorDirections.map(
+              (selection, index) => (
+              <Dropdown.Item eventKey={index} key={index}>{selection}</Dropdown.Item>
+              )) : <></> }
+              </EndpointDropdown>
+            </Col>
+            <Col>
+              <InputGroup>
+                <InputGroup.Text>
+                   Speed (Volts?)
+                </InputGroup.Text>
+                <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="motor/speed" disabled={connectedPuttingDisable}></EndPointFormControl>
               </InputGroup>
             </Col>
           </Row>

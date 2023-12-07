@@ -20,14 +20,17 @@ void ModbusServerController::initialiseModbus()
   configureCoils(MOD_PID_ENABLE_A_COIL, MOD_NUM_COIL);
 
   // Default enable values for each control
-  coilWrite(MOD_PID_ENABLE_A_COIL, 1);
-  coilWrite(MOD_PID_ENABLE_B_COIL, 1);
+  coilWrite(MOD_PID_ENABLE_A_COIL, 0);
+  coilWrite(MOD_PID_ENABLE_B_COIL, 0);
 
   coilWrite(MOD_GRADIENT_ENABLE_COIL, 0);
+  coilWrite(MOD_GRADIENT_HIGH_COIL, 0);
+
   coilWrite(MOD_AUTOSP_ENABLE_COIL, 0);
   coilWrite(MOD_AUTOSP_HEATING_COIL, 1);
-
-  coilWrite(MOD_GRADIENT_HIGH_COIL, 0);
+  
+  coilWrite(MOD_MOTOR_ENABLE_COIL, 0);
+  coilWrite(MOD_MOTOR_DIRECTION_COIL, 1);
 }
 
 // Write a boolean (1 or 0) to a modbus coil.

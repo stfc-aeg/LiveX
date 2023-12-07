@@ -8,6 +8,7 @@
 #define INTERVAL_PID 20  // PID iteration
 #define INTERVAL_MODIFIERS 500  // Gradient and auto set point control interval
 #define INTERVAL_THERMOCOUPLES 1000  // Read extra thermcouples
+#define INTERVAL_MOTOR 1000
 #define INTERVAL_TIMEOUT 30000
 
 // Modbus setup/addresses
