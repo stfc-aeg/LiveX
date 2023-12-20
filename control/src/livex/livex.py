@@ -107,20 +107,6 @@ class LiveX():
         self.thermocouple_c = 0  # nothing to read, no thermocouple
         self.thermocouple_d = 0  # nothing to read, no thermocouple
 
-        # Graph handling
-        self.data_collection_frequency = 50  # Not hardcoding this causes error. To be fixed
-        self.temp_graph_minutes = 1  # Minutes to show
-        self.temp_graph_range = -60*self.temp_graph_minutes*self.data_collection_frequency  # Index from end
-
-        # Arrays for graphs. Right now, 'a' and 'b' refer to thermocouples for PID A and B
-        self.graph_arrays = {
-            'pid': {
-                'a': np.array([]),
-                'b': np.array([]),
-                'time': np.array([])
-            },  # Easy way to coordinate entries and time
-        }
-
         self.reading_counter = 0
 
         self.connected = True
@@ -159,13 +145,6 @@ class LiveX():
             'midpt_temp': (lambda: self.autosp_midpt, None)
         })
 
-        temperature_graph = ParameterTree({
-            'thermocouple_a': (lambda: self.graph_arrays['pid']['a'][self.temp_graph_range:].tolist(), None),  # np arrays are not JSON serialisable
-            'thermocouple_b': (lambda: self.graph_arrays['pid']['b'][self.temp_graph_range:].tolist(), None),
-            'view_minutes': (lambda: self.temp_graph_minutes, self.set_temp_graph_minutes),
-            'reset_history': (lambda: False, self.reset_data_history)
-        })
-
         # Build a parameter tree for the background task
         bg_task = ParameterTree({
             'thread_count': (lambda: self.background_thread_counter, None),
@@ -189,13 +168,27 @@ class LiveX():
             'pid_b': self.pid_b.pid_tree,
             'autosp': autosp,
             'gradient': thermal_gradient,
-            'motor': motor,
-            'temperature_graph': temperature_graph
+            'motor': motor
         })
 
         # Launch the background task if enabled in options
         if self.background_task_enable:
             self.start_background_tasks()
+
+    def initialise_adapters(self, adapters):
+        """Initialise any adapters that this one needs access to.
+        :param adapters: dict of adapters from adapter.py
+        """
+        self.graph_adapter = adapters['graph']
+
+    def push_data(self, key, data):
+        """Push data to the graph adapter dataset(s).
+        :param key: key in dataset
+        :param data: value to append to list in key
+        """
+        self.graph_adapter.datasets['thermocouples'].data[key].append(data)
+
+        self.graph_adapter.datasets['thermocouples_long'].data[key].append(data)
 
     def initialise_modbus_clients(self, value):
         """Instantiate a ModbusTcpClient and provide it to the PID controllers."""
@@ -307,19 +300,6 @@ class LiveX():
         else:
             self.client.write_coil(modAddr.gradient_high_coil, 0, slave=1)
 
-    # Graph management
-
-    def set_temp_graph_minutes(self, value):
-        """Set the number of minutes viewed on the temperature monitor."""
-        self.temp_graph_minutes = value
-
-        self.temp_graph_range = -60*self.temp_graph_minutes*self.data_collection_frequency  # Index from end
-
-    def reset_data_history(self, value):
-        """Reset the data collected."""
-        for key, value in self.graph_arrays.items():
-            value.clear()
-
     # Motor Controls
 
     def set_motor_enable(self, value):
@@ -371,12 +351,26 @@ class LiveX():
 
         self.background_task_enable = True
 
+        self.background_ioloop_task = PeriodicCallback(
+            self.background_ioloop_callback, 1000
+        )  # Hardcode interval for now
+        self.background_ioloop_task.start()
+
         # Run the background thread task in the thread execution pool
         self.background_thread_task()
 
     def stop_background_tasks(self):
         """Stop the background tasks."""
         self.background_task_enable = False
+        self.background_ioloop_callback.stop()
+
+    def background_ioloop_callback(self):
+        """background task IOLoop callback
+        may be swapped to be a thread for the reading"""
+        self.push_data('temp_a', self.pid_a.thermocouple)
+        self.push_data('temp_b', self.pid_b.thermocouple)
+
+        # self.background_ioloop_counter += 1
 
     @run_on_executor
     def background_thread_task(self):
@@ -404,11 +398,6 @@ class LiveX():
                 try:
                     self.pid_a.thermocouple = read_decode_input_reg(self.client, modAddr.thermocouple_a_inp)
                     self.pid_b.thermocouple = read_decode_input_reg(self.client, modAddr.thermocouple_b_inp)
-                    # self.graph_arrays['a'].append(self.pid_a.thermocouple)
-                    # self.graph_arrays['b'].append(self.pid_b.thermocouple)
-
-                    self.graph_arrays['pid']['a'] = np.append(self.graph_arrays['pid']['a'], self.pid_a.thermocouple)
-                    self.graph_arrays['pid']['b'] = np.append(self.graph_arrays['pid']['b'], self.pid_b.thermocouple)
 
                     self.reading_counter = read_decode_input_reg(self.client, modAddr.counter_inp)
 
@@ -425,10 +414,12 @@ class LiveX():
 
                     self.pid_a.setpoint = read_decode_holding_reg(self.client, modAddr.pid_setpoint_a_hold)
                     self.pid_b.setpoint = read_decode_holding_reg(self.client, modAddr.pid_setpoint_b_hold)
+
                 except:
                     self.client.close()
                     logging.debug("Modbus communication error, pausing reads")
                     self.connected = False
+                    self.connected_uptime = 0
                     # self.reconnect = False
                     time.sleep(sleep_interval)
 

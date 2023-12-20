@@ -24,7 +24,8 @@ const EndPointButton = WithEndpoint(Button);
 
 function App(props) {
 
-  const liveXEndPoint = useAdapterEndpoint('livex', 'http://localhost:8888', 100);
+  const liveXEndPoint = useAdapterEndpoint('livex', 'http://localhost:8888', 1000);
+  const graphEndPoint = useAdapterEndpoint('graph/thermocouples/data', 'http://localhost:8888', 1000);
   // Disable if NOT connected or if putting. Workaround for odin-react not treating manual disable tags as OR
   const connectedPuttingDisable = (!(liveXEndPoint.data.status?.connected || false)) || (liveXEndPoint.loading == "putting")
 
@@ -265,7 +266,7 @@ function App(props) {
     </Container>
     </Col>
     <Col>
-    <TemperatureGraph liveXEndPoint={liveXEndPoint}></TemperatureGraph>
+    <TemperatureGraph graphEndPoint={graphEndPoint}></TemperatureGraph>
     </Col>
     </OdinApp>
   );

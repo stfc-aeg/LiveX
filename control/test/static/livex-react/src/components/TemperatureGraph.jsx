@@ -12,21 +12,22 @@ const EndPointFormControl = WithEndpoint(Form.Control);
 const EndPointButton = WithEndpoint(Button);
 
 function TemperatureGraph(props) {
-    const {liveXEndPoint} = props;
+    const {graphEndPoint} = props;
 
-    const connectedPuttingDisable = (!(liveXEndPoint.data.status?.connected || false)) || (liveXEndPoint.loading == "putting")
+    // Might need changing or removing
+    const connectedPuttingDisable = (!(graphEndPoint.data?.loop_running?.connected || false)) || (graphEndPoint.loading == "putting")
 
     const [tempData, changeTempData] = useState([{}]);
 
-    const tempDataA = liveXEndPoint.data.temperature_graph?.thermocouple_a;
-    const tempDataB = liveXEndPoint.data.temperature_graph?.thermocouple_b;
+    const tempDataA = graphEndPoint.data.data?.temp_a;
+    const tempDataB = graphEndPoint.data.data?.temp_b;
 
     // This allows graph to re-render when the data changes
     // This does mean you can't turn off lines, as the graph re-renders
     // This will require toggles and programmatically iterating over what arrays/series name is provided
     useEffect(() => {
       changeTempData([tempDataA, tempDataB]);
-    }, [liveXEndPoint.data.temperature_graph?.thermocouple_a, liveXEndPoint.data.temperature_graph?.thermocouple_b])
+    }, [graphEndPoint.data.data?.temp_a, graphEndPoint.data.data?.temp_b])
 
     return (
         <Container>
@@ -43,7 +44,7 @@ function TemperatureGraph(props) {
                     <InputGroup.Text>
                       View previous
                     </InputGroup.Text>
-                    <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="temperature_graph/view_minutes" disabled={connectedPuttingDisable}></EndPointFormControl>
+                    {/* <EndPointFormControl endpoint={graphEndPoint} type="number" fullpath="temperature_graph/view_minutes" disabled={connectedPuttingDisable}></EndPointFormControl> */}
                     <InputGroup.Text>
                       minute(s)
                     </InputGroup.Text>
@@ -51,10 +52,10 @@ function TemperatureGraph(props) {
                   </Col>
                   <Col md="3"></Col>
                   <Col md="3">
-                    <EndPointButton endpoint={liveXEndPoint} value={true} fullpath="temperature_graph/reset_history" event_type="click" 
+                    {/* <EndPointButton endpoint={graphEndPoint} value={true} fullpath="temperature_graph/reset_history" event_type="click" 
                     disabled={connectedPuttingDisable}>
                       Clear Historical Data
-                    </EndPointButton>
+                    </EndPointButton> */}
                   </Col>
                 </Row>
               </Container>

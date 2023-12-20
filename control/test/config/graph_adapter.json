@@ -1,0 +1,16 @@
+{
+    "thermocouples": {
+        "adapter": "livex",
+        "get_subpaths": ["temp_a", "temp_b"],
+        "get_path": "temps_test",
+        "interval": 1,
+        "retention": 60
+    },
+    "thermocouples_long": {
+        "adapter": "livex",
+        "get_subpaths": ["temp_a", "temp_b"],
+        "get_path": "temps_test",
+        "interval": 1,
+        "retention": 1200
+    }
+}
