@@ -15,16 +15,14 @@ function TemperatureGraph(props) {
     const {graphEndPoint} = props;
 
     // Might need changing or removing
-    const connectedPuttingDisable = (!(graphEndPoint.data?.loop_running?.connected || false)) || (graphEndPoint.loading == "putting")
+    const connectedPuttingDisable = (!(graphEndPoint.data?.loop_running || false)) || (graphEndPoint.loading == "putting")
 
     const [tempData, changeTempData] = useState([{}]);
 
     const tempDataA = graphEndPoint.data.data?.temp_a;
     const tempDataB = graphEndPoint.data.data?.temp_b;
 
-    // This allows graph to re-render when the data changes
-    // This does mean you can't turn off lines, as the graph re-renders
-    // This will require toggles and programmatically iterating over what arrays/series name is provided
+    // Graph re-renders when data changes
     useEffect(() => {
       changeTempData([tempDataA, tempDataB]);
     }, [graphEndPoint.data.data?.temp_a, graphEndPoint.data.data?.temp_b])
