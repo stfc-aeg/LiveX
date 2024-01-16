@@ -5,7 +5,7 @@
 
 // Intervals
 // Speed at which specified function runs in ms
-#define INTERVAL_PID 2000  // PID iteration
+#define INTERVAL_PID 20  // PID iteration
 #define INTERVAL_MODIFIERS 500  // Gradient and auto set point control interval
 #define INTERVAL_THERMOCOUPLES 1000  // Read extra thermcouples
 #define INTERVAL_MOTOR 1000
