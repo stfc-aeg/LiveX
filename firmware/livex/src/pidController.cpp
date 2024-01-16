@@ -4,15 +4,15 @@
 PIDController::PIDController(PIDAddresses addr) : myPID_(&input, &output, &setPoint, Kp, Ki, Kd, DIRECT)
 {
     // Best written as floats for modbus, but PID class requires doubles.
-    setPoint = 25.5;
-    baseSetPoint = 25.5;
-    Kp = 25.5;
-    Ki = 5.0;
-    Kd = 0.1;
+    setPoint = PID_SETPOINT_DEFAULT;
+    baseSetPoint = PID_SETPOINT_DEFAULT;
+    Kp = PID_KP_DEFAULT;
+    Ki = PID_KI_DEFAULT;
+    Kd = PID_KD_DEFAULT;
     addr_ = addr;
 
     // Set PID output range to match ESP3258PLC PWM
-    myPID_.SetOutputLimits(0, 4095);
+    myPID_.SetOutputLimits(0, PID_OUTPUT_LIMIT);
 
     // PID mode
     myPID_.SetMode(AUTOMATIC);

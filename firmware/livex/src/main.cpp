@@ -276,7 +276,16 @@ void runPID(String pid)
 
       // Write PID output
       modbus_server.floatToInputRegisters(addr.modPidOutputInp, PID->output);
-      gpio.analogWrite(addr.outputPin, PID->output);
+
+      if (INVERT_OUTPUT_SIGNAL)
+      {
+        float inv_output = PID_OUTPUT_LIMIT - PID->output;
+        gpio.analogWrite(addr.outputPin, inv_output);
+      }
+      else
+      {
+        gpio.analogWrite(addr.outputPin, PID->output);
+      }
 
       // Check autosp enable status. If enabled, add rate to setpoint via holding register
       if (modbus_server.readBool(MOD_AUTOSP_ENABLE_COIL))

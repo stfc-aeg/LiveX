@@ -5,11 +5,21 @@
 
 // Intervals
 // Speed at which specified function runs in ms
-#define INTERVAL_PID 20  // PID iteration
+#define INTERVAL_PID 2000  // PID iteration
 #define INTERVAL_MODIFIERS 500  // Gradient and auto set point control interval
 #define INTERVAL_THERMOCOUPLES 1000  // Read extra thermcouples
 #define INTERVAL_MOTOR 1000
 #define INTERVAL_TIMEOUT 30000
+
+// Default terms for PID controllers
+#define PID_SETPOINT_DEFAULT 25.5
+#define PID_KP_DEFAULT       25.5
+#define PID_KI_DEFAULT       5.0
+#define PID_KD_DEFAULT       0.1
+#define PID_OUTPUT_LIMIT     4095
+
+// Invert output pid analogwrite signal (does not alter output in UI)
+#define INVERT_OUTPUT_SIGNAL true
 
 // Modbus setup/addresses
 
