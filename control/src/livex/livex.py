@@ -386,15 +386,10 @@ class LiveX():
             time.sleep(self.background_task_interval)
 
             if self.connected:
-
-                # logging.debug("Reading from Modbus")
-
                 sleep_interval = self.background_task_interval
 
-                # Need to get any value that can be updated by the device.
-                # This is almost exclusively the contents of input registers, with the exception of
-                # setpoints, which can be modified with the gradient and autosp controls.
-
+                # Get any value updated by the device
+                # Almost all input registers, except for setpoints which can change automatically
                 try:
                     self.pid_a.thermocouple = read_decode_input_reg(self.client, modAddr.thermocouple_a_inp)
                     self.pid_b.thermocouple = read_decode_input_reg(self.client, modAddr.thermocouple_b_inp)
