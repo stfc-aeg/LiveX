@@ -13,6 +13,7 @@ const EndPointButton = WithEndpoint(Button);
 
 function TemperatureGraph(props) {
     const {graphEndPoint} = props;
+    const {graphAdapterEndPoint} = props;
 
     // Might need changing or removing
     const connectedPuttingDisable = (!(graphEndPoint.data?.loop_running || false)) || (graphEndPoint.loading == "putting")
@@ -33,27 +34,25 @@ function TemperatureGraph(props) {
             <TitleCard title="temperature graph">
               <Container>
                 <Row>
-                  <OdinGraph prop_data={tempData} series_names={["TC1", "TC2"]}>
+                  <OdinGraph 
+                  prop_data={tempData}
+                  series_names={["TC1", "TC2"]}>
                   </OdinGraph>
                 </Row>
                 <Row>
                   <Col md="6">
-                    <InputGroup>
-                    <InputGroup.Text>
-                      View previous
-                    </InputGroup.Text>
-                    {/* <EndPointFormControl endpoint={graphEndPoint} type="number" fullpath="temperature_graph/view_minutes" disabled={connectedPuttingDisable}></EndPointFormControl> */}
-                    <InputGroup.Text>
-                      minute(s)
-                    </InputGroup.Text>
-                    </InputGroup>
+                  <InputGroup>
+                  <InputGroup.Text>Log file name</InputGroup.Text>
+                  <EndPointFormControl endpoint={graphAdapterEndPoint} type="text" fullpath="thermocouples/logging/log_file" disabled={!connectedPuttingDisable}></EndPointFormControl>
+                 </InputGroup>
                   </Col>
                   <Col md="3"></Col>
                   <Col md="3">
-                    {/* <EndPointButton endpoint={graphEndPoint} value={true} fullpath="temperature_graph/reset_history" event_type="click" 
-                    disabled={connectedPuttingDisable}>
-                      Clear Historical Data
-                    </EndPointButton> */}
+                  <EndPointButton endpoint={graphAdapterEndPoint} 
+                  value={true} fullpath="thermocouples/logging/write_data" event_type="click" 
+                  disabled={!connectedPuttingDisable}>
+                    Write data to log file
+                  </EndPointButton>
                   </Col>
                 </Row>
               </Container>
