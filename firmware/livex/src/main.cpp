@@ -97,9 +97,11 @@ void setup()
   gpio.init();
   // PID
   gpio.pinMode(A0_5, OUTPUT);
-  // Motor stuff
+  // Motor direction/speed outputs
   gpio.pinMode(Q1_6, OUTPUT);
-  gpio.pinMode(Q1_7, OUTPUT); 
+  gpio.pinMode(Q1_7, OUTPUT);
+  // Motor LVDT
+  gpio.pinMode(I0_7, INPUT);
 
   xTaskCreatePinnedToCore(
     Core0PIDTask,  /* Task function */
@@ -353,6 +355,15 @@ void Core0PIDTask(void * pvParameters)
       tModifiers = millis();
       thermalGradient();
       autoSetPointControl();
+
+      float lvdt = gpio.analogRead(I0_7);
+
+      // No obvious conversion formula, but readings of values at positions are known.
+      // Max height is at ~1700, minimum at ~200, total range of 9.5mm.
+      // This covers a range of 7.28V by current positioning of LVDT.
+      float position = (1700 -(lvdt)) * (9.5 / 1500); // mm/mV
+
+      modbus_server.floatToInputRegisters(MOD_MOTOR_LVDT_INP, position);
     }
 
     if ( (now - tPID) >= INTERVAL_PID )

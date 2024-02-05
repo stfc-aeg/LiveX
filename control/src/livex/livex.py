@@ -410,6 +410,8 @@ class LiveX():
                     self.pid_a.setpoint = read_decode_holding_reg(self.client, modAddr.pid_setpoint_a_hold)
                     self.pid_b.setpoint = read_decode_holding_reg(self.client, modAddr.pid_setpoint_b_hold)
 
+                    self.motor_lvdt = read_decode_input_reg(self.client, modAddr.motor_lvdt_inp)
+
                 except:
                     self.client.close()
                     logging.debug("Modbus communication error, pausing reads")

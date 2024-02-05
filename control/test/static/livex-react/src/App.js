@@ -241,7 +241,7 @@ function App(props) {
           </Row>
           <Row>
             <Col>
-              <StatusBox type="info" label="LVDT (mm)">{liveXEndPoint.data.motor?.lvdt || 0}
+              <StatusBox type="info" label="LVDT (mm)">{(liveXEndPoint.data.motor?.lvdt || 0).toFixed(4)}
               </StatusBox>
             </Col>
             <Col>
@@ -255,7 +255,7 @@ function App(props) {
             <Col>
               <InputGroup>
                 <InputGroup.Text>
-                   Speed (Volts?)
+                   Speed (0-4095)
                 </InputGroup.Text>
                 <EndPointFormControl endpoint={liveXEndPoint} type="number" fullpath="motor/speed" disabled={connectedPuttingDisable}></EndPointFormControl>
               </InputGroup>
