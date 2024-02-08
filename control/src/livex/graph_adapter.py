@@ -20,6 +20,7 @@ import h5py
 import numpy as np
 import os
 
+from livex.filewriter import write_hdf5
 
 class GraphDataset():
 
@@ -88,37 +89,14 @@ class GraphDataset():
             self.log_file = filename
 
     def write_data(self, request):
-        """Write stored data to an hdf5 file.
-        To-do: make this more generic / file-writing its own class."""
-        logging.debug("log directory: %s", self.log_directory)
+        write_hdf5(
+            filepath=self.log_directory,
+            filename=self.log_file,
+            data=self.data,
+            groupname="temperature_readings",
+            dtypes={'timestamps': 'S'}
+        )
 
-        log_filepath = os.path.join(self.log_directory, self.log_file)
-        os.makedirs(self.log_directory, exist_ok=True)
-
-        f = h5py.File(log_filepath, "w")
-
-        temp_group = f.require_group("temperature_readings")
-
-        # Param tree could be np arrays - this for now
-        tempa_arr = np.array(self.data['temp_a'])
-        tempb_arr = np.array(self.data['temp_b'])
-        times_arr = np.array(self.data['timestamps'], dtype='S')
-
-        if ("temp_a" or "temp_b" or "timestamps") in temp_group:
-            temp_group['temp_a'][...] = tempa_arr
-            temp_group['temp_b'][...] = tempb_arr
-            temp_group['timestamps'][...] = times_arr
-        else:
-            tempa_dset = temp_group.create_dataset(
-                "temp_a", data=tempa_arr
-            )
-            tempb_dset = temp_group.create_dataset(
-                "temp_b", data=tempb_arr
-            )
-            times_dset = temp_group.create_dataset(
-                "timestamps", data=times_arr
-            )
-        logging.debug("File written successfully.")
 
 class AvgGraphDataset(GraphDataset):
 
