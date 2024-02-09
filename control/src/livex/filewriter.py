@@ -9,11 +9,8 @@ Temp logs, camera data, metadata (config) are the obvious structures. User notes
 
 Camera data will eventually need more consideration
 """
-
 import h5py
 import os
-import time
-import datetime
 import numpy as np
 import logging
 
@@ -78,7 +75,6 @@ def create_notes_file(filepath, filename, filetype='md'):
     filename += '.' + filetype
     logging.debug("filename: %s", filename)
 
-    # want to add option for .txt or .md?
     full_path = os.path.join(
         filepath, filename
     )
