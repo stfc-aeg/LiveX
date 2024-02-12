@@ -1,11 +1,12 @@
 import './App.css';
 
 import 'odin-react/dist/index.css'
-
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-import React, { useState } from "react";
-import { TitleCard, ToggleSwitch, DropdownSelector, StatusBox, OdinApp, OdinGraph } from 'odin-react';
+import { checkNull } from './utils';
+
+import React from "react";
+import { TitleCard, ToggleSwitch, DropdownSelector, StatusBox, OdinApp } from 'odin-react';
 import { WithEndpoint, useAdapterEndpoint } from 'odin-react';
 import TemperatureGraph from './components/TemperatureGraph';
 import PidControl from './components/PidControl';
@@ -15,7 +16,6 @@ import Dropdown from 'react-bootstrap/Dropdown';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
-import Stack from 'react-bootstrap/Stack';
 import Button from 'react-bootstrap/Button';
 
 const EndpointDropdown = WithEndpoint(DropdownSelector);
@@ -74,12 +74,12 @@ function App(props) {
               <StatusBox
                 type="info"
                 label="Actual">
-                  {liveXEndPoint.data.gradient?.actual || 0}
+                  {checkNull(liveXEndPoint.data.gradient?.actual)}
                 </StatusBox>
               <StatusBox
                 type="info"
                 label="Theoretical">
-                  {liveXEndPoint.data.gradient?.theoretical || 0}
+                  {checkNull(liveXEndPoint.data.gradient?.theoretical)}
               </StatusBox>
             </Col>
             <Col>
@@ -140,7 +140,7 @@ function App(props) {
               <StatusBox
                 type="info"
                 label="Mid Pt. TEMP.">
-                  {liveXEndPoint.data.autosp?.midpt_temp || 0}
+                  {checkNull(liveXEndPoint.data.autosp?.midpt_temp)}
               </StatusBox>
             </Col>
             <Col>
@@ -209,7 +209,7 @@ function App(props) {
               <StatusBox
               type="info"
               label="LVDT (mm)">
-                {(liveXEndPoint.data.motor?.lvdt || 0).toFixed(4)}
+                {checkNull(liveXEndPoint.data.motor?.lvdt)}
               </StatusBox>
             </Col>
             <Col>

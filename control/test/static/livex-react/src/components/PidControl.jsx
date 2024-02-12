@@ -6,6 +6,8 @@ import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import { TitleCard, WithEndpoint, ToggleSwitch, StatusBox } from 'odin-react';
 
+import { checkNull  } from '../utils';
+
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndPointToggle = WithEndpoint(ToggleSwitch);
 
@@ -33,7 +35,7 @@ function PidControl(props) {
             <StatusBox
                 type="info"
                 label="PID OUT.">
-                    {(liveXEndPoint.data[pid]?.output || 0).toFixed(2)}
+                    {checkNull(liveXEndPoint.data[pid]?.output)}
             </StatusBox>
             </Col>
 
@@ -90,9 +92,9 @@ function PidControl(props) {
                 </InputGroup>
                 <StatusBox as="span" type="info"
                 label="Setpoint">
-                {((liveXEndPoint.data.gradient?.enable ||false) ?
-                    liveXEndPoint.data[pid]?.gradient_setpoint || -2 :
-                    liveXEndPoint.data[pid]?.setpoint || 0).toFixed(4)
+                {(liveXEndPoint.data.gradient?.enable ||false) ?
+                    checkNull(liveXEndPoint.data[pid]?.gradient_setpoint) :
+                    checkNull(liveXEndPoint.data[pid]?.setpoint)
                 }
                 </StatusBox>
                 </Stack>
@@ -100,7 +102,7 @@ function PidControl(props) {
             </Col>
             <Col>
             <StatusBox type="info" label="TEMP.">
-                {liveXEndPoint.data[pid]?.temperature || 0}
+                {checkNull(liveXEndPoint.data[pid]?.temperature)}
             </StatusBox>
             </Col>
         </Row>
