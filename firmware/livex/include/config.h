@@ -8,7 +8,7 @@
 #define INTERVAL_PID 20  // PID iteration
 #define INTERVAL_MODIFIERS 500  // Gradient and auto set point control interval
 #define INTERVAL_THERMOCOUPLES 1000  // Read extra thermcouples
-#define INTERVAL_MOTOR 1000
+#define INTERVAL_MOTOR 500
 #define INTERVAL_TIMEOUT 30000
 
 // Default terms for PID controllers
@@ -75,5 +75,12 @@
 #define MOD_AUTOSP_IMGDEGREE_HOLD 40023
 
 #define MOD_MOTOR_SPEED_HOLD 40025
+
+#define PIN_PWM_A A0_5
+#define PIN_PWM_B A0_6
+#define PIN_MOTOR_DIRECTION Q1_6
+#define PIN_MOTOR_PWM Q1_7
+
+#define PIN_MOTOR_LVDT_IN I0_7
 
 #endif

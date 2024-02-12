@@ -17,11 +17,6 @@
 #include "Adafruit_MCP9600.h"
 #include <PID_v1.h>
 
-#define PWM_PIN_A A0_5
-#define PWM_PIN_B A0_6 // Hypothetical second heater output pin
-#define MOTOR_DIRECTION_PIN Q1_6
-#define MOTOR_PWM_PIN Q1_7
-
 static bool eth_connected = false;
 
 EthernetServer ethServer(502);
@@ -30,7 +25,7 @@ ExpandedGpio gpio;
 
 // addresses for PID objects
 PIDAddresses pidA_addr = {
-  PWM_PIN_A,
+  PIN_PWM_A,
   MOD_SETPOINT_A_HOLD,
   MOD_PID_OUTPUT_A_INP,
   MOD_PID_ENABLE_A_COIL,
@@ -41,7 +36,7 @@ PIDAddresses pidA_addr = {
 };
 
 PIDAddresses pidB_addr = {
-  PWM_PIN_B,
+  PIN_PWM_B,
   MOD_SETPOINT_B_HOLD,
   MOD_PID_OUTPUT_B_INP,
   MOD_PID_ENABLE_B_COIL,
@@ -393,13 +388,13 @@ void Core0PIDTask(void * pvParameters)
         float speed = modbus_server.combineHoldingRegisters(MOD_MOTOR_SPEED_HOLD); // exactly how this is calculated is TBC
 
         // analogWrite does PWM
-        gpio.digitalWrite(MOTOR_DIRECTION_PIN, direction);
-        gpio.analogWrite(MOTOR_PWM_PIN, speed);
+        gpio.digitalWrite(PIN_MOTOR_DIRECTION, direction);
+        gpio.analogWrite(PIN_MOTOR_PWM, speed);
       }
       else
       {
         // Write 0 (no motor) if motor control disabled
-        gpio.analogWrite(MOTOR_PWM_PIN, 0);
+        gpio.analogWrite(PIN_MOTOR_PWM, 0);
       }
     }
   }
