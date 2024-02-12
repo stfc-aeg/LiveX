@@ -14,9 +14,7 @@ const EndPointButton = WithEndpoint(Button);
 function TemperatureGraph(props) {
     const {graphEndPoint} = props;
     const {graphAdapterEndPoint} = props;
-
-    // Might need changing or removing
-    const connectedPuttingDisable = (!(graphEndPoint.data?.loop_running || false)) || (graphEndPoint.loading == "putting")
+    const {connectedPuttingDisable} = props;
 
     const [tempData, changeTempData] = useState([{}]);
 
@@ -43,14 +41,14 @@ function TemperatureGraph(props) {
                   <Col md="6">
                   <InputGroup>
                   <InputGroup.Text>Log file name</InputGroup.Text>
-                  <EndPointFormControl endpoint={graphAdapterEndPoint} type="text" fullpath="thermocouples/logging/log_file" disabled={!connectedPuttingDisable}></EndPointFormControl>
+                  <EndPointFormControl endpoint={graphAdapterEndPoint} type="text" fullpath="thermocouples/logging/log_file" disabled={connectedPuttingDisable}></EndPointFormControl>
                  </InputGroup>
                   </Col>
                   <Col md="3"></Col>
                   <Col md="3">
                   <EndPointButton endpoint={graphAdapterEndPoint} 
                   value={true} fullpath="thermocouples/logging/write_data" event_type="click" 
-                  disabled={!connectedPuttingDisable}>
+                  disabled={connectedPuttingDisable}>
                     Write data to log file
                   </EndPointButton>
                   </Col>

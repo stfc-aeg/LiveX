@@ -251,7 +251,8 @@ function App(props) {
     <Col>
     <TemperatureGraph
       graphEndPoint={graphEndPoint}
-      graphAdapterEndPoint={graphAdapterEndPoint}>
+      graphAdapterEndPoint={graphAdapterEndPoint}
+      connectedPuttingDisable={connectedPuttingDisable}>
     </TemperatureGraph>
     </Col>
     </OdinApp>
