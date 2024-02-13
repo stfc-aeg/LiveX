@@ -33,9 +33,13 @@ class PID():
         # PID (pid) variables for PID controllers A and B
         self.enable            = bool(read_coil(self.client, self.addresses['pid_enable']))
         self.setpoint          = read_decode_holding_reg(self.client, self.addresses['pid_setpoint'])
-        self.kp                = read_decode_holding_reg(self.client, self.addresses['pid_kp'])
-        self.ki                = read_decode_holding_reg(self.client, self.addresses['pid_ki'])
-        self.kd                = read_decode_holding_reg(self.client, self.addresses['pid_kd'])
+        # PID term default display rounded for readability
+        self.kp                = round(
+            read_decode_holding_reg(self.client, self.addresses['pid_kp']), 4)
+        self.ki                = round(
+            read_decode_holding_reg(self.client, self.addresses['pid_ki']), 4)
+        self.kd                = round(
+            read_decode_holding_reg(self.client, self.addresses['pid_kd']), 4)
         self.output            = read_decode_input_reg(self.client, self.addresses['pid_output'])
         self.gradient_setpoint = read_decode_input_reg(self.client, self.addresses['pid_gradient_setpoint'])
 

@@ -1,6 +1,34 @@
-#ifndef MODBUS_ADDRESSES_H
-#define MODBUS_ADDRESSES_H
+#ifndef CONFIG_H
+#define CONFIG_H
 
+#define DEBUG false
+
+// Intervals
+// Speed at which specified function runs in ms
+#define INTERVAL_PID 20  // PID iteration
+#define INTERVAL_MODIFIERS 500  // Gradient and auto set point control interval
+#define INTERVAL_THERMOCOUPLES 1000  // Read extra thermcouples
+#define INTERVAL_MOTOR 500
+#define INTERVAL_TIMEOUT 30000
+
+// Default terms for PID controllers
+#define PID_SETPOINT_DEFAULT 25.5
+#define PID_KP_DEFAULT       25.5
+#define PID_KI_DEFAULT       5.0
+#define PID_KD_DEFAULT       0.1
+#define PID_OUTPUT_LIMIT     4095
+
+// Invert output pid analogwrite signal (does not alter output in UI)
+#define INVERT_OUTPUT_SIGNAL true
+
+// Modbus setup/addresses
+
+// Number of each register type
+#define MOD_NUM_HOLD 32
+#define MOD_NUM_INP 32
+#define MOD_NUM_COIL 8
+
+// Register addresses
 // coils start at 00001-09999
 #define MOD_PID_ENABLE_A_COIL 1
 #define MOD_PID_ENABLE_B_COIL 2
@@ -10,6 +38,7 @@
 #define MOD_MOTOR_ENABLE_COIL 6
 #define MOD_MOTOR_DIRECTION_COIL 7
 #define MOD_GRADIENT_HIGH_COIL 8
+
 // input registers start at 30001-39999
 #define MOD_COUNTER_INP 30001
 #define MOD_PID_OUTPUT_A_INP 30003
@@ -46,5 +75,12 @@
 #define MOD_AUTOSP_IMGDEGREE_HOLD 40023
 
 #define MOD_MOTOR_SPEED_HOLD 40025
+
+#define PIN_PWM_A A0_5
+#define PIN_PWM_B A0_6
+#define PIN_MOTOR_DIRECTION Q1_6
+#define PIN_MOTOR_PWM Q1_7
+
+#define PIN_MOTOR_LVDT_IN I0_7
 
 #endif

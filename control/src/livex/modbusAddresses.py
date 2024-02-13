@@ -2,7 +2,7 @@ class modAddr():
     """Source class for accessing modbus addresses in one location.
     Format is as follows:
     `control_purpose_<optional specifier>_registerType`
-    Names match that of modbusAddresses.h, without the mod_prefix
+    Names match that of config.h, without the mod_prefix
     """
 
     def __init__(self):
@@ -34,6 +34,8 @@ class modAddr():
     gradient_setpoint_b_inp = 30021
     autosp_midpt_inp        = 30023
 
+    motor_lvdt_inp = 30027
+
     # Holding registers (read/write) start at 40001-49999
     pid_setpoint_a_hold = 40001
     pid_kp_a_hold       = 40003
@@ -50,3 +52,5 @@ class modAddr():
 
     autosp_rate_hold       = 40021
     autosp_imgdegree_hold  = 40023
+
+    motor_speed_hold = 40025

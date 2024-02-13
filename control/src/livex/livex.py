@@ -9,6 +9,8 @@ from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.concurrent import run_on_executor
 from tornado.escape import json_decode
 
+import numpy as np
+
 from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from odin._version import get_versions
@@ -111,6 +113,19 @@ class LiveX():
         self.reconnect = False
         self.connected_uptime = 0
 
+        # Motor controls
+        self.motor_direction = 1
+        self.motor_speed = 1.0
+        self.motor_enable = 1
+        self.motor_lvdt = 5.0  # not using yet
+
+        motor = ParameterTree({
+            'enable': (lambda: self.motor_enable, self.set_motor_enable),
+            'direction': (lambda: self.motor_direction, self.set_motor_direction),
+            'speed': (lambda: self.motor_speed, self.set_motor_speed),
+            'lvdt': (lambda: self.motor_lvdt, None)
+        })
+
         thermal_gradient = ParameterTree({
             'enable': (lambda: self.gradient_enable, self.set_gradient_enable),
             'wanted': (lambda: self.gradient_wanted, self.set_gradient_wanted),
@@ -152,12 +167,28 @@ class LiveX():
             'pid_a': self.pid_a.pid_tree,
             'pid_b': self.pid_b.pid_tree,
             'autosp': autosp,
-            'gradient': thermal_gradient
+            'gradient': thermal_gradient,
+            'motor': motor
         })
 
         # Launch the background task if enabled in options
         if self.background_task_enable:
             self.start_background_tasks()
+
+    def initialise_adapters(self, adapters):
+        """Initialise any adapters that this one needs access to.
+        :param adapters: dict of adapters from adapter.py
+        """
+        self.graph_adapter = adapters['graph']
+
+    def push_data(self, key, data):
+        """Push data to the graph adapter dataset(s).
+        :param key: key in dataset
+        :param data: value to append to list in key
+        """
+        self.graph_adapter.datasets['thermocouples'].data[key].append(data)
+
+        self.graph_adapter.datasets['thermocouples_long'].data[key].append(data)
 
     def initialise_modbus_clients(self, value):
         """Instantiate a ModbusTcpClient and provide it to the PID controllers."""
@@ -209,20 +240,7 @@ class LiveX():
         self.client.close()
         self.stop_background_tasks()
 
-    def set_task_interval(self, interval):
-        """Set the background task interval."""
-        logging.debug("Setting background task interval to %f", interval)
-        self.background_task_interval = float(interval)
-        
-    def set_task_enable(self, enable):
-        """Set the background task enable."""
-        enable = bool(enable)
-
-        if enable != self.background_task_enable:
-            if enable:
-                self.start_background_tasks()
-            else:
-                self.stop_background_tasks()
+    # Auto set point control
 
     def set_autosp_enable(self, value):
         """Set the enable boolean for the auto set point control."""
@@ -242,15 +260,6 @@ class LiveX():
         else:      # 0, cooling
             self.client.write_coil(modAddr.autosp_heating_coil, 0, slave=1)
 
-    def set_gradient_high(self, value):
-        """Set the boolean for thermal gradient high heater."""
-        self.gradient_high = value
-
-        if value:  # 1, heater B
-            self.client.write_coil(modAddr.gradient_high_coil, 1, slave=1)
-        else:
-            self.client.write_coil(modAddr.gradient_high_coil, 0, slave=1)
-
     def set_autosp_rate(self, value):
         """Set the rate value for the auto set point control."""
         self.autosp_rate = value
@@ -261,10 +270,7 @@ class LiveX():
         self.autosp_imgdegree = value
         response = write_modbus_float(self.client, value, modAddr.autosp_imgdegree_hold)
 
-    def set_gradient_distance(self, value):
-        """Set the distance value for the thermal gradient."""
-        self.gradient_distance = value
-        response = write_modbus_float(self.client, value, modAddr.gradient_distance_hold)
+    # Thermal gradient
 
     def set_gradient_enable(self, value):
         """Set the enable boolean for the thermal gradient."""
@@ -275,10 +281,67 @@ class LiveX():
         else:
             self.client.write_coil(modAddr.gradient_enable_coil, 0, slave=1)
 
+    def set_gradient_distance(self, value):
+        """Set the distance value for the thermal gradient."""
+        self.gradient_distance = value
+        response = write_modbus_float(self.client, value, modAddr.gradient_distance_hold)
+
     def set_gradient_wanted(self, value):
         """Set the desired temperature change per mm for the thermal gradient."""
         self.gradient_wanted = value
         response = write_modbus_float(self.client, value, modAddr.gradient_wanted_hold)
+
+    def set_gradient_high(self, value):
+        """Set the boolean for thermal gradient high heater."""
+        self.gradient_high = value
+
+        if value:  # 1, heater B
+            self.client.write_coil(modAddr.gradient_high_coil, 1, slave=1)
+        else:
+            self.client.write_coil(modAddr.gradient_high_coil, 0, slave=1)
+
+    # Motor Controls
+
+    def set_motor_enable(self, value):
+        """Set motor enable boolean."""
+        self.motor_enable = value
+
+        if value:  # 1, enabled
+            self.client.write_coil(modAddr.motor_enable_coil, 1, slave=1)
+        else:
+            self.client.write_coil(modAddr.motor_enable_coil, 0, slave=1)
+
+    def set_motor_direction(self, value):
+        """Set motor direction boolean."""
+        self.motor_direction = value
+
+        if value:  # 1, up
+            self.client.write_coil(modAddr.motor_direction_coil, 1, slave=1)
+        else:  # 0, down
+            self.client.write_coil(modAddr.motor_direction_coil, 0, slave=1)
+
+    def set_motor_speed(self, value):
+        """Set motor speed holding register."""
+        self.motor_speed = value
+
+        write_modbus_float(self.client, value, modAddr.motor_speed_hold)
+
+    # Background tasks
+
+    def set_task_enable(self, enable):
+        """Set the background task enable."""
+        enable = bool(enable)
+
+        if enable != self.background_task_enable:
+            if enable:
+                self.start_background_tasks()
+            else:
+                self.stop_background_tasks()
+
+    def set_task_interval(self, interval):
+        """Set the background task interval."""
+        logging.debug("Setting background task interval to %f", interval)
+        self.background_task_interval = float(interval)
 
     def start_background_tasks(self):
         """Start the background tasks."""
@@ -288,12 +351,26 @@ class LiveX():
 
         self.background_task_enable = True
 
+        self.background_ioloop_task = PeriodicCallback(
+            self.background_ioloop_callback, 1000
+        )  # Hardcode interval for now
+        self.background_ioloop_task.start()
+
         # Run the background thread task in the thread execution pool
         self.background_thread_task()
 
     def stop_background_tasks(self):
         """Stop the background tasks."""
         self.background_task_enable = False
+        self.background_ioloop_callback.stop()
+
+    def background_ioloop_callback(self):
+        """background task IOLoop callback
+        may be swapped to be a thread for the reading"""
+        self.push_data('temp_a', self.pid_a.thermocouple)
+        self.push_data('temp_b', self.pid_b.thermocouple)
+
+        # self.background_ioloop_counter += 1
 
     @run_on_executor
     def background_thread_task(self):
@@ -306,19 +383,13 @@ class LiveX():
 
         while self.background_task_enable:
 
-            # logging.debug("connectedness: %s", self.client.connected)
             time.sleep(self.background_task_interval)
 
             if self.connected:
-
-                logging.debug("Reading from Modbus")
-
                 sleep_interval = self.background_task_interval
 
-                # Need to get any value that can be updated by the device.
-                # This is almost exclusively the contents of input registers, with the exception of
-                # setpoints, which can be modified with the gradient and autosp controls.
-
+                # Get any value updated by the device
+                # Almost all input registers, except for setpoints which can change automatically
                 try:
                     self.pid_a.thermocouple = read_decode_input_reg(self.client, modAddr.thermocouple_a_inp)
                     self.pid_b.thermocouple = read_decode_input_reg(self.client, modAddr.thermocouple_b_inp)
@@ -338,18 +409,21 @@ class LiveX():
 
                     self.pid_a.setpoint = read_decode_holding_reg(self.client, modAddr.pid_setpoint_a_hold)
                     self.pid_b.setpoint = read_decode_holding_reg(self.client, modAddr.pid_setpoint_b_hold)
+
+                    self.motor_lvdt = read_decode_input_reg(self.client, modAddr.motor_lvdt_inp)
+
                 except:
                     self.client.close()
                     logging.debug("Modbus communication error, pausing reads")
                     self.connected = False
+                    self.connected_uptime = 0
                     # self.reconnect = False
                     time.sleep(sleep_interval)
 
                 self.background_thread_counter += 1
 
             else:
-                logging.debug("Awaiting reconnection")
-                # self.connected = False
-                # logging.debug("No Modbus connection. Waiting.")
+                # logging.debug("Awaiting reconnection")
+                pass
 
         logging.debug("Background thread task stopping")

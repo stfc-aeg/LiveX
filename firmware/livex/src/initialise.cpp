@@ -89,28 +89,23 @@ void initialiseEthernet(EthernetServer ethServer, byte* mac, byte* ip, int ethPi
   }
 }
 
-  // Modbus setup and control default enabling
-void initialiseModbus(ModbusTCPServer& modbus_server, int numInputRegs, int numHoldRegs, int numCoils)
+void writePIDDefaults(ModbusServerController& modbus_server, PIDController PID)
 {
-  if (!modbus_server.begin()) 
-  {
-    Serial.println("Failed to start Modbus TCP Server!");
-    while (1);
-  }
+      // Write variables to modbus
+    // PID requires doubles, modbus works best with floats, so cast
+    float pidDefaults_[4] =
+    {
+        static_cast<float>(PID.setPoint),
+        static_cast<float>(PID.Kp),
+        static_cast<float>(PID.Ki),
+        static_cast<float>(PID.Kd)
+    }; 
+    int tempAddress = PID.addr_.modSetPointHold;
 
-  // Configure and intialise modbus coils/registers
-  // Addresses follow Modbus convention for register type: 1, 30001, 40001.
-  modbus_server.configureInputRegisters(MOD_COUNTER_INP, numInputRegs);
-  modbus_server.configureHoldingRegisters(MOD_SETPOINT_A_HOLD, numHoldRegs);
-  modbus_server.configureCoils(MOD_PID_ENABLE_A_COIL, numCoils);
-
-  // Default enable values for each control
-  modbus_server.coilWrite(MOD_PID_ENABLE_A_COIL, 0);
-  modbus_server.coilWrite(MOD_PID_ENABLE_B_COIL, 0);
-
-  modbus_server.coilWrite(MOD_GRADIENT_ENABLE_COIL, 0);
-  modbus_server.coilWrite(MOD_AUTOSP_ENABLE_COIL, 0);
-  modbus_server.coilWrite(MOD_AUTOSP_HEATING_COIL, 1);
-
-  modbus_server.coilWrite(MOD_GRADIENT_HIGH_COIL, 0);
+    // Separate values as only one holding register can be written to at a time
+    for (float term : pidDefaults_)
+    {
+        modbus_server.floatToHoldingRegisters(tempAddress, term);
+        tempAddress += 2;
+    }
 }

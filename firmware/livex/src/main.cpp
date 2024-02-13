@@ -8,29 +8,24 @@
 #include <ExpandedGpio.h>
 #include "pins_is.h"
 #include "initialise.h"
-#include "modbusAddresses.h"
+#include "config.h"
 #include "pidController.h"
-#include "utilFunctions.h"
+#include "modbusServerController.h"
 
 #include <Adafruit_I2CDevice.h>
 #include <Adafruit_I2CRegister.h>
 #include "Adafruit_MCP9600.h"
 #include <PID_v1.h>
 
-#define PWM_PIN_A A0_5
-#define PWM_PIN_B A0_6 // Hypothetical second heater output pin
-
-const bool DEBUG = false;
-
 static bool eth_connected = false;
 
 EthernetServer ethServer(502);
-ModbusTCPServer modbus_server;
+ModbusServerController modbus_server;
 ExpandedGpio gpio;
 
-// Addresses for PID objects
+// addresses for PID objects
 PIDAddresses pidA_addr = {
-  PWM_PIN_A,
+  PIN_PWM_A,
   MOD_SETPOINT_A_HOLD,
   MOD_PID_OUTPUT_A_INP,
   MOD_PID_ENABLE_A_COIL,
@@ -41,7 +36,7 @@ PIDAddresses pidA_addr = {
 };
 
 PIDAddresses pidB_addr = {
-  PWM_PIN_B,
+  PIN_PWM_B,
   MOD_SETPOINT_B_HOLD,
   MOD_PID_OUTPUT_B_INP,
   MOD_PID_ENABLE_B_COIL,
@@ -59,21 +54,12 @@ byte ip[] = { 192, 168, 0, 159 };
 byte gateway[] = { 192, 168, 0, 1 };
 byte subnet[] = { 255, 255, 255, 0 };
 
-int numHoldRegs = 32;
-int numInputRegs = 32;
-int numCoils = 8;
-
 // Timers setup
 float counter = 0;
 long int tPID = millis(); // Timer for PID
-long int tGradient = millis(); // Timer for gradient update
-long int tAutosp = millis(); // Auto set point control
-// Interval/period for each control
-long int intervalPID = 1000;
-long int intervalGradient = 1000;
-long int intervalAutosp = 1000;
+long int tModifiers = millis(); // Timer for gradient update
+long int tMotor = millis(); // Auto set point control
 long int connectionTimer;
-long int connectionTimeout = 30000;
 
 // MCP9600 setup
 Adafruit_MCP9600 mcp[] = {Adafruit_MCP9600(), Adafruit_MCP9600()};
@@ -99,12 +85,18 @@ void setup()
   // initialise.cpp
   initialiseEthernet(ethServer, mac, ip, PIN_SPI_SS_ETHERNET_LIB);
   initialiseThermocouples(mcp, num_mcp, mcp_addr);
-  initialiseModbus(modbus_server, numInputRegs, numHoldRegs, numCoils);
+  modbus_server.initialiseModbus();
+  writePIDDefaults(modbus_server, PID_A);
+  writePIDDefaults(modbus_server, PID_B);
 
   gpio.init();
-  gpio.pinMode(Q0_0, OUTPUT); // PIN_Q0_0
-  gpio.pinMode(Q0_1, OUTPUT); // PIN_Q0_1
-  gpio.pinMode(A0_5, OUTPUT); // required?
+  // PID
+  gpio.pinMode(A0_5, OUTPUT);
+  // Motor direction/speed outputs
+  gpio.pinMode(Q1_6, OUTPUT);
+  gpio.pinMode(Q1_7, OUTPUT);
+  // Motor LVDT
+  gpio.pinMode(I0_7, INPUT);
 
   xTaskCreatePinnedToCore(
     Core0PIDTask,  /* Task function */
@@ -115,14 +107,6 @@ void setup()
     NULL,     /* Handle        */
     0        /* Pin to core 1 */
   );
-
-  // pidController.cpp
-  PID_A.initialise(modbus_server, gpio);
-  PID_B.initialise(modbus_server, gpio);
-
-  // PID mode
-  PID_A.myPID_.SetMode(AUTOMATIC);
-  PID_B.myPID_.SetMode(AUTOMATIC);
 }
 
 // Read two MCP9600 thermocouples
@@ -150,23 +134,23 @@ void readThermoCouples()
     MOD_COUNTER_INP, (uint16_t*)(&counter), 2
   );
   counter++;
-  Serial.println(counter);
+  // Serial.println(counter);
 }
 
 // Thermal gradient is based off of midpoint of heater setpoints and overrides them
 void thermalGradient()
 {
   // Get temperature (K) per mm
-  float wanted = combineHoldingRegisters(modbus_server, MOD_GRADIENT_WANTED_HOLD);
+  float wanted = modbus_server.combineHoldingRegisters(MOD_GRADIENT_WANTED_HOLD);
   // Get distance (mm)
-  float distance = combineHoldingRegisters(modbus_server, MOD_GRADIENT_DISTANCE_HOLD);
+  float distance = modbus_server.combineHoldingRegisters(MOD_GRADIENT_DISTANCE_HOLD);
   // Theoretical temperature gradient (k/mm * mm = k)
   float theoretical = wanted * distance;
   float gradientModifier = theoretical/2;
 
   // Calculate midpoint and 
-  float setPointA = combineHoldingRegisters(modbus_server, MOD_SETPOINT_A_HOLD);
-  float setPointB = combineHoldingRegisters(modbus_server, MOD_SETPOINT_B_HOLD);
+  float setPointA = modbus_server.combineHoldingRegisters(MOD_SETPOINT_A_HOLD);
+  float setPointB = modbus_server.combineHoldingRegisters(MOD_SETPOINT_B_HOLD);
   float midpoint = (setPointA + setPointB) / 2.0;
 
   float signA, signB;
@@ -209,11 +193,11 @@ void thermalGradient()
   }
 }
 
- // Increment setPoint by an average rate per second
+// Increment setPoint by an average rate per second
 void autoSetPointControl()
 {
   // Get rate
-  float rate = combineHoldingRegisters(modbus_server, MOD_AUTOSP_RATE_HOLD);
+  float rate = modbus_server.combineHoldingRegisters(MOD_AUTOSP_RATE_HOLD);
 
   // Heating (1) or cooling (0)?
   bool heating = modbus_server.coilRead(MOD_AUTOSP_HEATING_COIL);
@@ -225,23 +209,91 @@ void autoSetPointControl()
   }
 
   // Rate is average K/s, but value depends on PID interval
-  rate = rate * (static_cast<float>(intervalPID)/1000); // e.g.: 0.5 * 20/1000 = 0.01 = 50 times per second
+  rate = rate * (static_cast<float>(INTERVAL_PID)/1000); // e.g.: 0.5 * 20/1000 = 0.01 = 50 times per second
   PID_A.autospRate = rate;
   PID_B.autospRate = rate;
 
   // Get img per degree
-  float imgPerDegree = combineHoldingRegisters(modbus_server, MOD_AUTOSP_IMGDEGREE_HOLD);
+  float imgPerDegree = modbus_server.combineHoldingRegisters(MOD_AUTOSP_IMGDEGREE_HOLD);
 
   // Calculate midpoint. Fabs in case B is higher temp
   float midpoint = fabs((PID_A.input + PID_B.input) / 2);
-  modbus_server.writeInputRegisters(MOD_AUTOSP_MIDPT_INP, (uint16_t*)(&midpoint), 2);
+  modbus_server.floatToInputRegisters(MOD_AUTOSP_MIDPT_INP, midpoint);
 
   if (DEBUG)
   {
     Serial.print("Autosp rate: ");
     Serial.print(rate);
     Serial.print(" | interval: ");
-    Serial.print(intervalPID/1000);
+    Serial.print(INTERVAL_PID/1000);
+  }
+}
+
+void runPID(String pid)
+{
+  PIDController* PID = nullptr;
+  PIDAddresses addr;
+  // Identify which PID
+  if (pid == "A")
+  {
+    PID = &PID_A;
+    addr = pidA_addr;
+  } else if (pid == "B")
+  {
+    PID = &PID_B;
+    addr = pidB_addr;
+  } else
+  {
+    Serial.println("Improper PID run call, no PID specified.");
+    return;
+  }
+
+  if (PID != nullptr)
+  {
+    // Check PID enabled
+    if (modbus_server.readBool(addr.modPidEnableCoil)){
+      // Check PID tunings
+      double newKp = double(modbus_server.combineHoldingRegisters(addr.modKpHold));
+      double newKi = double(modbus_server.combineHoldingRegisters(addr.modKiHold));
+      double newKd = double(modbus_server.combineHoldingRegisters(addr.modKdHold));
+      PID->check_PID_tunings(newKp, newKi, newKd);
+
+      // Check thermal gradient enable status and use setpoint accordingly
+      if (modbus_server.readBool(MOD_GRADIENT_ENABLE_COIL))
+      {
+        PID->setPoint = PID->gradientSetPoint;
+      }
+      else
+      {
+        PID->setPoint = modbus_server.combineHoldingRegisters(addr.modSetPointHold);
+      }
+
+      // Calculate PID output
+      PID->run();
+
+      // Write PID output
+      modbus_server.floatToInputRegisters(addr.modPidOutputInp, PID->output);
+
+      if (INVERT_OUTPUT_SIGNAL)
+      {
+        float inv_output = PID_OUTPUT_LIMIT - PID->output;
+        gpio.analogWrite(addr.outputPin, inv_output);
+      }
+      else
+      {
+        gpio.analogWrite(addr.outputPin, PID->output);
+      }
+
+      // Check autosp enable status. If enabled, add rate to setpoint via holding register
+      if (modbus_server.readBool(MOD_AUTOSP_ENABLE_COIL))
+      {
+        modbus_server.floatToHoldingRegisters(addr.modSetPointHold, (PID->setPoint + PID->autospRate));
+      }
+    }
+  }
+  else
+  {
+    gpio.analogWrite(addr.outputPin, 0);
   }
 }
 
@@ -271,7 +323,7 @@ void loop()
 
   // Disable heaters if no connection for 30 seconds. Checked only if no current connection.
   long int elapsedTime = millis() - connectionTimer;
-  if (elapsedTime > connectionTimeout)
+  if (elapsedTime > INTERVAL_TIMEOUT)
   {
     Serial.println("Timeout: no connection. Disabling PID behaviour (write 0).");
     modbus_server.coilWrite(MOD_PID_ENABLE_A_COIL, 0);
@@ -281,7 +333,7 @@ void loop()
   }
 }
 
- // Core 0 task to handle device control
+// Core 0 task to handle device control
 void Core0PIDTask(void * pvParameters)
 {
   Serial.print("Task 2 running on core ");
@@ -293,35 +345,57 @@ void Core0PIDTask(void * pvParameters)
      // Get 'current' time
     long int now = millis();
 
-    // Run control after its specified interval
-    if ( (now-tRead) >= 1000 )
+    if ( (now - tModifiers) >= INTERVAL_MODIFIERS)
     {
-      tRead = millis(); // Timers read before as runtime should not influence call period
-      readThermoCouples();
-    }
-
-    if ( (now - tGradient) >= intervalGradient)
-    {
-      tGradient = millis();
+      tModifiers = millis();
       thermalGradient();
-    }
-
-    if ( (now - tAutosp) >= intervalAutosp)
-    {
-      tAutosp = millis();
       autoSetPointControl();
+
+      float lvdt = gpio.analogRead(I0_7);
+
+      // No obvious conversion formula, but readings of values at positions are known.
+      // Max height is at ~1700, minimum at ~200, total range of 9.5mm.
+      // This covers a range of 7.28V by current positioning of LVDT.
+      float position = (1700 -(lvdt)) * (9.5 / 1500); // mm/mV
+
+      modbus_server.floatToInputRegisters(MOD_MOTOR_LVDT_INP, position);
     }
 
-    if ( (now - tPID) >= intervalPID )
+    if ( (now - tPID) >= INTERVAL_PID )
     {
       tPID = millis(); // Only need one timer, PIDs have same period
 
-      double readingA = mcp[0].readThermocouple(); // First thermocouple for A
-      double readingB = mcp[1].readThermocouple(); // Second thermocouple for B
+      // Get thermocouple readings for input
+      PID_A.input = mcp[0].readThermocouple(); // First thermocouple for A
+      PID_B.input = mcp[1].readThermocouple(); // Second thermocouple for B
 
-      PID_A.run(readingA);
-      PID_B.run(readingB);
-      Serial.println("");
+      // Write thermocouple output to server
+      modbus_server.floatToInputRegisters(MOD_THERMOCOUPLE_A_INP, PID_A.input);
+      modbus_server.floatToInputRegisters(MOD_THERMOCOUPLE_B_INP, PID_B.input);
+
+      runPID("A");
+      runPID("B");
+    }
+
+    if ( (now - tMotor) >= INTERVAL_MOTOR)
+    {
+      if (modbus_server.readBool(MOD_MOTOR_ENABLE_COIL))
+      {
+        tMotor = millis();
+        bool direction = modbus_server.readBool(MOD_MOTOR_DIRECTION_COIL);
+        direction *= 4095; // Either 4095 (max out) or 0 (no out)
+
+        float speed = modbus_server.combineHoldingRegisters(MOD_MOTOR_SPEED_HOLD); // exactly how this is calculated is TBC
+
+        // analogWrite does PWM
+        gpio.digitalWrite(PIN_MOTOR_DIRECTION, direction);
+        gpio.analogWrite(PIN_MOTOR_PWM, speed);
+      }
+      else
+      {
+        // Write 0 (no motor) if motor control disabled
+        gpio.analogWrite(PIN_MOTOR_PWM, 0);
+      }
     }
   }
 }
