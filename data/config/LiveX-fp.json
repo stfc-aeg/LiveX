@@ -1,0 +1,55 @@
+[
+    {
+        "fr_setup": {
+            "fr_ready_cnxn":"tcp://127.0.0.1:5001",
+            "fr_release_cnxn":"tcp://127.0.0.1:5002"
+        }
+    },
+    {
+        "plugin": {
+            "load": {
+                "index": "learning",
+                "name": "LiveXTorchPlugin",
+                "library": "./lib/libLiveXTorchPlugin.so"
+            }
+        }
+    },
+    {
+        "plugin": {
+            "load": {
+                "index":"liveview",
+                "name":"LiveViewPlugin",
+                "library":"./lib/libLiveViewPlugin.so"
+            }
+        }
+    },
+    {
+        "plugin": {
+            "connect": {
+                "index":"learning",
+                "connection":"frame_receiver"
+            }
+        }
+    },
+    {
+        "plugin": {
+            "connect": {
+                "index":"liveview",
+                "connection":"learning"
+            }
+        }
+    },
+    {
+        "learning": {
+            "model_path": "/aeg_sw/work/users/wbd45595/develop/projects/pytorch/castings_net_traced_2.pt",
+            "decode_header": true
+        }
+    },
+    {
+        "liveview": {
+            "live_view_socket_addr":"tcp://0.0.0.0:6972",
+            "dataset_name": "Test",
+            "frame_frequency": 1
+        }
+    }
+]
