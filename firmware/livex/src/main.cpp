@@ -17,9 +17,12 @@
 #include "Adafruit_MCP9600.h"
 #include <PID_v1.h>
 
+#include "buffer.cpp"
+
 static bool eth_connected = false;
 
-EthernetServer ethServer(502);
+EthernetServer modbusEthServer(502);
+EthernetServer tcpEthServer(4444);
 ModbusServerController modbus_server;
 ExpandedGpio gpio;
 
@@ -54,8 +57,12 @@ byte ip[] = { 192, 168, 0, 159 };
 byte gateway[] = { 192, 168, 0, 1 };
 byte subnet[] = { 255, 255, 255, 0 };
 
+EthernetClient modbusClient;
+EthernetClient streamClient;
+
 // Timers setup
-float counter = 0;
+float counter = 1;
+long int tDequeue = millis(); // timer for buffer dequeue
 long int tPID = millis(); // Timer for PID
 long int tModifiers = millis(); // Timer for gradient update
 long int tMotor = millis(); // Auto set point control
@@ -83,11 +90,15 @@ void setup()
   Wire.begin();
 
   // initialise.cpp
-  initialiseEthernet(ethServer, mac, ip, PIN_SPI_SS_ETHERNET_LIB);
+  initialiseEthernet(modbusEthServer, mac, ip, PIN_SPI_SS_ETHERNET_LIB);
+  tcpEthServer.begin();
   initialiseThermocouples(mcp, num_mcp, mcp_addr);
   modbus_server.initialiseModbus();
   writePIDDefaults(modbus_server, PID_A);
   writePIDDefaults(modbus_server, PID_B);
+
+  // // start invalid
+  // modbus_server.coilWrite(BUFFER_VALID_COIL, 0);
 
   gpio.init();
   // PID
@@ -229,6 +240,7 @@ void autoSetPointControl()
   }
 }
 
+// Run a specified PID (A or B) then apply gradient, ASPC, new PID terms, etc.
 void runPID(String pid)
 {
   PIDController* PID = nullptr;
@@ -297,28 +309,29 @@ void runPID(String pid)
   }
 }
 
-// Client connections handled on core 1 (loop)
 void loop()
 {
-  // Listen for incoming clients
-  EthernetClient client = ethServer.available();
-
-  if (client)
+  if(modbusClient.connected()) // check for existing connection...
   {
-    Serial.println("New client");
-    modbus_server.accept(client);
-
-    while (client.connected())
-    {
-      // Poll for requests while client is connected
-      int ret = modbus_server.poll();
-      if (ret) 
-      {
-        // Nothing needed here right now.
-      }
-    }
-    Serial.println("Client disconnected");
+    modbus_server.poll();
     connectionTimer = millis();
+  }
+  else // ...check for new ones if not.
+  {
+    modbusClient = modbusEthServer.available();
+    if (modbusClient){
+      modbus_server.accept(modbusClient);
+    }
+  }
+
+  if(streamClient.connected()) // check first, then poll
+  {
+    char c = streamClient.read();
+    // Serial.print(c);
+  }
+  else
+  {
+    streamClient = tcpEthServer.available();
   }
 
   // Disable heaters if no connection for 30 seconds. Checked only if no current connection.
@@ -372,6 +385,17 @@ void Core0PIDTask(void * pvParameters)
       // Write thermocouple output to server
       modbus_server.floatToInputRegisters(MOD_THERMOCOUPLE_A_INP, PID_A.input);
       modbus_server.floatToInputRegisters(MOD_THERMOCOUPLE_B_INP, PID_B.input);
+      modbus_server.floatToInputRegisters(MOD_COUNTER_INP, counter);
+      counter = counter +1;
+
+      if(streamClient.connected())
+      { // move it to comms core
+        BufferObject obj;
+        obj.counter = counter;
+        obj.temperatureA = PID_A.input;
+        obj.temperatureB = PID_B.input;
+        tcpEthServer.write((uint8_t*)&obj, sizeof(obj));
+      }
 
       runPID("A");
       runPID("B");

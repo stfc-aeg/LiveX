@@ -46,10 +46,14 @@ class LiveXAdapter(ApiAdapter):
         super(LiveXAdapter, self).__init__(**kwargs)
 
         # Parse options
-        background_task_enable = bool(self.options.get('background_task_enable', False))
-        background_task_interval = float(self.options.get('background_task_interval', 1.0))
+        bg_read_task_enable = bool(self.options.get('background_read_task_enable', False))
+        bg_read_task_interval = float(self.options.get('background_read_task_interval', 1.0))
+        bg_stream_task_enable = bool(self.options.get('background_stream_task_enable', False))
+        bg_stream_task_interval = float(self.options.get('background_stream_task_interval', 1.0))
 
-        self.livex = LiveX(background_task_enable, background_task_interval)
+        self.livex = LiveX(
+            bg_read_task_enable, bg_read_task_interval,
+            bg_stream_task_enable, bg_stream_task_interval)
 
         logging.debug('LiveXAdapter loaded')
 

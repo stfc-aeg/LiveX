@@ -25,6 +25,11 @@ def read_coil(client, address, asInt=False):
     else:
         return response.bits[0]  # read_coils pads to eight with zeroes.
 
+def write_coil(client, address, value=0):
+    """Write a boolean value to a coil at the specified address."""
+    response = client.write_coil(address, value, slave=1)
+    return response
+
 def read_decode_input_reg(client, address):
     """Read and decode a float value from a given input register address (two registers).
     Return the decoded value.
