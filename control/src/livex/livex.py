@@ -28,7 +28,7 @@ class LiveX():
     """LiveX - class that ..."""
 
     # Thread executor used for background tasks
-    executor = futures.ThreadPoolExecutor(max_workers=1)
+    executor = futures.ThreadPoolExecutor(max_workers=2)
 
     def __init__(self, bg_read_task_enable, bg_read_task_interval, bg_stream_task_enable, bg_stream_task_interval):
         """Initialise the LiveX object.
@@ -91,7 +91,10 @@ class LiveX():
         self.tcp_client.connect((self.ip, self.port))
         activate = '111' # to ensure connection and allow reading
         self.tcp_client.send(activate.encode())
+        self.tcp_client.settimeout(1)
         self.tcp_reading = None
+
+        self.counter_readings = []
 
         self.struct = struct.Struct('fff')  # Better than calling the function for every message
 
@@ -183,9 +186,8 @@ class LiveX():
             'pid_b': self.pid_b.pid_tree,
             'autosp': autosp,
             'gradient': thermal_gradient,
-            'motor': motor
-            'tcp_reading': (lambda: self.tcp_reading, None),
-            'take_tcp_reading': (lambda: None, self.get_latest_reading)
+            'motor': motor,
+            'tcp_reading': (lambda: self.tcp_reading, None)
         })
 
         # Launch the background task if enabled in options
@@ -222,23 +224,6 @@ class LiveX():
 
         self.pid_a.initialise_modbus_client(self.mod_client)
         self.pid_b.initialise_modbus_client(self.mod_client)
-
-    def send_tcp_message(self, data):
-        """send message to the tcp client"""
-        # self.tcp_client.connect((self.ip,self.port))
-        logging.debug("data: %s", data)
-        logging.debug("encoded: %s", data.encode())
-        self.tcp_client.sendall(data.encode())
-        # self.tcp_client.close()
-
-    def get_latest_reading(self, data):
-        """Get reading from the tcp client"""
-        reading = self.tcp_client.recv(12)
-        if not reading:
-            logging.debug("read no data")
-        obj = self.struct.unpack(reading)
-        logging.debug(obj)
-        self.tcp_reading = obj
 
     def get_server_uptime(self):
         """Get the uptime for the ODIN server.
@@ -404,9 +389,11 @@ class LiveX():
 
     def stop_background_tasks(self):
         """Stop the background tasks."""
+        self.tcp_client.close()
         self.bg_read_task_enable = False
         self.bg_stream_task_enable = False
         self.background_ioloop_callback.stop()
+
 
     def background_ioloop_callback(self):
         """background task IOLoop callback
@@ -423,8 +410,12 @@ class LiveX():
             try:
                 reading = self.tcp_client.recv(12)
                 obj = self.struct.unpack(reading)
-                logging.debug(obj)
+                logging.debug(obj[0])
+                # self.counter_readings.append(obj[0])
                 self.tcp_reading = obj
+                # if len(self.counter_readings) >= 2000:
+                #     logging.debug(self.counter_readings)
+                #     self.counter_readings.clear()
             except:
                 logging.debug("read no data")
 
@@ -447,16 +438,11 @@ class LiveX():
                 # Get any value updated by the device
                 # Almost all input registers, except for setpoints which can change automatically
                 try:
-
                     # logging.debug("coil valid")
                     self.pid_a.thermocouple = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp)
                     self.pid_b.thermocouple = read_decode_input_reg(self.mod_client, modAddr.thermocouple_b_inp)
 
                     self.reading_counter = read_decode_input_reg(self.mod_client, modAddr.counter_inp)
-                    self.counter_history.append(self.reading_counter)
-                    if len(self.counter_history) > 1000:
-                        # logging.debug(self.counter_history)
-                        self.counter_history.clear()
 
                     self.pid_a.output    = read_decode_input_reg(self.mod_client, modAddr.pid_output_a_inp)
                     self.pid_b.output    = read_decode_input_reg(self.mod_client, modAddr.pid_output_b_inp)

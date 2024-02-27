@@ -11,13 +11,12 @@
 #include "config.h"
 #include "pidController.h"
 #include "modbusServerController.h"
+#include "buffer.h"
 
 #include <Adafruit_I2CDevice.h>
 #include <Adafruit_I2CRegister.h>
 #include "Adafruit_MCP9600.h"
 #include <PID_v1.h>
-
-#include "buffer.cpp"
 
 static bool eth_connected = false;
 
@@ -25,6 +24,7 @@ EthernetServer modbusEthServer(502);
 EthernetServer tcpEthServer(4444);
 ModbusServerController modbus_server;
 ExpandedGpio gpio;
+FifoBuffer<BufferObject> buffer(256);
 
 // addresses for PID objects
 PIDAddresses pidA_addr = {
@@ -327,7 +327,14 @@ void loop()
   if(streamClient.connected()) // check first, then poll
   {
     char c = streamClient.read();
-    // Serial.print(c);
+    // Serial.print(".");
+
+    // Dequeue object, if its not a nullptr, write its data out
+    BufferObject* dequeued = buffer.dequeue();
+    if (dequeued != nullptr)
+    {
+      tcpEthServer.write((uint8_t*)dequeued, sizeof(BufferObject));
+    }
   }
   else
   {
@@ -388,13 +395,19 @@ void Core0PIDTask(void * pvParameters)
       modbus_server.floatToInputRegisters(MOD_COUNTER_INP, counter);
       counter = counter +1;
 
-      if(streamClient.connected())
-      { // move it to comms core
-        BufferObject obj;
-        obj.counter = counter;
-        obj.temperatureA = PID_A.input;
-        obj.temperatureB = PID_B.input;
-        tcpEthServer.write((uint8_t*)&obj, sizeof(obj));
+      // This will eventually be conditional, likely on an active acquisition
+      // Create a buffer object, add selected attributes, add it to the buffer if not full
+      BufferObject obj;
+      obj.counter = counter;
+      obj.temperatureA = PID_A.input;
+      obj.temperatureB = PID_B.input;
+      if (buffer.isFull())
+      {
+        // Serial.print(".");
+      }
+      else
+      {
+        buffer.enqueue(&obj);
       }
 
       runPID("A");
