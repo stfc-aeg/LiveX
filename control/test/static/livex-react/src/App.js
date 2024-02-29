@@ -38,8 +38,13 @@ function App(props) {
     <Col>
     <Container>
       <Col>
-      <EndPointButton endpoint={liveXEndPoint} value={true} fullpath="status/reconnect" event_type="click" 
-      disabled={!connectedPuttingDisable}>
+      <EndPointButton
+        endpoint={liveXEndPoint}
+        value={true}
+        fullpath="status/reconnect"
+        event_type="click"
+        disabled={!connectedPuttingDisable}
+        variant={liveXEndPoint.data.status?.connected ? "primary" : "danger"}>
         {liveXEndPoint.data.status?.connected ? 'Connected' : 'Reconnect'}
       </EndPointButton>
 
@@ -55,7 +60,31 @@ function App(props) {
         connectedPuttingDisable={connectedPuttingDisable}
         title="Lower Heater (B) Controls"
         pid="pid_b">
-        </PidControl>
+      </PidControl>
+
+      <TitleCard title="test card">
+        <Container>
+          <Row>
+          <EndPointButton
+            endpoint={liveXEndPoint}
+            fullpath={"tcp/acquire"}
+            value={liveXEndPoint.data.tcp?.acquire ? false : true}
+            event_type="click"
+            disable={connectedPuttingDisable}
+            variant={liveXEndPoint.data.tcp?.acquire ? "danger" : "success" }>
+              {liveXEndPoint.data.tcp?.acquire ? "Stop acquisition" : "Start acquisition"}
+          </EndPointButton>
+          <Col>
+          <Row>
+            <StatusBox as="span" type="info" label="reading">
+              {liveXEndPoint.data.tcp?.tcp_reading}
+            </StatusBox>
+            </Row>
+            </Col>
+          </Row>
+        </Container>
+
+      </TitleCard>
 
       <TitleCard title="Thermal Gradient">
         <Container>

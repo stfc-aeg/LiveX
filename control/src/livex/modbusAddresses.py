@@ -17,6 +17,7 @@ class modAddr():
     motor_enable_coil    = 6
     motor_direction_coil = 7
     gradient_high_coil   = 8
+    acquisition_coil     = 9
 
     # Input registers (read-only, from device) start at 30001-39999
     counter_inp      = 30001

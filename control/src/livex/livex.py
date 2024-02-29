@@ -89,12 +89,13 @@ class LiveX():
         self.mod_client = ModbusTcpClient(self.ip)
         self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.tcp_client.connect((self.ip, self.port))
+
         activate = '111' # to ensure connection and allow reading
         self.tcp_client.send(activate.encode())
         self.tcp_client.settimeout(1)
         self.tcp_reading = None
 
-        self.counter_readings = []
+        self.start_acquisition = False
 
         self.struct = struct.Struct('fff')  # Better than calling the function for every message
 
@@ -178,6 +179,11 @@ class LiveX():
             'reconnect': (lambda: self.reconnect, self.initialise_clients)
         })
 
+        tcp = ParameterTree({
+            'tcp_reading': (lambda: self.tcp_reading, None),
+            'acquire': (lambda: self.start_acquisition, self.toggle_acquisition)
+        })
+
         # Store all information in a parameter tree
         self.param_tree = ParameterTree({
             'status': status,
@@ -187,7 +193,7 @@ class LiveX():
             'autosp': autosp,
             'gradient': thermal_gradient,
             'motor': motor,
-            'tcp_reading': (lambda: self.tcp_reading, None)
+            'tcp': tcp
         })
 
         # Launch the background task if enabled in options
@@ -195,20 +201,25 @@ class LiveX():
             logging.debug("going to start bg tasks")
             self.start_background_tasks()
 
+    # Adapter processes
+
+    def toggle_acquisition(self, value):
+        """Toggle whether the system is acquiring data."""
+        value = bool(value)
+        self.start_acquisition = value
+
+        logging.debug("Toggled acquisition")
+
+        if value:
+            self.mod_client.write_coil(modAddr.acquisition_coil, 1, slave=1)
+        else:
+            self.mod_client.write_coil(modAddr.acquisition_coil, 0, slave=1)
+
     def initialise_adapters(self, adapters):
         """Initialise any adapters that this one needs access to.
         :param adapters: dict of adapters from adapter.py
         """
         self.graph_adapter = adapters['graph']
-
-    def push_data(self, key, data):
-        """Push data to the graph adapter dataset(s).
-        :param key: key in dataset
-        :param data: value to append to list in key
-        """
-        self.graph_adapter.datasets['thermocouples'].data[key].append(data)
-
-        self.graph_adapter.datasets['thermocouples_long'].data[key].append(data)
 
     def initialise_clients(self, value):
         """Instantiate a ModbusTcpClient and provide it to the PID controllers."""
@@ -224,6 +235,15 @@ class LiveX():
 
         self.pid_a.initialise_modbus_client(self.mod_client)
         self.pid_b.initialise_modbus_client(self.mod_client)
+
+    def push_data(self, key, data):
+        """Push data to the graph adapter dataset(s).
+        :param key: key in dataset
+        :param data: value to append to list in key
+        """
+        self.graph_adapter.datasets['thermocouples'].data[key].append(data)
+
+        self.graph_adapter.datasets['thermocouples_long'].data[key].append(data)
 
     def get_server_uptime(self):
         """Get the uptime for the ODIN server.
@@ -386,14 +406,12 @@ class LiveX():
         logging.debug("started the stream one")
         self.background_read_task()
 
-
     def stop_background_tasks(self):
         """Stop the background tasks."""
         self.tcp_client.close()
         self.bg_read_task_enable = False
         self.bg_stream_task_enable = False
         self.background_ioloop_callback.stop()
-
 
     def background_ioloop_callback(self):
         """background task IOLoop callback
@@ -405,17 +423,13 @@ class LiveX():
 
     @run_on_executor
     def background_stream_task(self):
-        """task to, if connected, receive a special object through a buffer"""
+        """task to, if connected, receive a specific object through a buffer"""
         while self.bg_stream_task_enable:
             try:
                 reading = self.tcp_client.recv(12)
                 obj = self.struct.unpack(reading)
                 logging.debug(obj[0])
-                # self.counter_readings.append(obj[0])
                 self.tcp_reading = obj
-                # if len(self.counter_readings) >= 2000:
-                #     logging.debug(self.counter_readings)
-                #     self.counter_readings.clear()
             except:
                 logging.debug("read no data")
 

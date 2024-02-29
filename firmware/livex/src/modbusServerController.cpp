@@ -28,9 +28,11 @@ void ModbusServerController::initialiseModbus()
 
   coilWrite(MOD_AUTOSP_ENABLE_COIL, 0);
   coilWrite(MOD_AUTOSP_HEATING_COIL, 1);
-  
+
   coilWrite(MOD_MOTOR_ENABLE_COIL, 0);
   coilWrite(MOD_MOTOR_DIRECTION_COIL, 1);
+
+  coilWrite(MOD_ACQUISITION_COIL, 0);
 }
 
 // Write a boolean (1 or 0) to a modbus coil.

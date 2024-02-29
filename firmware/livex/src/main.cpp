@@ -67,6 +67,7 @@ long int tPID = millis(); // Timer for PID
 long int tModifiers = millis(); // Timer for gradient update
 long int tMotor = millis(); // Auto set point control
 long int connectionTimer;
+bool acquisitionFlag = false;
 
 // MCP9600 setup
 Adafruit_MCP9600 mcp[] = {Adafruit_MCP9600(), Adafruit_MCP9600()};
@@ -397,17 +398,33 @@ void Core0PIDTask(void * pvParameters)
 
       // This will eventually be conditional, likely on an active acquisition
       // Create a buffer object, add selected attributes, add it to the buffer if not full
-      BufferObject obj;
-      obj.counter = counter;
-      obj.temperatureA = PID_A.input;
-      obj.temperatureB = PID_B.input;
-      if (buffer.isFull())
+      if (modbus_server.coilRead(MOD_ACQUISITION_COIL))
       {
-        // Serial.print(".");
+        // Reset counter if we haven't already done so.
+        if (!acquisitionFlag)
+        {
+          counter = 1;
+          acquisitionFlag = true;
+        }
+        // Construct object
+        BufferObject obj;
+        obj.counter = counter;
+        obj.temperatureA = PID_A.input;
+        obj.temperatureB = PID_B.input;
+
+        // Queue it only if there is room in the buffer
+        if (buffer.isFull())
+        {
+          // Serial.print(".");
+        }
+        else
+        {
+          buffer.enqueue(&obj);
+        }
       }
       else
       {
-        buffer.enqueue(&obj);
+        acquisitionFlag = false;
       }
 
       runPID("A");
