@@ -4,6 +4,8 @@
 #include <ArduinoRS485.h>
 #include <ArduinoModbus.h>
 #include <cmath>
+#include <esp32-hal-timer.h>
+#include <driver/timer.h>
 
 #include <ExpandedGpio.h>
 #include "pins_is.h"
@@ -62,7 +64,7 @@ EthernetClient streamClient;
 
 // Timers setup
 float counter = 1;
-long int tDequeue = millis(); // timer for buffer dequeue
+long int tDequeue = millis(); // Timer for buffer dequeue
 long int tPID = millis(); // Timer for PID
 long int tModifiers = millis(); // Timer for gradient update
 long int tMotor = millis(); // Auto set point control
@@ -81,9 +83,48 @@ int num_thermoReadings = sizeof(thermoReadings) / sizeof(thermoReadings[0]);
 // Functions for reference later
 void Core0PIDTask(void * pvParameters);
 
+hw_timer_t *pidFlagTimer = NULL;
+hw_timer_t *motorFlagTimer = NULL;
+hw_timer_t *modifierFlagTimer = NULL;
+
+volatile bool pidFlag = false;
+volatile bool motorFlag = false;
+volatile bool modifierFlag = false;
+
+void IRAM_ATTR pidFlagOnTimer()
+{
+  pidFlag = true;
+}
+
+void IRAM_ATTR motorFlagOnTimer()
+{
+  motorFlag = true;
+}
+
+void IRAM_ATTR modifierFlagOnTimer()
+{
+  modifierFlag = true;
+}
+
 // Initialise wires, devices, and Modbus/gpio
 void setup()
 {
+  pidFlagTimer = timerBegin(0, 80, true); // timer number (0-3),prescaler (80MHz), count up (true/false)
+  timerAttachInterrupt(pidFlagTimer, &pidFlagOnTimer, true); // timer, ISR (interrupting function), edge (?)
+  timerAlarmWrite(pidFlagTimer, TIMER_PID, true); // timer, time in μs, reload (true) for periodic
+  timerAlarmEnable(pidFlagTimer); // guess
+
+  motorFlagTimer = timerBegin(1, 80, true);
+  timerAttachInterrupt(motorFlagTimer, &motorFlagOnTimer, true);
+  timerAlarmWrite(motorFlagTimer, TIMER_MOTOR, true);
+
+  modifierFlagTimer = timerBegin(2, 80, true);
+  timerAttachInterrupt(modifierFlagTimer, &modifierFlagOnTimer, true);
+  timerAlarmWrite(modifierFlagTimer, TIMER_MODIFIER, true);
+
+  timerAlarmEnable(modifierFlagTimer);
+  timerAlarmEnable(motorFlagTimer);
+
   Serial.begin(9600);
   delay(2000); // Serial requires a moment to be ready
 
@@ -366,23 +407,7 @@ void Core0PIDTask(void * pvParameters)
      // Get 'current' time
     long int now = millis();
 
-    if ( (now - tModifiers) >= INTERVAL_MODIFIERS)
-    {
-      tModifiers = millis();
-      thermalGradient();
-      autoSetPointControl();
-
-      float lvdt = gpio.analogRead(I0_7);
-
-      // No obvious conversion formula, but readings of values at positions are known.
-      // Max height is at ~1700, minimum at ~200, total range of 9.5mm.
-      // This covers a range of 7.28V by current positioning of LVDT.
-      float position = (1700 -(lvdt)) * (9.5 / 1500); // mm/mV
-
-      modbus_server.floatToInputRegisters(MOD_MOTOR_LVDT_INP, position);
-    }
-
-    if ( (now - tPID) >= INTERVAL_PID )
+    if (pidFlag)
     {
       tPID = millis(); // Only need one timer, PIDs have same period
 
@@ -390,13 +415,12 @@ void Core0PIDTask(void * pvParameters)
       PID_A.input = mcp[0].readThermocouple(); // First thermocouple for A
       PID_B.input = mcp[1].readThermocouple(); // Second thermocouple for B
 
-      // Write thermocouple output to server
+      // Write thermocouple output to modbus registers
       modbus_server.floatToInputRegisters(MOD_THERMOCOUPLE_A_INP, PID_A.input);
       modbus_server.floatToInputRegisters(MOD_THERMOCOUPLE_B_INP, PID_B.input);
       modbus_server.floatToInputRegisters(MOD_COUNTER_INP, counter);
       counter = counter +1;
 
-      // This will eventually be conditional, likely on an active acquisition
       // Create a buffer object, add selected attributes, add it to the buffer if not full
       if (modbus_server.coilRead(MOD_ACQUISITION_COIL))
       {
@@ -412,7 +436,7 @@ void Core0PIDTask(void * pvParameters)
         obj.temperatureA = PID_A.input;
         obj.temperatureB = PID_B.input;
 
-        // Queue it only if there is room in the buffer
+        // Queue only if there is room in the buffer
         if (buffer.isFull())
         {
           // Serial.print(".");
@@ -429,9 +453,20 @@ void Core0PIDTask(void * pvParameters)
 
       runPID("A");
       runPID("B");
+
+      // Set flag back to false for timer
+      pidFlag=false;
     }
 
-    if ( (now - tMotor) >= INTERVAL_MOTOR)
+    if (modifierFlag)
+    {
+      tModifiers = millis();
+      thermalGradient();
+      autoSetPointControl();
+      modifierFlag = false;
+    }
+
+    if (motorFlag)
     {
       if (modbus_server.readBool(MOD_MOTOR_ENABLE_COIL))
       {
@@ -450,6 +485,16 @@ void Core0PIDTask(void * pvParameters)
         // Write 0 (no motor) if motor control disabled
         gpio.analogWrite(PIN_MOTOR_PWM, 0);
       }
+      float lvdt = gpio.analogRead(I0_7);
+
+      // No obvious conversion formula, but readings of values at positions are known.
+      // Max height is at ~1700, minimum at ~200, total range of 9.5mm.
+      // This covers a range of 7.28V by current positioning of LVDT.
+      float position = (1700 -(lvdt)) * (9.5 / 1500); // mm/mV
+
+      modbus_server.floatToInputRegisters(MOD_MOTOR_LVDT_INP, position);
+
+      motorFlag = false;
     }
   }
 }
