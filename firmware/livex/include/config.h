@@ -12,9 +12,8 @@
 #define INTERVAL_TIMEOUT 30000
 
 #define TIMER_PID 20000
-// These flags may be merged for readability/timer availability
-#define TIMER_MOTOR 200000
-#define TIMER_MODIFIER 200000
+#define TIMER_CAM_PIN 10000
+#define TIMER_SECONDARY 200000 // motor and modifiers
 
 // Default terms for PID controllers
 #define PID_SETPOINT_DEFAULT 25.5

@@ -69,7 +69,7 @@ long int tPID = millis(); // Timer for PID
 long int tModifiers = millis(); // Timer for gradient update
 long int tMotor = millis(); // Auto set point control
 long int connectionTimer;
-bool acquisitionFlag = false;
+bool acquiringFlag = false;
 
 // MCP9600 setup
 Adafruit_MCP9600 mcp[] = {Adafruit_MCP9600(), Adafruit_MCP9600()};
@@ -84,26 +84,27 @@ int num_thermoReadings = sizeof(thermoReadings) / sizeof(thermoReadings[0]);
 void Core0PIDTask(void * pvParameters);
 
 hw_timer_t *pidFlagTimer = NULL;
-hw_timer_t *motorFlagTimer = NULL;
-hw_timer_t *modifierFlagTimer = NULL;
+hw_timer_t *secondaryFlagTimer = NULL;
+hw_timer_t *camPinToggleTimer = NULL;
 
 volatile bool pidFlag = false;
-volatile bool motorFlag = false;
-volatile bool modifierFlag = false;
+volatile bool secondaryFlag = false;
+volatile bool camToggleFlag = false;
+volatile bool camPinToggle = false;
 
 void IRAM_ATTR pidFlagOnTimer()
 {
   pidFlag = true;
 }
 
-void IRAM_ATTR motorFlagOnTimer()
+void IRAM_ATTR secondaryFlagOnTimer()
 {
-  motorFlag = true;
+  secondaryFlag = true;
 }
 
-void IRAM_ATTR modifierFlagOnTimer()
+void IRAM_ATTR camPinToggleOnTimer()
 {
-  modifierFlag = true;
+  camToggleFlag = true;
 }
 
 // Initialise wires, devices, and Modbus/gpio
@@ -114,16 +115,14 @@ void setup()
   timerAlarmWrite(pidFlagTimer, TIMER_PID, true); // timer, time in μs, reload (true) for periodic
   timerAlarmEnable(pidFlagTimer); // guess
 
-  motorFlagTimer = timerBegin(1, 80, true);
-  timerAttachInterrupt(motorFlagTimer, &motorFlagOnTimer, true);
-  timerAlarmWrite(motorFlagTimer, TIMER_MOTOR, true);
+  secondaryFlagTimer = timerBegin(1, 80, true);
+  timerAttachInterrupt(secondaryFlagTimer, &secondaryFlagOnTimer, true);
+  timerAlarmWrite(secondaryFlagTimer, TIMER_SECONDARY, true);
+  timerAlarmEnable(secondaryFlagTimer);
 
-  modifierFlagTimer = timerBegin(2, 80, true);
-  timerAttachInterrupt(modifierFlagTimer, &modifierFlagOnTimer, true);
-  timerAlarmWrite(modifierFlagTimer, TIMER_MODIFIER, true);
-
-  timerAlarmEnable(modifierFlagTimer);
-  timerAlarmEnable(motorFlagTimer);
+  camPinToggleTimer = timerBegin(3, 80, true);
+  timerAttachInterrupt(camPinToggleTimer, &camPinToggleOnTimer, true);
+  timerAlarmWrite(camPinToggleTimer, TIMER_CAM_PIN, false);
 
   Serial.begin(9600);
   delay(2000); // Serial requires a moment to be ready
@@ -139,9 +138,6 @@ void setup()
   writePIDDefaults(modbus_server, PID_A);
   writePIDDefaults(modbus_server, PID_B);
 
-  // // start invalid
-  // modbus_server.coilWrite(BUFFER_VALID_COIL, 0);
-
   gpio.init();
   // PID
   gpio.pinMode(A0_5, OUTPUT);
@@ -150,6 +146,8 @@ void setup()
   gpio.pinMode(Q1_7, OUTPUT);
   // Motor LVDT
   gpio.pinMode(I0_7, INPUT);
+  // External trigger pin
+  gpio.pinMode(Q1_0, OUTPUT);
 
   xTaskCreatePinnedToCore(
     Core0PIDTask,  /* Task function */
@@ -404,12 +402,16 @@ void Core0PIDTask(void * pvParameters)
 
   for(;;)
   {
-     // Get 'current' time
-    long int now = millis();
-
     if (pidFlag)
     {
-      tPID = millis(); // Only need one timer, PIDs have same period
+      // Write pin to high and start timer to write it low
+      gpio.digitalWrite(Q1_0, HIGH);
+      if (!timerAlarmEnabled(camPinToggleTimer))
+      {
+        // Restart resets counter, otherwise timer fires immediately on 2nd+ enables
+        timerRestart(camPinToggleTimer);
+        timerAlarmEnable(camPinToggleTimer);
+      }
 
       // Get thermocouple readings for input
       PID_A.input = mcp[0].readThermocouple(); // First thermocouple for A
@@ -424,11 +426,11 @@ void Core0PIDTask(void * pvParameters)
       // Create a buffer object, add selected attributes, add it to the buffer if not full
       if (modbus_server.coilRead(MOD_ACQUISITION_COIL))
       {
-        // Reset counter if we haven't already done so.
-        if (!acquisitionFlag)
+        // Reset counter if we haven't already done so
+        if (!acquiringFlag)
         {
           counter = 1;
-          acquisitionFlag = true;
+          acquiringFlag = true;
         }
         // Construct object
         BufferObject obj;
@@ -448,7 +450,8 @@ void Core0PIDTask(void * pvParameters)
       }
       else
       {
-        acquisitionFlag = false;
+        // Counter will be set to 1 when starting acquisition
+        acquiringFlag = false;
       }
 
       runPID("A");
@@ -458,19 +461,15 @@ void Core0PIDTask(void * pvParameters)
       pidFlag=false;
     }
 
-    if (modifierFlag)
+    if (secondaryFlag)
     {
-      tModifiers = millis();
+      // Thermal modifiers
       thermalGradient();
       autoSetPointControl();
-      modifierFlag = false;
-    }
 
-    if (motorFlag)
-    {
+      // Motor control (if enabled)
       if (modbus_server.readBool(MOD_MOTOR_ENABLE_COIL))
       {
-        tMotor = millis();
         bool direction = modbus_server.readBool(MOD_MOTOR_DIRECTION_COIL);
         direction *= 4095; // Either 4095 (max out) or 0 (no out)
 
@@ -485,6 +484,8 @@ void Core0PIDTask(void * pvParameters)
         // Write 0 (no motor) if motor control disabled
         gpio.analogWrite(PIN_MOTOR_PWM, 0);
       }
+
+      // Always read LVDT regardless of motor enable
       float lvdt = gpio.analogRead(I0_7);
 
       // No obvious conversion formula, but readings of values at positions are known.
@@ -494,7 +495,13 @@ void Core0PIDTask(void * pvParameters)
 
       modbus_server.floatToInputRegisters(MOD_MOTOR_LVDT_INP, position);
 
-      motorFlag = false;
+      secondaryFlag = false;
+    }
+  
+    if (camToggleFlag)
+    {
+      gpio.digitalWrite(Q1_0, LOW);
+      camToggleFlag = false;
     }
   }
 }
