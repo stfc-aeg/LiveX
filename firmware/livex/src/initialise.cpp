@@ -1,5 +1,29 @@
 #include "initialise.h"
 
+// Initialise timers for pid, for secondary devices, and setting camera to low (enabled by pid)
+void initialiseTimers(hw_timer_t** pidFlagTimer, hw_timer_t** secondaryFlagTimer, hw_timer_t** camPinToggleTimer)
+{
+  *pidFlagTimer = timerBegin(0, 80, true); // timer number (0-3),prescaler (80MHz), count up (true/false)
+  timerAttachInterrupt(*pidFlagTimer, &pidFlagOnTimer, true); // timer, ISR (interrupting function), edge (?)
+  timerAlarmWrite(*pidFlagTimer, TIMER_PID, true); // timer, time in μs, reload (true) for periodic
+
+  *secondaryFlagTimer = timerBegin(1, 80, true);
+  timerAttachInterrupt(*secondaryFlagTimer, &secondaryFlagOnTimer, true);
+  timerAlarmWrite(*secondaryFlagTimer, TIMER_SECONDARY, true);
+
+  // timerAlarmEnable(*pidFlagTimer);
+  timerAlarmEnable(*secondaryFlagTimer);
+  
+  pinMode(I0_5, INPUT);
+  attachInterrupt(digitalPinToInterrupt(I0_5), toggledInterrupt, CHANGE);
+
+  // This timer may not be used
+  *camPinToggleTimer = timerBegin(3, 80, true);
+  timerAttachInterrupt(*camPinToggleTimer, &camPinToggleOnTimer, true);
+  timerAlarmWrite(*camPinToggleTimer, TIMER_CAM_PIN, false);
+  // timerAlarmEnable(*camPinToggleTimer);
+}
+
 // Run the MCP9600 default setup code. Find devices and set defaults
 void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* mcp_addr)
 {
