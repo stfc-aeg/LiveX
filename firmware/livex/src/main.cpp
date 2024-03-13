@@ -53,31 +53,16 @@ Adafruit_MCP9600 mcp[] = {Adafruit_MCP9600(), Adafruit_MCP9600()};
 const unsigned int num_mcp = sizeof(mcp) / sizeof(mcp[0]);
 const uint8_t mcp_addr[] = {0x60, 0x67};
 
-// Timers - main, taskPid
-hw_timer_t *pidFlagTimer = NULL;
+// Timers and flags - main, taskPid
 hw_timer_t *secondaryFlagTimer = NULL;
-hw_timer_t *camPinToggleTimer = NULL;
-
 volatile bool pidFlag = false;
 volatile bool secondaryFlag = false;
-volatile bool camToggleFlag = false;
-volatile bool camPinToggle = false;
-
+// Pin interrupt flag 
 volatile bool rising = true;
 volatile int interruptCounter = 0;
 
 // may be rolled into toggledInterrupt
-void IRAM_ATTR pidFlagOnTimer()
-{
-  pidFlag = true;
-}
-
-void IRAM_ATTR secondaryFlagOnTimer()
-{
-  secondaryFlag = true;
-}
-
-void IRAM_ATTR toggledInterrupt()
+void IRAM_ATTR pidInterrupt()
 {
   if (rising)
   {
@@ -87,10 +72,9 @@ void IRAM_ATTR toggledInterrupt()
   rising = !rising;
 }
 
-// may not be needed
-void IRAM_ATTR camPinToggleOnTimer()
+void IRAM_ATTR secondaryFlagOnTimer()
 {
-  camToggleFlag = true;
+  secondaryFlag = true;
 }
 
 // Initialise wires, devices, and Modbus/gpio
@@ -106,7 +90,7 @@ void setup()
   modbus_server.initialiseModbus();
   // initialise.cpp
   initialiseEthernet(modbusEthServer, mac, ip, PIN_SPI_SS_ETHERNET_LIB);
-  initialiseTimers(&pidFlagTimer, &secondaryFlagTimer, &camPinToggleTimer);
+  initialiseInterrupts(&secondaryFlagTimer);
   initialiseThermocouples(mcp, num_mcp, mcp_addr);
   writePIDDefaults(modbus_server, PID_A);
   writePIDDefaults(modbus_server, PID_B);
@@ -131,34 +115,6 @@ void setup()
     NULL,     /* Handle        */
     0        /* Pin to core 1 */
   );
-}
-
-// Read two MCP9600 thermocouples
-void readThermoCouples()
-{
-  // Read hot junction from each mcp
-  for (int idx = 0; idx < num_mcp; idx++)
-  {
-    thermoReadings[idx] = mcp[idx].readThermocouple();
-
-    if (DEBUG)
-    {
-      Serial.print((String)"Thermocouple reading (" + idx + "): ");
-      Serial.println(thermoReadings[idx]);
-    }
-  }
-
-  // Write both readings (written to thermocouple_C, overlapping to D)
-  modbus_server.writeInputRegisters(
-    MOD_THERMOCOUPLE_C_INP, (uint16_t*)(&thermoReadings), 4
-  );
-
-  // Write counter
-  modbus_server.writeInputRegisters(
-    MOD_COUNTER_INP, (uint16_t*)(&counter), 2
-  );
-  counter++;
-  // Serial.println(counter);
 }
 
 void loop()

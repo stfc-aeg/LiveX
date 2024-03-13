@@ -22,15 +22,6 @@ void Core0PIDTask(void * pvParameters)
       {
       Serial.println(interruptCounter);
       }
-      // Write pin to high and start timer to write it low
-      gpio.digitalWrite(Q1_0, HIGH);
-      if (!timerAlarmEnabled(camPinToggleTimer))
-      {
-        // Restart resets counter, otherwise timer fires immediately on 2nd+ enables
-        timerRestart(camPinToggleTimer);
-        timerAlarmEnable(camPinToggleTimer);
-      }
-
       // Get thermocouple readings for input
       PID_A.input = mcp[0].readThermocouple(); // First thermocouple for A
       PID_B.input = mcp[1].readThermocouple(); // Second thermocouple for B
@@ -115,12 +106,6 @@ void Core0PIDTask(void * pvParameters)
 
       secondaryFlag = false;
     }
-
-    // if (camToggleFlag)
-    // {
-    //   gpio.digitalWrite(Q1_0, LOW);
-    //   camToggleFlag = false;
-    // }
   }
 }
 
