@@ -77,7 +77,7 @@ function App(props) {
           <Col>
           <Row>
             <StatusBox as="span" type="info" label="reading">
-              {liveXEndPoint.data.tcp?.tcp_reading}
+              {liveXEndPoint.data.tcp?.tcp_reading?.counter} {liveXEndPoint.data.tcp?.tcp_reading?.temperature_a}
             </StatusBox>
             </Row>
             </Col>
