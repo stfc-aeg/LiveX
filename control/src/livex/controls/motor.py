@@ -16,9 +16,6 @@ class Motor():
         self.speed = read_decode_holding_reg(self.client, self.addresses['speed'])
         self.lvdt = read_decode_input_reg(self.client, self.addresses['lvdt'])
 
-        logging.debug("#######################")
-        logging.debug(self.direction)
-
         self.tree = ParameterTree({
             'enable': (lambda: self.enable, self.set_enable),
             'direction': (lambda: self.direction, self.set_direction),
@@ -29,7 +26,6 @@ class Motor():
     def register_modbus_client(self, client):
         """Keep internal reference to the modbus client."""
         self.client = client
-
 
     def set_enable(self, value):
         """Set motor enable boolean."""

@@ -40,8 +40,11 @@ class LiveXPacketDecoder(struct.Struct):
             reading = self.tcp_client.recv(12)
             (self.reading_counter, self.temperature_a, self.temperature_b) = super().unpack(reading)
             logging.debug(self.reading_counter)
-        except:
-            logging.debug("read no data")
+        except socket.timeout:
+            logging.debug("TCP Socket timeout: read no data")
+        except Exception as e:
+            logging.debug(f"Other TCP error: {str(e)}")
+            return False
 
     def as_dict(self):
         """Return all the values as a dictionary."""

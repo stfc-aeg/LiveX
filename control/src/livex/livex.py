@@ -171,7 +171,10 @@ class LiveX():
         in the parameter tree.
         """
         while self.bg_stream_task_enable:
-            self.packet_decoder.receive()
+            success = self.packet_decoder.receive()
+            if not success:
+                logging.debug("Unexpected exception, stopping background tasks.")
+                self.stop_background_tasks()
             self.tcp_reading = self.packet_decoder.as_dict()
             time.sleep(self.bg_stream_task_interval)
 
