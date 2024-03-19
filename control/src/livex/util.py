@@ -3,7 +3,6 @@ Utilities for the LiveX adapters.
 
 Mika Shearwood, STFC Detector Systems Software Group
 """
-from pymodbus.client import ModbusTcpClient
 from pymodbus.payload import BinaryPayloadDecoder
 from pymodbus.payload import BinaryPayloadBuilder
 from pymodbus.constants import Endian

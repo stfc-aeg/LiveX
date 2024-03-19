@@ -55,3 +55,53 @@ class modAddr():
     autosp_imgdegree_hold  = 40023
 
     motor_speed_hold = 40025
+
+    # Addresses for controls
+
+    addresses_pid_a = {
+        'enable': pid_enable_a_coil,
+        'setpoint': pid_setpoint_a_hold,
+        'kp': pid_kp_a_hold,
+        'ki': pid_ki_a_hold,
+        'kd': pid_kd_a_hold,
+        'output': pid_output_a_inp,
+        'gradient_setpoint': gradient_setpoint_a_inp,
+        'thermocouple': thermocouple_a_inp
+    }
+
+    addresses_pid_b = {
+        'enable': pid_enable_b_coil,
+        'setpoint': pid_setpoint_b_hold,
+        'kp': pid_kp_b_hold,
+        'ki': pid_ki_b_hold,
+        'kd': pid_kd_b_hold,
+        'output': pid_output_b_inp,
+        'gradient_setpoint': gradient_setpoint_b_inp,
+        'thermocouple': thermocouple_b_inp
+    }
+
+    gradient_addresses = {
+        'enable': gradient_enable_coil,
+        'wanted': gradient_wanted_hold,
+        'distance': gradient_distance_hold,
+        'actual': gradient_actual_inp,
+        'theoretical': gradient_theory_inp,
+        'high': gradient_high_coil,  # Which heater is the 'high' end of the gradient
+        'high_options': ["A", "B"]
+    }
+
+    aspc_addresses = {
+        'enable': autosp_enable_coil,
+        'heating': autosp_heating_coil,
+        'heating_options': ["Cooling", "Heating"],
+        'rate': autosp_rate_hold,
+        'midpt': autosp_midpt_inp,
+        'imgdegree': autosp_imgdegree_hold
+    }
+
+    motor_addresses = {
+        'enable': motor_enable_coil,
+        'direction': motor_direction_coil,
+        'speed': motor_speed_hold,
+        'lvdt': motor_lvdt_inp
+    }
