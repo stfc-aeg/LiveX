@@ -45,6 +45,7 @@ class LiveXPacketDecoder(struct.Struct):
         except Exception as e:
             logging.debug(f"Other TCP error: {str(e)}")
             return False
+        return True
 
     def as_dict(self):
         """Return all the values as a dictionary."""

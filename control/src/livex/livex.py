@@ -268,6 +268,7 @@ class LiveX():
         correctly.
         """
         self.mod_client.close()
+        self.packet_decoder.close_tcp_client()
         self.stop_background_tasks()
 
     # Background tasks
@@ -308,7 +309,6 @@ class LiveX():
 
     def stop_background_tasks(self):
         """Stop the background tasks."""
-        self.packet_decoder.close_tcp_client()
         self.bg_read_task_enable = False
         self.bg_stream_task_enable = False
-        self.background_ioloop_callback.stop()
+        self.background_ioloop_task.stop()
