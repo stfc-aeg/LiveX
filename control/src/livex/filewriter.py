@@ -1,4 +1,3 @@
-# How does this class work
 """
 It needs functions to:
 - Check if file exists, if not create it with <name>
@@ -23,35 +22,43 @@ def write_hdf5(filepath, filename, data, groupname, dtypes=None):
     :param dtypes: optional specified data-typing for specific datasets, e.g.: 'S'
     """
     # Handle filename
-    if (filename.endswith('.hdf5')):
-        filename = filename
-    else:
+    if not (filename.endswith('.hdf5')):
         filename += '.hdf5'
-        filename = filename
+
     # File path, make directory
     full_path = os.path.join(
         filepath, filename
     )
     os.makedirs(filepath, exist_ok=True),
-    file = h5py.File(full_path, "w")
+    file = h5py.File(full_path, "a")
 
     # Add group to file
     group = file.require_group(groupname)
 
-    for entry in data.keys():
-        # Create np array
-        if entry in dtypes.keys():  # Sort special dtypes
-            arr_entry = np.array(data[entry], dtype=dtypes[entry])
-        else:
-            arr_entry = np.array(data[entry])
+    # Assumption that data is a list of dicts representing 1 reading each
+    # Aggregate data from provided readings
+    aggregate_data = {key: [] for key in data[0]}
+    for entry in data:
+        for key, value in entry.items():
+            aggregate_data[key].append(value)
 
-        # Replace/create dataset
-        if entry in group:
-            group[entry][...] = arr_entry
+    for key, values in aggregate_data.items():
+
+        # Create array with dtype. If no dtypes specified, defaults to float in all cases
+        dtype = dtypes.get(key, 'f') if dtypes else 'f'
+        new_data = np.array(values, dtype=dtype)
+
+        if key in group:
+            dset = group[key]
+            size_orig = dset.shape[0]
+            size_new = size_orig + len(values)
+            dset.resize(size_new, axis=0)
+            dset[size_orig:size_new] = new_data
+
         else:
-            dset = group.create_dataset(
-                entry, data=arr_entry
-            )
+            maxshape = (None,) + new_data.shape[1:]
+            group.create_dataset(key, data=new_data, maxshape=maxshape, dtype=new_data.dtype)
+
     logging.debug("file written")
 
 def create_notes_file(filepath, filename, filetype='md'):

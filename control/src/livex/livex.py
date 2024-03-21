@@ -11,6 +11,7 @@ from odin._version import get_versions
 from pymodbus.client import ModbusTcpClient
 
 from livex.modbusAddresses import modAddr
+from livex.filewriter import write_hdf5
 from livex.controls.pid import PID
 from livex.controls.gradient import Gradient
 from livex.controls.autoSetPointControl import AutoSetPointControl
@@ -61,6 +62,7 @@ class LiveX():
         self.packet_decoder.initialise_tcp_client()
 
         self.tcp_reading = None
+        self.stream_buffer = []
         self.start_acquisition = False
 
         self.pid_a = PID(self.mod_client, modAddr.addresses_pid_a)
@@ -121,6 +123,11 @@ class LiveX():
 
         logging.debug("Toggled acquisition")
 
+        # If ending an acquisition, clear the buffer
+        if self.stream_buffer:
+            write_hdf5('logs', 'test.hdf5', self.stream_buffer, 'temperature_readings', {'timestamps': 'S'})
+            self.stream_buffer = []
+
         if value:
             self.mod_client.write_coil(modAddr.acquisition_coil, 1, slave=1)
         else:
@@ -175,7 +182,22 @@ class LiveX():
             if not success:
                 logging.debug("Unexpected exception, stopping background tasks.")
                 self.stop_background_tasks()
+
             self.tcp_reading = self.packet_decoder.as_dict()
+
+            if self.start_acquisition:
+                self.stream_buffer.append(self.tcp_reading)
+
+                if len(self.stream_buffer) == 50:
+                    write_hdf5(
+                        filepath='logs',
+                        filename='test.hdf5',
+                        data=self.stream_buffer,
+                        groupname="temperature_readings",
+                        dtypes={'timestamps': 'S'}
+                    )
+                    self.stream_buffer = []  # Clear buffer
+
             time.sleep(self.bg_stream_task_interval)
 
     @run_on_executor

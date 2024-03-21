@@ -38,7 +38,7 @@ class LiveXPacketDecoder(struct.Struct):
         """Read the latest data from the stream, if it exists."""
         try:
             reading = self.tcp_client.recv(12)
-            (self.reading_counter, self.temperature_a, self.temperature_b) = super().unpack(reading)
+            (self.reading_counter, self.temperature_a, self.temperature_b) = self.unpack(reading)
             logging.debug(self.reading_counter)
         except socket.timeout:
             logging.debug("TCP Socket timeout: read no data")

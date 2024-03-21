@@ -7,18 +7,13 @@ Ashley Neaves, STFC Detector Systems Software Group"""
 
 import logging
 
-from odin.adapters.adapter import (ApiAdapter, ApiAdapterRequest,
-                                   ApiAdapterResponse, request_types, response_types)
-from odin.util import decode_request_body
+from odin.adapters.adapter import (ApiAdapter, ApiAdapterResponse)
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
-from tornado.ioloop import PeriodicCallback, IOLoop
+from tornado.ioloop import PeriodicCallback
 from tornado.escape import json_decode
 import time
 import datetime
 import json
-import h5py
-import numpy as np
-import os
 
 from livex.filewriter import write_hdf5
 
