@@ -1,5 +1,6 @@
 import logging
 import time
+import socket
 from concurrent import futures
 
 from tornado.ioloop import PeriodicCallback
@@ -11,7 +12,7 @@ from odin._version import get_versions
 from pymodbus.client import ModbusTcpClient
 
 from livex.modbusAddresses import modAddr
-from livex.filewriter import write_hdf5
+from livex.filewriter import FileWriter
 from livex.controls.pid import PID
 from livex.controls.gradient import Gradient
 from livex.controls.autoSetPointControl import AutoSetPointControl
@@ -22,14 +23,15 @@ from livex.util import read_decode_input_reg, read_decode_holding_reg
 from livex.packet_decoder import LiveXPacketDecoder
 
 class LiveX():
-    """LiveX - class that communicates with a modbus server on a PLC to drive a furnace.
-
-    """
+    """LiveX - class that communicates with a modbus server on a PLC to drive a furnace."""
 
     # Thread executor used for background tasks
     executor = futures.ThreadPoolExecutor(max_workers=2)
 
-    def __init__(self, bg_read_task_enable, bg_read_task_interval, bg_stream_task_enable, bg_stream_task_interval):
+    def __init__(self,
+                 bg_read_task_enable, bg_read_task_interval, bg_stream_task_enable, bg_stream_task_interval,
+                 log_directory, log_filename
+        ):
         """Initialise the LiveX object.
 
         This constructor initlialises the LiveX object, building parameter trees and
@@ -42,6 +44,8 @@ class LiveX():
         self.bg_read_task_interval = bg_read_task_interval
         self.bg_stream_task_enable = bg_stream_task_enable
         self.bg_stream_task_interval = bg_stream_task_interval
+        self.log_directory = log_directory
+        self.log_filename = log_filename
 
         # Store initialisation time
         self.init_time = time.time()
@@ -57,12 +61,17 @@ class LiveX():
         self.ip = '192.168.0.159'
         self.port = 4444
         self.mod_client = ModbusTcpClient(self.ip)
+        self.initialise_tcp_client()
 
-        self.packet_decoder = LiveXPacketDecoder(self.ip, self.port)
-        self.packet_decoder.initialise_tcp_client()
+        self.packet_decoder = LiveXPacketDecoder()
+        self.file_writer = FileWriter(self.log_directory, self.log_filename, {'timestamps': 'S'})
 
         self.tcp_reading = None
-        self.stream_buffer = []
+        self.stream_buffer = {
+            'counter': [],
+            'temperature_a': [],
+            'temperature_b': []
+        }
         self.start_acquisition = False
 
         self.pid_a = PID(self.mod_client, modAddr.addresses_pid_a)
@@ -125,8 +134,15 @@ class LiveX():
 
         # If ending an acquisition, clear the buffer
         if self.stream_buffer:
-            write_hdf5('logs', 'test.hdf5', self.stream_buffer, 'temperature_readings', {'timestamps': 'S'})
-            self.stream_buffer = []
+            self.file_writer.write_hdf5(
+                self.stream_buffer,
+                'temperature_readings'
+            )
+            self.stream_buffer = {
+            'counter': [],
+            'temperature_a': [],
+            'temperature_b': []
+            }
 
         if value:
             self.mod_client.write_coil(modAddr.acquisition_coil, 1, slave=1)
@@ -145,8 +161,6 @@ class LiveX():
         self.mod_client = ModbusTcpClient(self.ip)
         self.mod_client.connect()
 
-        self.packet_decoder.initialise_tcp_client()
-
         self.connected = True
 
         self.pid_a.register_modbus_client(self.mod_client)
@@ -154,6 +168,20 @@ class LiveX():
         self.gradient.register_modbus_client(self.mod_client)
         self.aspc.register_modbus_client(self.mod_client)
         self.motor.register_modbus_client(self.mod_client)
+
+    def initialise_tcp_client(self):
+        """Initialise the tcp client."""
+
+        self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.tcp_client.connect((self.ip, self.port))
+
+        self.tcp_client.settimeout(1)
+        activate = '1'
+        self.tcp_client.send(activate.encode())
+
+    def close_tcp_client(self):
+        """Safely end the TCP connection."""
+        self.tcp_client.close()
 
     def push_data(self, key, data):
         """Push data to the graph adapter dataset(s).
@@ -178,25 +206,42 @@ class LiveX():
         in the parameter tree.
         """
         while self.bg_stream_task_enable:
-            success = self.packet_decoder.receive()
-            if not success:
-                logging.debug("Unexpected exception, stopping background tasks.")
+
+            try:
+                reading = self.tcp_client.recv(self.packet_decoder.size) # fff: 12
+                logging.debug(self.packet_decoder.reading_counter)
+                reading = self.packet_decoder.unpack(reading)
+
+            except socket.timeout:
+                logging.debug("TCP Socket timeout: read no data")
+            except Exception as e:
+                logging.debug(f"Other TCP error: {str(e)}")
+                logging.debug("Halting background tasks")
                 self.stop_background_tasks()
+                break
+
+            # success = self.packet_decoder.receive()
+            # if not success:
+            #     logging.debug("Unexpected exception, stopping background tasks.")
+            #     self.stop_background_tasks()
 
             self.tcp_reading = self.packet_decoder.as_dict()
 
             if self.start_acquisition:
-                self.stream_buffer.append(self.tcp_reading)
+                self.stream_buffer['counter'].append(self.packet_decoder.reading_counter)
+                self.stream_buffer['temperature_a'].append(self.packet_decoder.temperature_a)
+                self.stream_buffer['temperature_b'].append(self.packet_decoder.temperature_b)
 
                 if len(self.stream_buffer) == 50:
-                    write_hdf5(
-                        filepath='logs',
-                        filename='test.hdf5',
+                    self.file_writer.write_hdf5(
                         data=self.stream_buffer,
-                        groupname="temperature_readings",
-                        dtypes={'timestamps': 'S'}
+                        groupname="temperature_readings"
                     )
-                    self.stream_buffer = []  # Clear buffer
+                    self.stream_buffer = {
+                        'counter': [],
+                        'temperature_a': [],
+                        'temperature_b': []
+                    }  # Clear buffer
 
             time.sleep(self.bg_stream_task_interval)
 
@@ -290,7 +335,7 @@ class LiveX():
         correctly.
         """
         self.mod_client.close()
-        self.packet_decoder.close_tcp_client()
+        self.tcp_client.close()
         self.stop_background_tasks()
 
     # Background tasks

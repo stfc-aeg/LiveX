@@ -8,24 +8,13 @@ to be read by the PLC.
 Mika Shearwood, Detector Systems Software Group
 """
 import logging
-import tornado
-import time
-import sys
-from concurrent import futures
-from functools import partial
 
-from tornado.ioloop import IOLoop, PeriodicCallback
-from tornado.concurrent import run_on_executor
 from tornado.escape import json_decode
 
 from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
-from odin._version import get_versions
+from odin.adapters.parameter_tree import ParameterTreeError
 
-from livex.modbusAddresses import modAddr
 from livex.livex import LiveX, LiveXError
-
-import csv
 
 class LiveXAdapter(ApiAdapter):
     """System info adapter class for the ODIN server.
@@ -51,9 +40,16 @@ class LiveXAdapter(ApiAdapter):
         bg_stream_task_enable = bool(self.options.get('background_stream_task_enable', False))
         bg_stream_task_interval = float(self.options.get('background_stream_task_interval', 1.0))
 
+        log_directory = self.options.get('log_directory', 'logs')
+        # Filename may instead be generated? Cannot have just one configurable one,
+        # subsequent uses would overwrite. generation method TBD. metadata, date/time, etc.
+        log_filename = self.options.get('log_filename', 'default.hdf5')
+
         self.livex = LiveX(
             bg_read_task_enable, bg_read_task_interval,
-            bg_stream_task_enable, bg_stream_task_interval)
+            bg_stream_task_enable, bg_stream_task_interval,
+            log_directory, log_filename
+        )
 
         logging.debug('LiveXAdapter loaded')
 
