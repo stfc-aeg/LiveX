@@ -1,5 +1,6 @@
 import logging
 import time
+import datetime
 import socket
 from concurrent import futures
 
@@ -30,7 +31,8 @@ class LiveX():
 
     def __init__(self,
                  bg_read_task_enable, bg_read_task_interval, bg_stream_task_enable, bg_stream_task_interval,
-                 log_directory, log_filename
+                 log_directory, log_filename,
+                 temp_monitor_retention
         ):
         """Initialise the LiveX object.
 
@@ -88,6 +90,14 @@ class LiveX():
         self.connected = True
         self.reconnect = False
 
+        # For the temperature monitor
+        self.temp_monitor_graph = {
+            'timestamp': [],
+            'temperature_a': [],
+            'temperature_b': []
+        }
+        self.temp_monitor_retention = temp_monitor_retention
+
         bg_task = ParameterTree({
             'thread_count': (lambda: self.background_thread_counter, None),
             'enable': (lambda: self.bg_read_task_enable, self.set_task_enable),
@@ -115,12 +125,12 @@ class LiveX():
             'autosp': self.aspc.tree,
             'gradient': self.gradient.tree,
             'motor': self.motor.tree,
-            'tcp': tcp
+            'tcp': tcp,
+            'temp_monitor': (lambda: self.temp_monitor_graph, None)
         })
 
         # Launch the background task if enabled in options
         if self.bg_read_task_enable:
-            logging.debug("Starting bg tasks")
             self.start_background_tasks()
 
     # Data acquiring tasks
@@ -149,25 +159,21 @@ class LiveX():
         else:
             self.mod_client.write_coil(modAddr.acquisition_coil, 0, slave=1)
 
-    def initialise_adapters(self, adapters):
-        """Initialise any adapters that this one needs access to.
-        :param adapters: dict of adapters from adapter.py
-        """
-        self.graph_adapter = adapters['graph']
-
     def initialise_clients(self, value):
         """Instantiate a ModbusTcpClient and provide it to the PID controllers."""
         logging.debug("Attempting to establish modbus connection")
+        self.connected = True
+
         self.mod_client = ModbusTcpClient(self.ip)
         self.mod_client.connect()
-
-        self.connected = True
 
         self.pid_a.register_modbus_client(self.mod_client)
         self.pid_b.register_modbus_client(self.mod_client)
         self.gradient.register_modbus_client(self.mod_client)
         self.aspc.register_modbus_client(self.mod_client)
         self.motor.register_modbus_client(self.mod_client)
+
+        self.file_writer.open_file()
 
     def initialise_tcp_client(self):
         """Initialise the tcp client."""
@@ -183,20 +189,21 @@ class LiveX():
         """Safely end the TCP connection."""
         self.tcp_client.close()
 
-    def push_data(self, key, data):
-        """Push data to the graph adapter dataset(s).
-        :param key: key in dataset
-        :param data: value to append to list in key
-        """
-        self.graph_adapter.datasets['thermocouples'].data[key].append(data)
-
-        self.graph_adapter.datasets['thermocouples_long'].data[key].append(data)
-
     def background_ioloop_callback(self):
         """background task IOLoop callback
         may be swapped to be a thread for the reading"""
-        self.push_data('temp_a', self.pid_a.thermocouple)
-        self.push_data('temp_b', self.pid_b.thermocouple)
+
+        # Check retention
+        for key in self.temp_monitor_graph.keys():
+            if len(self.temp_monitor_graph[key]) >= self.temp_monitor_retention:
+                self.temp_monitor_graph[key].pop(0)
+
+        # Add data
+        cur_time = datetime.datetime.now()
+        cur_time = cur_time.strftime("%H:%M:%S")
+        self.temp_monitor_graph['timestamp'].append(cur_time)
+        self.temp_monitor_graph['temperature_a'].append(self.pid_a.thermocouple)
+        self.temp_monitor_graph['temperature_b'].append(self.pid_b.thermocouple)
 
         # self.background_ioloop_counter += 1
 
@@ -219,11 +226,6 @@ class LiveX():
                 logging.debug("Halting background tasks")
                 self.stop_background_tasks()
                 break
-
-            # success = self.packet_decoder.receive()
-            # if not success:
-            #     logging.debug("Unexpected exception, stopping background tasks.")
-            #     self.stop_background_tasks()
 
             self.tcp_reading = self.packet_decoder.as_dict()
 
@@ -369,13 +371,12 @@ class LiveX():
         self.background_ioloop_task.start()
 
         # Run the background thread task in the thread execution pool
-        logging.debug("starting them!")
         self.background_stream_task()
-        logging.debug("started the stream one")
         self.background_read_task()
 
     def stop_background_tasks(self):
         """Stop the background tasks."""
+        self.file_writer.close_file()
         self.bg_read_task_enable = False
         self.bg_stream_task_enable = False
         self.background_ioloop_task.stop()

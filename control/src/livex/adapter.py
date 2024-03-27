@@ -45,10 +45,13 @@ class LiveXAdapter(ApiAdapter):
         # subsequent uses would overwrite. generation method TBD. metadata, date/time, etc.
         log_filename = self.options.get('log_filename', 'default.hdf5')
 
+        temp_monitor_retention = int(self.options.get('temp_monitor_retention', 60))
+
         self.livex = LiveX(
             bg_read_task_enable, bg_read_task_interval,
             bg_stream_task_enable, bg_stream_task_interval,
-            log_directory, log_filename
+            log_directory, log_filename,
+            temp_monitor_retention
         )
 
         logging.debug('LiveXAdapter loaded')
@@ -133,5 +136,3 @@ class LiveXAdapter(ApiAdapter):
     def initialize(self, adapters):
         """Get list of adapters and call relevant functions for them."""
         self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
-
-        self.livex.initialise_adapters(self.adapters)

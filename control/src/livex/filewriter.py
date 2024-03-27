@@ -32,7 +32,17 @@ class FileWriter():
 
         self.dtypes = dtypes
 
-        self.file = h5py.File(self.full_path, "a")
+        self.open_file(mode="a")
+
+    def open_file(self, mode="a"):
+        """Open the file in specified mode.
+        :param mode: mode to open file in. default a (append)
+        """
+        self.file = h5py.File(self.full_path, mode)
+
+    def close_file(self):
+        """Close the file."""
+        self.file.close()
 
     def write_hdf5(self, data, groupname):
         """Create or access a specified file, create a group in it and add data to that group.
