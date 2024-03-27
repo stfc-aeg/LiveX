@@ -3,32 +3,27 @@ import './App.css';
 import 'odin-react/dist/index.css'
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-import { checkNull } from './utils';
-
-import React from "react";
-import { TitleCard, ToggleSwitch, DropdownSelector, StatusBox, OdinApp } from 'odin-react';
-import { WithEndpoint, useAdapterEndpoint } from 'odin-react';
-import TemperatureGraph from './components/TemperatureGraph';
-import PidControl from './components/PidControl';
-import InputGroup from 'react-bootstrap/InputGroup';
-import Form from 'react-bootstrap/Form';
-import Dropdown from 'react-bootstrap/Dropdown';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import Button from 'react-bootstrap/Button';
 
-const EndpointDropdown = WithEndpoint(DropdownSelector);
-const EndPointToggle = WithEndpoint(ToggleSwitch);
-const EndPointFormControl = WithEndpoint(Form.Control);
+import TemperatureGraph from './components/TemperatureGraph';
+import PidControl from './components/PidControl';
+import ThermalGradient from './components/ThermalGradient';
+import AutoSetPointControl from './components/AutoSetPointControl';
+import Motor from './components/Motor';
+import React from "react";
+import { TitleCard, StatusBox, OdinApp } from 'odin-react';
+import { WithEndpoint, useAdapterEndpoint } from 'odin-react';;
+
+
 const EndPointButton = WithEndpoint(Button);
 
 function App(props) {
 
   const liveXEndPoint = useAdapterEndpoint('livex', 'http://localhost:8888', 200);
   const connectedPuttingDisable = (!(liveXEndPoint.data.status?.connected || false)) || (liveXEndPoint.loading == "putting")
-
-  const motorDirections = ['Down', 'Up'];
 
   return (
     <OdinApp title="LiveX Controls" navLinks={["controls", "monitoring", "cameras"]}>
@@ -83,194 +78,21 @@ function App(props) {
 
       </TitleCard>
 
-      <TitleCard title="Thermal Gradient">
-        <Container>
-          <Row>
-            <Col>
-              <EndPointToggle 
-                endpoint={liveXEndPoint}
-                fullpath="gradient/enable"
-                event_type="click"
-                checked={liveXEndPoint.data.gradient?.enable || false} label="Enable" disabled={connectedPuttingDisable}>
-              </EndPointToggle>
-            </Col>
-          </Row>
-          <Row>
-            <Col>
-              <StatusBox
-                type="info"
-                label="Actual">
-                  {checkNull(liveXEndPoint.data.gradient?.actual)}
-                </StatusBox>
-              <StatusBox
-                type="info"
-                label="Theoretical">
-                  {checkNull(liveXEndPoint.data.gradient?.theoretical)}
-              </StatusBox>
-            </Col>
-            <Col>
-              <InputGroup>
-                <InputGroup.Text>
-                  Wanted (K/mm)
-                </InputGroup.Text>
-                <EndPointFormControl
-                  endpoint={liveXEndPoint}
-                  type="number"
-                  fullpath="gradient/wanted"
-                  disabled={connectedPuttingDisable}>
-                </EndPointFormControl>
-              </InputGroup>
-        
-              <InputGroup>
-                <InputGroup.Text>
-                  Distance (mm)
-                </InputGroup.Text>
-                <EndPointFormControl
-                  endpoint={liveXEndPoint}
-                  type="number"
-                  fullpath="gradient/distance"
-                  disabled={connectedPuttingDisable}></EndPointFormControl>
-              </InputGroup>
-                High: 
-              <EndpointDropdown
-                endpoint={liveXEndPoint}
-                event_type="select"
-                fullpath="gradient/high_heater"
-                buttonText={liveXEndPoint.data.gradient?.high_heater_options[liveXEndPoint.data.gradient.high_heater] || "Unknown"}
-                disabled={connectedPuttingDisable}>
-                  {liveXEndPoint.data.gradient?.high_heater_options ? liveXEndPoint.data.gradient.high_heater_options.map(
-                  (selection, index) => (
-                    <Dropdown.Item
-                      eventKey={index}
-                      key={index}>
-                        {selection}
-                    </Dropdown.Item>
-                  )) : <></> }
-              </EndpointDropdown>
-            </Col>
-          </Row>
-        </Container>
-      </TitleCard>
+      <ThermalGradient
+        liveXEndPoint={liveXEndPoint}
+        connectedPuttingDisable={connectedPuttingDisable}>
+      </ThermalGradient>
 
-      <TitleCard title="Auto Set Point Control">
-        <Container>
-          <Row>
-            <Col>
-              <EndPointToggle endpoint={liveXEndPoint} fullpath="autosp/enable" event_type="click" 
-                checked={liveXEndPoint.data.autosp?.enable || false} label="Enable" disabled={connectedPuttingDisable}>
-              </EndPointToggle>
-            </Col>
-          </Row>
-          <Row>
-            <Col>
-              <StatusBox
-                type="info"
-                label="Mid Pt. TEMP.">
-                  {checkNull(liveXEndPoint.data.autosp?.midpt_temp)}
-              </StatusBox>
-            </Col>
-            <Col>
-              <EndpointDropdown
-                endpoint={liveXEndPoint} event_type="select"
-                fullpath="autosp/heating"
-                buttonText={liveXEndPoint.data.autosp?.heating_options[liveXEndPoint.data.autosp.heating] || "Unknown"} disabled={connectedPuttingDisable}>
-                {liveXEndPoint.data.autosp?.heating_options ? liveXEndPoint.data.autosp.heating_options.map(
-                (selection, index) => (
-                  <Dropdown.Item
-                    eventKey={index}
-                    key={index}>
-                      {selection}
-                  </Dropdown.Item>
-                )) : <></> }
-              </EndpointDropdown>
-            </Col>
-            <Col>
-              <InputGroup>
-                <InputGroup.Text>
-                   Rate (K/s)
-                </InputGroup.Text>
-                <EndPointFormControl
-                  endpoint={liveXEndPoint}
-                  type="number"
-                  fullpath="autosp/rate"
-                  disabled={connectedPuttingDisable}>
-                </EndPointFormControl>
-              </InputGroup>
-            </Col>
-          </Row>
-          <Row>
-            <Col>
-              <InputGroup>
-                <InputGroup.Text>
-                  Img Aquisition Per Degree (Img/K)
-                </InputGroup.Text>
-                <EndPointFormControl
-                  endpoint={liveXEndPoint}
-                  type="number"
-                  fullpath="autosp/img_per_degree"
-                  disabled={connectedPuttingDisable}>
-                </EndPointFormControl>
-              </InputGroup>
-            </Col>
-          </Row>
-        </Container>
-      </TitleCard>
+      <AutoSetPointControl
+        liveXEndPoint={liveXEndPoint}
+        connectedPuttingDisable={connectedPuttingDisable}>
+      </AutoSetPointControl>
 
-      <TitleCard title="Motor Controls">
-        <Container>
-          <Row>
-            <Col>
-              <EndPointToggle
-                endpoint={liveXEndPoint}
-                fullpath="motor/enable"
-                event_type="click"
-                checked={liveXEndPoint.data.motor?.enable || false}
-                label="Enable"
-                disabled={connectedPuttingDisable}>
-              </EndPointToggle>
-            </Col>
-          </Row>
-          <Row>
-            <Col>
-              <StatusBox
-              type="info"
-              label="LVDT (mm)">
-                {checkNull(liveXEndPoint.data.motor?.lvdt)}
-              </StatusBox>
-            </Col>
-            <Col>
-              <EndpointDropdown
-                endpoint={liveXEndPoint}
-                event_type="select"
-                fullpath="motor/direction"
-                buttonText={motorDirections[liveXEndPoint.data.motor?.direction] || "Unknown"}
-                disabled={connectedPuttingDisable}>
-                  {motorDirections ? motorDirections.map(
-                  (selection, index) => (
-                    <Dropdown.Item
-                      eventKey={index}
-                      key={index}>
-                        {selection}
-                    </Dropdown.Item>
-                  )) : <></> }
-              </EndpointDropdown>
-            </Col>
-            <Col>
-              <InputGroup>
-                <InputGroup.Text>
-                   Speed (0-4095)
-                </InputGroup.Text>
-                <EndPointFormControl
-                  endpoint={liveXEndPoint}
-                  type="number"
-                  fullpath="motor/speed"
-                  disabled={connectedPuttingDisable}>
-                </EndPointFormControl>
-              </InputGroup>
-            </Col>
-          </Row>
-        </Container>
-      </TitleCard>
+      <Motor
+        liveXEndPoint={liveXEndPoint}
+        connectedPuttingDisable={connectedPuttingDisable}>
+      </Motor>
+
       </Col>
     </Container>
     </Col>
