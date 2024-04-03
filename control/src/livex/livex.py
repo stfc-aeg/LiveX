@@ -30,7 +30,7 @@ class LiveX():
     executor = futures.ThreadPoolExecutor(max_workers=2)
 
     def __init__(self,
-                 bg_read_task_enable, bg_read_task_interval, bg_stream_task_enable, bg_stream_task_interval,
+                 bg_read_task_enable, bg_read_task_interval, bg_stream_task_enable, pid_frequency,
                  log_directory, log_filename,
                  temp_monitor_retention
         ):
@@ -45,7 +45,12 @@ class LiveX():
         self.bg_read_task_enable = bg_read_task_enable
         self.bg_read_task_interval = bg_read_task_interval
         self.bg_stream_task_enable = bg_stream_task_enable
-        self.bg_stream_task_interval = bg_stream_task_interval
+
+        # Buffer will be cleared once per second
+        self.buffer_size = pid_frequency
+        # Interval is smaller than period so that tcp stream can be cleared and not maintained
+        self.bg_stream_task_interval = (1/pid_frequency)/2
+
         self.log_directory = log_directory
         self.log_filename = log_filename
 
@@ -67,6 +72,8 @@ class LiveX():
 
         self.packet_decoder = LiveXPacketDecoder()
         self.file_writer = FileWriter(self.log_directory, self.log_filename, {'timestamps': 'S'})
+        # File is not open by default in case of multiple acquisitions per software run
+        self.file_open_flag = False
 
         self.tcp_reading = None
         self.stream_buffer = {
@@ -86,7 +93,7 @@ class LiveX():
         self.thermocouple_a = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp)
         self.thermocouple_b = read_decode_input_reg(self.mod_client, modAddr.thermocouple_b_inp)
 
-        self.reading_counter = 0
+        self.lifetime_counter = 0
         self.connected = True
         self.reconnect = False
 
@@ -138,26 +145,28 @@ class LiveX():
     def toggle_acquisition(self, value):
         """Toggle whether the system is acquiring data."""
         value = bool(value)
-        self.start_acquisition = value
-
         logging.debug("Toggled acquisition")
 
-        # If ending an acquisition, clear the buffer
-        if self.stream_buffer:
+        if value:
+            # Send signal to
+            self.mod_client.write_coil(modAddr.acquisition_coil, 1, slave=1)
+            self.file_writer.open_file()
+            self.file_open_flag = True
+        else:
+            self.mod_client.write_coil(modAddr.acquisition_coil, 0, slave=1)
+
+            # If ending an acquisition, clear the buffer
             self.file_writer.write_hdf5(
                 self.stream_buffer,
                 'temperature_readings'
             )
-            self.stream_buffer = {
-            'counter': [],
-            'temperature_a': [],
-            'temperature_b': []
-            }
+            for key in self.stream_buffer:
+                self.stream_buffer[key].clear()
 
-        if value:
-            self.mod_client.write_coil(modAddr.acquisition_coil, 1, slave=1)
-        else:
-            self.mod_client.write_coil(modAddr.acquisition_coil, 0, slave=1)
+            self.file_writer.close_file()
+            self.file_open_flag = False
+
+        self.start_acquisition = value
 
     def initialise_clients(self, value):
         """Instantiate a ModbusTcpClient and provide it to the PID controllers."""
@@ -172,8 +181,6 @@ class LiveX():
         self.gradient.register_modbus_client(self.mod_client)
         self.aspc.register_modbus_client(self.mod_client)
         self.motor.register_modbus_client(self.mod_client)
-
-        self.file_writer.open_file()
 
     def initialise_tcp_client(self):
         """Initialise the tcp client."""
@@ -216,7 +223,7 @@ class LiveX():
 
             try:
                 reading = self.tcp_client.recv(self.packet_decoder.size) # fff: 12
-                logging.debug(self.packet_decoder.reading_counter)
+                logging.debug(self.packet_decoder.counter)
                 reading = self.packet_decoder.unpack(reading)
 
             except socket.timeout:
@@ -230,20 +237,29 @@ class LiveX():
             self.tcp_reading = self.packet_decoder.as_dict()
 
             if self.start_acquisition:
-                self.stream_buffer['counter'].append(self.packet_decoder.reading_counter)
+
+                self.stream_buffer['counter'].append(self.packet_decoder.counter)
                 self.stream_buffer['temperature_a'].append(self.packet_decoder.temperature_a)
                 self.stream_buffer['temperature_b'].append(self.packet_decoder.temperature_b)
 
-                if len(self.stream_buffer) == 50:
+                if len(self.stream_buffer['counter']) == 50:
                     self.file_writer.write_hdf5(
                         data=self.stream_buffer,
                         groupname="temperature_readings"
                     )
-                    self.stream_buffer = {
-                        'counter': [],
-                        'temperature_a': [],
-                        'temperature_b': []
-                    }  # Clear buffer
+                    # Clear the buffer
+                    for key in self.stream_buffer:
+                        self.stream_buffer[key].clear()
+
+                    secondary_data = {
+                        'counter': [self.packet_decoder.counter],
+                        'setpoint_a': [self.pid_a.setpoint],
+                        'setpoint_b': [self.pid_b.setpoint]
+                    }
+                    self.file_writer.write_hdf5(
+                        data=secondary_data,
+                        groupname="secondary_readings"
+                    )
 
             time.sleep(self.bg_stream_task_interval)
 
@@ -263,7 +279,7 @@ class LiveX():
                     self.pid_a.thermocouple = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp)
                     self.pid_b.thermocouple = read_decode_input_reg(self.mod_client, modAddr.thermocouple_b_inp)
 
-                    self.reading_counter = read_decode_input_reg(self.mod_client, modAddr.counter_inp)
+                    self.lifetime_counter = read_decode_input_reg(self.mod_client, modAddr.counter_inp)
 
                     self.pid_a.output    = read_decode_input_reg(self.mod_client, modAddr.pid_output_a_inp)
                     self.pid_b.output    = read_decode_input_reg(self.mod_client, modAddr.pid_output_b_inp)
@@ -376,7 +392,9 @@ class LiveX():
 
     def stop_background_tasks(self):
         """Stop the background tasks."""
-        self.file_writer.close_file()
+        if self.file_open_flag:  # Ensure file is closed properly
+            self.file_writer.close_file()
+
         self.bg_read_task_enable = False
         self.bg_stream_task_enable = False
         self.background_ioloop_task.stop()

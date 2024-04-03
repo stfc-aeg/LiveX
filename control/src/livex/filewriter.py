@@ -32,8 +32,6 @@ class FileWriter():
 
         self.dtypes = dtypes
 
-        self.open_file(mode="a")
-
     def open_file(self, mode="a"):
         """Open the file in specified mode.
         :param mode: mode to open file in. default a (append)

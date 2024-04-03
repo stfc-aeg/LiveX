@@ -10,13 +10,13 @@ class LiveXPacketDecoder(struct.Struct):
         super().__init__('fff')
 
         # Values
-        self.reading_counter = None
+        self.counter = None
         self.temperature_a = None
         self.temperature_b = None
 
     def unpack(self, reading):
         """Read the latest data from the stream and unpack it into initialised values."""
-        (self.reading_counter, self.temperature_a, self.temperature_b) = super().unpack(reading)
+        (self.counter, self.temperature_a, self.temperature_b) = super().unpack(reading)
 
         return reading
 
@@ -24,7 +24,7 @@ class LiveXPacketDecoder(struct.Struct):
         """Return all the values as a dictionary."""
 
         dictionary = {
-            'counter': self.reading_counter,
+            'counter': self.counter,
             'temperature_a': self.temperature_a,
             'temperature_b': self.temperature_b
         }

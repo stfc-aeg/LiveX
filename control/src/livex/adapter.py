@@ -37,8 +37,9 @@ class LiveXAdapter(ApiAdapter):
         # Parse options
         bg_read_task_enable = bool(self.options.get('background_read_task_enable', False))
         bg_read_task_interval = float(self.options.get('background_read_task_interval', 1.0))
+
         bg_stream_task_enable = bool(self.options.get('background_stream_task_enable', False))
-        bg_stream_task_interval = float(self.options.get('background_stream_task_interval', 1.0))
+        pid_frequency = int(self.options.get('pid_frequency', 50))
 
         log_directory = self.options.get('log_directory', 'logs')
         # Filename may instead be generated? Cannot have just one configurable one,
@@ -49,7 +50,7 @@ class LiveXAdapter(ApiAdapter):
 
         self.livex = LiveX(
             bg_read_task_enable, bg_read_task_interval,
-            bg_stream_task_enable, bg_stream_task_interval,
+            bg_stream_task_enable, pid_frequency,
             log_directory, log_filename,
             temp_monitor_retention
         )
