@@ -31,6 +31,7 @@ class LiveX():
 
     def __init__(self,
                  bg_read_task_enable, bg_read_task_interval, bg_stream_task_enable, pid_frequency,
+                 ip, port,
                  log_directory, log_filename,
                  temp_monitor_retention
         ):
@@ -65,8 +66,8 @@ class LiveX():
 
         # Modbus and tree setup
         logging.debug("Initial modbus connection")
-        self.ip = '192.168.0.159'
-        self.port = 4444
+        self.ip = ip
+        self.port = port
         self.mod_client = ModbusTcpClient(self.ip)
         self.initialise_tcp_client()
 
