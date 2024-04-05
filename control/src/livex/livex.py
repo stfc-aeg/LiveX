@@ -1,44 +1,59 @@
 import logging
-import tornado
 import time
-import sys
+import datetime
+import socket
 from concurrent import futures
-from functools import partial
 
-from tornado.ioloop import IOLoop, PeriodicCallback
+from tornado.ioloop import PeriodicCallback
 from tornado.concurrent import run_on_executor
-from tornado.escape import json_decode
 
-import numpy as np
-
-from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from odin._version import get_versions
 
 from pymodbus.client import ModbusTcpClient
 
 from livex.modbusAddresses import modAddr
-from livex.pid import PID
+from livex.filewriter import FileWriter
+from livex.controls.pid import PID
+from livex.controls.gradient import Gradient
+from livex.controls.autoSetPointControl import AutoSetPointControl
+from livex.controls.motor import Motor
+
 from livex.util import LiveXError
-from livex.util import read_coil, read_decode_input_reg, read_decode_holding_reg, write_modbus_float
+from livex.util import read_decode_input_reg, read_decode_holding_reg
+from livex.packet_decoder import LiveXPacketDecoder
 
 class LiveX():
-    """LiveX - class that ..."""
+    """LiveX - class that communicates with a modbus server on a PLC to drive a furnace."""
 
     # Thread executor used for background tasks
-    executor = futures.ThreadPoolExecutor(max_workers=1)
+    executor = futures.ThreadPoolExecutor(max_workers=2)
 
-    def __init__(self, background_task_enable, background_task_interval):
+    def __init__(self,
+                 bg_read_task_enable, bg_read_task_interval, bg_stream_task_enable, pid_frequency,
+                 ip, port,
+                 log_directory, log_filename,
+                 temp_monitor_retention
+        ):
         """Initialise the LiveX object.
 
-        This constructor initlialises the LiveX object, building two parameter trees and
+        This constructor initlialises the LiveX object, building parameter trees and
         launching the background task to make modbus requests to the device.
         """
         logging.getLogger("pymodbus").setLevel(logging.WARNING)  # Stop modbus from filling console
 
         # Save arguments
-        self.background_task_enable = background_task_enable
-        self.background_task_interval = background_task_interval
+        self.bg_read_task_enable = bg_read_task_enable
+        self.bg_read_task_interval = bg_read_task_interval
+        self.bg_stream_task_enable = bg_stream_task_enable
+
+        # Buffer will be cleared once per second
+        self.buffer_size = pid_frequency
+        # Interval is smaller than period so that tcp stream can be cleared and not maintained
+        self.bg_stream_task_interval = (1/pid_frequency)/2
+
+        self.log_directory = log_directory
+        self.log_filename = log_filename
 
         # Store initialisation time
         self.init_time = time.time()
@@ -49,157 +64,258 @@ class LiveX():
         # Set the background task counters to zero
         self.background_thread_counter = 0
 
-        # PID controller initialisation
-        self.addresses_a = {
-            'pid_enable': modAddr.pid_enable_a_coil,
-            'pid_setpoint': modAddr.pid_setpoint_a_hold,
-            'pid_kp': modAddr.pid_kp_a_hold,
-            'pid_ki': modAddr.pid_ki_a_hold,
-            'pid_kd': modAddr.pid_kd_a_hold,
-            'pid_output': modAddr.pid_output_a_inp,
-            'pid_gradient_setpoint': modAddr.gradient_setpoint_a_inp,
-            'thermocouple': modAddr.thermocouple_a_inp
-        }
-
-        self.addresses_b = {
-            'pid_enable': modAddr.pid_enable_b_coil,
-            'pid_setpoint': modAddr.pid_setpoint_b_hold,
-            'pid_kp': modAddr.pid_kp_b_hold,
-            'pid_ki': modAddr.pid_ki_b_hold,
-            'pid_kd': modAddr.pid_kd_b_hold,
-            'pid_output': modAddr.pid_output_b_inp,
-            'pid_gradient_setpoint': modAddr.gradient_setpoint_b_inp,
-            'thermocouple': modAddr.thermocouple_b_inp
-        }
-
-        # Set up modbus-agnostic stuff to instantiate adapter
-        # Adapter does not and should not do anything without modbus
-        # it relies on it completely
-        # so init cannot progress without modbus connection -- it repeats
-
         # Modbus and tree setup
-        # Wait for connection before proceeding?
         logging.debug("Initial modbus connection")
-        self.client = ModbusTcpClient('192.168.0.159')
+        self.ip = ip
+        self.port = port
+        self.mod_client = ModbusTcpClient(self.ip)
+        self.initialise_tcp_client()
 
-        self.pid_a = PID(self.client, self.addresses_a)
-        self.pid_b = PID(self.client, self.addresses_b)
+        self.packet_decoder = LiveXPacketDecoder()
+        self.file_writer = FileWriter(self.log_directory, self.log_filename, {'timestamps': 'S'})
+        # File is not open by default in case of multiple acquisitions per software run
+        self.file_open_flag = False
 
-        # Gradient (gradient) and Auto set point (autosp) variables
-        self.gradient_enable       = bool(read_coil(self.client, modAddr.gradient_enable_coil))
-        self.gradient_wanted       = read_decode_holding_reg(self.client, modAddr.gradient_wanted_hold)
-        self.gradient_distance     = read_decode_holding_reg(self.client, modAddr.gradient_distance_hold)
-        self.gradient_actual       = read_decode_input_reg(self.client, modAddr.gradient_actual_inp)
-        self.gradient_theoretical  = read_decode_input_reg(self.client, modAddr.gradient_theory_inp)
-        self.gradient_high         = read_coil(self.client, modAddr.gradient_high_coil, asInt=True)  # Not bool, used as index
-        self.gradient_high_options = ["A", "B"]
+        self.tcp_reading = None
+        self.stream_buffer = {
+            'counter': [],
+            'temperature_a': [],
+            'temperature_b': []
+        }
+        self.start_acquisition = False
 
-        self.autosp_enable    = read_coil(self.client, modAddr.autosp_enable_coil)
-        self.autosp_heating   = read_coil(self.client, modAddr.autosp_heating_coil, asInt=True)  # Not bool, used as index
-        self.heating_options  = ["Cooling", "Heating"]
-        self.autosp_rate      = read_decode_holding_reg(self.client, modAddr.autosp_rate_hold)
-        self.autosp_midpt     = read_decode_input_reg(self.client, modAddr.autosp_midpt_inp)
-        self.autosp_imgdegree = read_decode_holding_reg(self.client, modAddr.autosp_imgdegree_hold)
+        self.pid_a = PID(self.mod_client, modAddr.addresses_pid_a)
+        self.pid_b = PID(self.mod_client, modAddr.addresses_pid_b)
+        self.gradient = Gradient(self.mod_client, modAddr.gradient_addresses)
+        self.aspc = AutoSetPointControl(self.mod_client, modAddr.aspc_addresses)
+        self.motor = Motor(self.mod_client, modAddr.motor_addresses)
 
         # Other display controls
-        self.thermocouple_a = read_decode_input_reg(self.client, modAddr.thermocouple_a_inp)
-        self.thermocouple_b = read_decode_input_reg(self.client, modAddr.thermocouple_b_inp)
-        self.thermocouple_c = 0  # nothing to read, no thermocouple
-        self.thermocouple_d = 0  # nothing to read, no thermocouple
+        self.thermocouple_a = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp)
+        self.thermocouple_b = read_decode_input_reg(self.mod_client, modAddr.thermocouple_b_inp)
 
-        self.reading_counter = 0
-
+        self.lifetime_counter = 0
         self.connected = True
         self.reconnect = False
-        self.connected_uptime = 0
 
-        # Motor controls
-        self.motor_direction = 1
-        self.motor_speed = 1.0
-        self.motor_enable = 1
-        self.motor_lvdt = 5.0  # not using yet
+        # For the temperature monitor
+        self.temp_monitor_graph = {
+            'timestamp': [],
+            'temperature_a': [],
+            'temperature_b': []
+        }
+        self.temp_monitor_retention = temp_monitor_retention
 
-        motor = ParameterTree({
-            'enable': (lambda: self.motor_enable, self.set_motor_enable),
-            'direction': (lambda: self.motor_direction, self.set_motor_direction),
-            'speed': (lambda: self.motor_speed, self.set_motor_speed),
-            'lvdt': (lambda: self.motor_lvdt, None)
-        })
-
-        thermal_gradient = ParameterTree({
-            'enable': (lambda: self.gradient_enable, self.set_gradient_enable),
-            'wanted': (lambda: self.gradient_wanted, self.set_gradient_wanted),
-            'distance': (lambda: self.gradient_distance, self.set_gradient_distance),
-            'actual': (lambda: self.gradient_actual, None),
-            'theoretical': (lambda: self.gradient_theoretical, None),
-            'high_heater': (lambda: self.gradient_high, self.set_gradient_high),
-            'high_heater_options': (lambda: self.gradient_high_options, None)
-        })
-
-        autosp = ParameterTree({
-            'enable': (lambda: self.autosp_enable, self.set_autosp_enable),
-            'heating': (lambda: self.autosp_heating, self.set_autosp_heating),
-            'heating_options': (lambda: self.heating_options, None), 
-            'rate': (lambda: self.autosp_rate, self.set_autosp_rate),
-            'img_per_degree': (lambda: self.autosp_imgdegree, self.set_autosp_imgdegree),
-            'midpt_temp': (lambda: self.autosp_midpt, None)
-        })
-
-        # Build a parameter tree for the background task
         bg_task = ParameterTree({
             'thread_count': (lambda: self.background_thread_counter, None),
-            'enable': (lambda: self.background_task_enable, self.set_task_enable),
-            'interval': (lambda: self.background_task_interval, self.set_task_interval),
+            'enable': (lambda: self.bg_read_task_enable, self.set_task_enable),
+            'interval': (lambda: self.bg_read_task_interval, self.set_task_interval),
         })
 
         status = ParameterTree({
             'odin_version': version_info['version'],
             'server_uptime': (self.get_server_uptime, None),
-            'connected_uptime': (lambda: self.connected_uptime, None),
             'connected': (lambda: self.connected, None),
-            'reconnect': (lambda: self.reconnect, self.initialise_modbus_clients)
+            'reconnect': (lambda: self.reconnect, self.initialise_clients)
+        })
+
+        tcp = ParameterTree({
+            'tcp_reading': (lambda: self.tcp_reading, None),
+            'acquire': (lambda: self.start_acquisition, self.toggle_acquisition)
         })
 
         # Store all information in a parameter tree
         self.param_tree = ParameterTree({
             'status': status,
             'background_task': bg_task,
-            'pid_a': self.pid_a.pid_tree,
-            'pid_b': self.pid_b.pid_tree,
-            'autosp': autosp,
-            'gradient': thermal_gradient,
-            'motor': motor
+            'pid_a': self.pid_a.tree,
+            'pid_b': self.pid_b.tree,
+            'autosp': self.aspc.tree,
+            'gradient': self.gradient.tree,
+            'motor': self.motor.tree,
+            'tcp': tcp,
+            'temp_monitor': (lambda: self.temp_monitor_graph, None)
         })
 
         # Launch the background task if enabled in options
-        if self.background_task_enable:
+        if self.bg_read_task_enable:
             self.start_background_tasks()
 
-    def initialise_adapters(self, adapters):
-        """Initialise any adapters that this one needs access to.
-        :param adapters: dict of adapters from adapter.py
-        """
-        self.graph_adapter = adapters['graph']
+    # Data acquiring tasks
 
-    def push_data(self, key, data):
-        """Push data to the graph adapter dataset(s).
-        :param key: key in dataset
-        :param data: value to append to list in key
-        """
-        self.graph_adapter.datasets['thermocouples'].data[key].append(data)
+    def toggle_acquisition(self, value):
+        """Toggle whether the system is acquiring data."""
+        value = bool(value)
+        logging.debug("Toggled acquisition")
 
-        self.graph_adapter.datasets['thermocouples_long'].data[key].append(data)
+        if value:
+            # Send signal to
+            self.mod_client.write_coil(modAddr.acquisition_coil, 1, slave=1)
+            self.file_writer.open_file()
+            self.file_open_flag = True
+        else:
+            self.mod_client.write_coil(modAddr.acquisition_coil, 0, slave=1)
 
-    def initialise_modbus_clients(self, value):
+            # If ending an acquisition, clear the buffer
+            self.file_writer.write_hdf5(
+                self.stream_buffer,
+                'temperature_readings'
+            )
+            for key in self.stream_buffer:
+                self.stream_buffer[key].clear()
+
+            self.file_writer.close_file()
+            self.file_open_flag = False
+
+        self.start_acquisition = value
+
+    def initialise_clients(self, value):
         """Instantiate a ModbusTcpClient and provide it to the PID controllers."""
         logging.debug("Attempting to establish modbus connection")
-        self.client = ModbusTcpClient('192.168.0.159')
-
-        self.client.connect()
         self.connected = True
 
-        self.pid_a.initialise_modbus_client(self.client)
-        self.pid_b.initialise_modbus_client(self.client)
+        self.mod_client = ModbusTcpClient(self.ip)
+        self.mod_client.connect()
+
+        self.pid_a.register_modbus_client(self.mod_client)
+        self.pid_b.register_modbus_client(self.mod_client)
+        self.gradient.register_modbus_client(self.mod_client)
+        self.aspc.register_modbus_client(self.mod_client)
+        self.motor.register_modbus_client(self.mod_client)
+
+    def initialise_tcp_client(self):
+        """Initialise the tcp client."""
+
+        self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.tcp_client.connect((self.ip, self.port))
+
+        self.tcp_client.settimeout(1)
+        activate = '1'
+        self.tcp_client.send(activate.encode())
+
+    def close_tcp_client(self):
+        """Safely end the TCP connection."""
+        self.tcp_client.close()
+
+    def background_ioloop_callback(self):
+        """background task IOLoop callback
+        may be swapped to be a thread for the reading"""
+
+        # Check retention
+        for key in self.temp_monitor_graph.keys():
+            if len(self.temp_monitor_graph[key]) >= self.temp_monitor_retention:
+                self.temp_monitor_graph[key].pop(0)
+
+        # Add data
+        cur_time = datetime.datetime.now()
+        cur_time = cur_time.strftime("%H:%M:%S")
+        self.temp_monitor_graph['timestamp'].append(cur_time)
+        self.temp_monitor_graph['temperature_a'].append(self.pid_a.thermocouple)
+        self.temp_monitor_graph['temperature_b'].append(self.pid_b.thermocouple)
+
+        # self.background_ioloop_counter += 1
+
+    @run_on_executor
+    def background_stream_task(self):
+        """Instruct the packet decoder to receive an object, then put that object
+        in the parameter tree.
+        """
+        while self.bg_stream_task_enable:
+
+            try:
+                reading = self.tcp_client.recv(self.packet_decoder.size) # fff: 12
+                logging.debug(self.packet_decoder.counter)
+                reading = self.packet_decoder.unpack(reading)
+
+            except socket.timeout:
+                logging.debug("TCP Socket timeout: read no data")
+            except Exception as e:
+                logging.debug(f"Other TCP error: {str(e)}")
+                logging.debug("Halting background tasks")
+                self.stop_background_tasks()
+                break
+
+            self.tcp_reading = self.packet_decoder.as_dict()
+
+            if self.start_acquisition:
+
+                self.stream_buffer['counter'].append(self.packet_decoder.counter)
+                self.stream_buffer['temperature_a'].append(self.packet_decoder.temperature_a)
+                self.stream_buffer['temperature_b'].append(self.packet_decoder.temperature_b)
+
+                if len(self.stream_buffer['counter']) == 50:
+                    self.file_writer.write_hdf5(
+                        data=self.stream_buffer,
+                        groupname="temperature_readings"
+                    )
+                    # Clear the buffer
+                    for key in self.stream_buffer:
+                        self.stream_buffer[key].clear()
+
+                    secondary_data = {
+                        'counter': [self.packet_decoder.counter],
+                        'setpoint_a': [self.pid_a.setpoint],
+                        'setpoint_b': [self.pid_b.setpoint]
+                    }
+                    self.file_writer.write_hdf5(
+                        data=secondary_data,
+                        groupname="secondary_readings"
+                    )
+
+            time.sleep(self.bg_stream_task_interval)
+
+    @run_on_executor
+    def background_read_task(self):
+        """The adapter background thread task.
+
+        This method runs in the thread executor pool, sleeping for the specified interval and 
+        incrementing its counter once per loop, until the background task enable is set to false.
+        """
+        while self.bg_read_task_enable:
+
+            if self.connected:
+                # Get any value updated by the device
+                # Mostly input registers, except for setpoints which can change automatically
+                try:
+                    self.pid_a.thermocouple = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp)
+                    self.pid_b.thermocouple = read_decode_input_reg(self.mod_client, modAddr.thermocouple_b_inp)
+
+                    self.lifetime_counter = read_decode_input_reg(self.mod_client, modAddr.counter_inp)
+
+                    self.pid_a.output    = read_decode_input_reg(self.mod_client, modAddr.pid_output_a_inp)
+                    self.pid_b.output    = read_decode_input_reg(self.mod_client, modAddr.pid_output_b_inp)
+
+                    self.gradient.actual      = read_decode_input_reg(self.mod_client, modAddr.gradient_actual_inp)
+                    self.gradient.theoretical = read_decode_input_reg(self.mod_client, modAddr.gradient_theory_inp)
+
+                    self.pid_a.gradient_setpoint = read_decode_input_reg(self.mod_client, modAddr.gradient_setpoint_a_inp)
+                    self.pid_b.gradient_setpoint = read_decode_input_reg(self.mod_client, modAddr.gradient_setpoint_b_inp)
+
+                    self.aspc.midpt = read_decode_input_reg(self.mod_client, modAddr.autosp_midpt_inp)
+
+                    self.pid_a.setpoint = read_decode_holding_reg(self.mod_client, modAddr.pid_setpoint_a_hold)
+                    self.pid_b.setpoint = read_decode_holding_reg(self.mod_client, modAddr.pid_setpoint_b_hold)
+
+                    self.motor.lvdt = read_decode_input_reg(self.mod_client, modAddr.motor_lvdt_inp)
+
+                except:
+                    self.mod_client.close()
+                    self.packet_decoder.close_tcp_client()
+                    # Close both for safety and consistency
+                    logging.debug("Modbus communication error, pausing reads")
+                    self.connected = False
+
+                self.background_thread_counter += 1
+
+            else:
+                # logging.debug("Awaiting reconnection")
+                pass
+            
+            time.sleep(self.bg_read_task_interval)
+
+        logging.debug("Background thread task stopping")
+
+    # Adapter processes
 
     def get_server_uptime(self):
         """Get the uptime for the ODIN server.
@@ -237,94 +353,9 @@ class LiveX():
         This method stops the background tasks, allowing the adapter state to be cleaned up
         correctly.
         """
-        self.client.close()
+        self.mod_client.close()
+        self.tcp_client.close()
         self.stop_background_tasks()
-
-    # Auto set point control
-
-    def set_autosp_enable(self, value):
-        """Set the enable boolean for the auto set point control."""
-        self.autosp_enable = bool(value)
-
-        if value:
-            ret = self.client.write_coil(modAddr.autosp_enable_coil, 1, slave=1)
-        else:
-            ret = self.client.write_coil(modAddr.autosp_enable_coil, 0, slave=1)
-
-    def set_autosp_heating(self, value):
-        """Set the boolean for auto set point control heating."""
-        self.autosp_heating = value
-
-        if value:  # 1, heating
-            self.client.write_coil(modAddr.autosp_heating_coil, 1, slave=1)
-        else:      # 0, cooling
-            self.client.write_coil(modAddr.autosp_heating_coil, 0, slave=1)
-
-    def set_autosp_rate(self, value):
-        """Set the rate value for the auto set point control."""
-        self.autosp_rate = value
-        response = write_modbus_float(self.client, value, modAddr.autosp_rate_hold)
-
-    def set_autosp_imgdegree(self, value):
-        """Set the image acquisition per degree for the auto set point control."""
-        self.autosp_imgdegree = value
-        response = write_modbus_float(self.client, value, modAddr.autosp_imgdegree_hold)
-
-    # Thermal gradient
-
-    def set_gradient_enable(self, value):
-        """Set the enable boolean for the thermal gradient."""
-        self.gradient_enable = bool(value)
-
-        if value:
-            self.client.write_coil(modAddr.gradient_enable_coil, 1, slave=1)
-        else:
-            self.client.write_coil(modAddr.gradient_enable_coil, 0, slave=1)
-
-    def set_gradient_distance(self, value):
-        """Set the distance value for the thermal gradient."""
-        self.gradient_distance = value
-        response = write_modbus_float(self.client, value, modAddr.gradient_distance_hold)
-
-    def set_gradient_wanted(self, value):
-        """Set the desired temperature change per mm for the thermal gradient."""
-        self.gradient_wanted = value
-        response = write_modbus_float(self.client, value, modAddr.gradient_wanted_hold)
-
-    def set_gradient_high(self, value):
-        """Set the boolean for thermal gradient high heater."""
-        self.gradient_high = value
-
-        if value:  # 1, heater B
-            self.client.write_coil(modAddr.gradient_high_coil, 1, slave=1)
-        else:
-            self.client.write_coil(modAddr.gradient_high_coil, 0, slave=1)
-
-    # Motor Controls
-
-    def set_motor_enable(self, value):
-        """Set motor enable boolean."""
-        self.motor_enable = value
-
-        if value:  # 1, enabled
-            self.client.write_coil(modAddr.motor_enable_coil, 1, slave=1)
-        else:
-            self.client.write_coil(modAddr.motor_enable_coil, 0, slave=1)
-
-    def set_motor_direction(self, value):
-        """Set motor direction boolean."""
-        self.motor_direction = value
-
-        if value:  # 1, up
-            self.client.write_coil(modAddr.motor_direction_coil, 1, slave=1)
-        else:  # 0, down
-            self.client.write_coil(modAddr.motor_direction_coil, 0, slave=1)
-
-    def set_motor_speed(self, value):
-        """Set motor speed holding register."""
-        self.motor_speed = value
-
-        write_modbus_float(self.client, value, modAddr.motor_speed_hold)
 
     # Background tasks
 
@@ -332,7 +363,7 @@ class LiveX():
         """Set the background task enable."""
         enable = bool(enable)
 
-        if enable != self.background_task_enable:
+        if enable != self.bg_read_task_enable:
             if enable:
                 self.start_background_tasks()
             else:
@@ -341,15 +372,15 @@ class LiveX():
     def set_task_interval(self, interval):
         """Set the background task interval."""
         logging.debug("Setting background task interval to %f", interval)
-        self.background_task_interval = float(interval)
+        self.bg_read_task_interval = float(interval)
 
     def start_background_tasks(self):
         """Start the background tasks."""
         logging.debug(
-            "Launching background tasks with interval %.2f secs", self.background_task_interval
+            "Launching background tasks with interval %.2f secs", self.bg_read_task_interval
         )
-
-        self.background_task_enable = True
+        self.bg_read_task_enable = True
+        self.bg_stream_task_enable = True
 
         self.background_ioloop_task = PeriodicCallback(
             self.background_ioloop_callback, 1000
@@ -357,73 +388,14 @@ class LiveX():
         self.background_ioloop_task.start()
 
         # Run the background thread task in the thread execution pool
-        self.background_thread_task()
+        self.background_stream_task()
+        self.background_read_task()
 
     def stop_background_tasks(self):
         """Stop the background tasks."""
-        self.background_task_enable = False
-        self.background_ioloop_callback.stop()
+        if self.file_open_flag:  # Ensure file is closed properly
+            self.file_writer.close_file()
 
-    def background_ioloop_callback(self):
-        """background task IOLoop callback
-        may be swapped to be a thread for the reading"""
-        self.push_data('temp_a', self.pid_a.thermocouple)
-        self.push_data('temp_b', self.pid_b.thermocouple)
-
-        # self.background_ioloop_counter += 1
-
-    @run_on_executor
-    def background_thread_task(self):
-        """The the adapter background thread task.
-
-        This method runs in the thread executor pool, sleeping for the specified interval and 
-        incrementing its counter once per loop, until the background task enable is set to false.
-        """
-        # sleep_interval = self.background_task_interval
-
-        while self.background_task_enable:
-
-            time.sleep(self.background_task_interval)
-
-            if self.connected:
-                sleep_interval = self.background_task_interval
-
-                # Get any value updated by the device
-                # Almost all input registers, except for setpoints which can change automatically
-                try:
-                    self.pid_a.thermocouple = read_decode_input_reg(self.client, modAddr.thermocouple_a_inp)
-                    self.pid_b.thermocouple = read_decode_input_reg(self.client, modAddr.thermocouple_b_inp)
-
-                    self.reading_counter = read_decode_input_reg(self.client, modAddr.counter_inp)
-
-                    self.pid_a.output    = read_decode_input_reg(self.client, modAddr.pid_output_a_inp)
-                    self.pid_b.output    = read_decode_input_reg(self.client, modAddr.pid_output_b_inp)
-
-                    self.gradient_actual      = read_decode_input_reg(self.client, modAddr.gradient_actual_inp)
-                    self.gradient_theoretical = read_decode_input_reg(self.client, modAddr.gradient_theory_inp)
-
-                    self.pid_a.gradient_setpoint = read_decode_input_reg(self.client, modAddr.gradient_setpoint_a_inp)
-                    self.pid_b.gradient_setpoint = read_decode_input_reg(self.client, modAddr.gradient_setpoint_b_inp)
-
-                    self.autosp_midpt = read_decode_input_reg(self.client, modAddr.autosp_midpt_inp)
-
-                    self.pid_a.setpoint = read_decode_holding_reg(self.client, modAddr.pid_setpoint_a_hold)
-                    self.pid_b.setpoint = read_decode_holding_reg(self.client, modAddr.pid_setpoint_b_hold)
-
-                    self.motor_lvdt = read_decode_input_reg(self.client, modAddr.motor_lvdt_inp)
-
-                except:
-                    self.client.close()
-                    logging.debug("Modbus communication error, pausing reads")
-                    self.connected = False
-                    self.connected_uptime = 0
-                    # self.reconnect = False
-                    time.sleep(sleep_interval)
-
-                self.background_thread_counter += 1
-
-            else:
-                # logging.debug("Awaiting reconnection")
-                pass
-
-        logging.debug("Background thread task stopping")
+        self.bg_read_task_enable = False
+        self.bg_stream_task_enable = False
+        self.background_ioloop_task.stop()

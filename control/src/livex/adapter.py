@@ -8,24 +8,13 @@ to be read by the PLC.
 Mika Shearwood, Detector Systems Software Group
 """
 import logging
-import tornado
-import time
-import sys
-from concurrent import futures
-from functools import partial
 
-from tornado.ioloop import IOLoop, PeriodicCallback
-from tornado.concurrent import run_on_executor
 from tornado.escape import json_decode
 
 from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
-from odin._version import get_versions
+from odin.adapters.parameter_tree import ParameterTreeError
 
-from livex.modbusAddresses import modAddr
 from livex.livex import LiveX, LiveXError
-
-import csv
 
 class LiveXAdapter(ApiAdapter):
     """System info adapter class for the ODIN server.
@@ -46,10 +35,29 @@ class LiveXAdapter(ApiAdapter):
         super(LiveXAdapter, self).__init__(**kwargs)
 
         # Parse options
-        background_task_enable = bool(self.options.get('background_task_enable', False))
-        background_task_interval = float(self.options.get('background_task_interval', 1.0))
+        bg_read_task_enable = bool(self.options.get('background_read_task_enable', False))
+        bg_read_task_interval = float(self.options.get('background_read_task_interval', 1.0))
 
-        self.livex = LiveX(background_task_enable, background_task_interval)
+        bg_stream_task_enable = bool(self.options.get('background_stream_task_enable', False))
+        pid_frequency = int(self.options.get('pid_frequency', 50))
+
+        ip = self.options.get('ip', '192.168.0.159')
+        port = int(self.options.get('port', '4444'))
+
+        log_directory = self.options.get('log_directory', 'logs')
+        # Filename may instead be generated? Cannot have just one configurable one,
+        # subsequent uses would overwrite. generation method TBD. metadata, date/time, etc.
+        log_filename = self.options.get('log_filename', 'default.hdf5')
+
+        temp_monitor_retention = int(self.options.get('temp_monitor_retention', 60))
+
+        self.livex = LiveX(
+            bg_read_task_enable, bg_read_task_interval,
+            bg_stream_task_enable, pid_frequency,
+            ip, port,
+            log_directory, log_filename,
+            temp_monitor_retention
+        )
 
         logging.debug('LiveXAdapter loaded')
 
@@ -133,5 +141,3 @@ class LiveXAdapter(ApiAdapter):
     def initialize(self, adapters):
         """Get list of adapters and call relevant functions for them."""
         self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
-
-        self.livex.initialise_adapters(self.adapters)

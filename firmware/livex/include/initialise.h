@@ -10,6 +10,9 @@
 #include "pidController.h"
 #include "modbusServerController.h"
 #include "config.h"
+#include "resources.h"
+
+void initialiseInterrupts(hw_timer_t** secondaryFlagTimer);
 
 void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* mcp_addr);
 

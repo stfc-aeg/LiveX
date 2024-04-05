@@ -11,6 +11,10 @@
 #define INTERVAL_MOTOR 500
 #define INTERVAL_TIMEOUT 30000
 
+#define TIMER_PID 20000
+#define TIMER_CAM_PIN 10000
+#define TIMER_SECONDARY 200000 // motor and modifiers
+
 // Default terms for PID controllers
 #define PID_SETPOINT_DEFAULT 25.5
 #define PID_KP_DEFAULT       25.5
@@ -26,7 +30,7 @@
 // Number of each register type
 #define MOD_NUM_HOLD 32
 #define MOD_NUM_INP 32
-#define MOD_NUM_COIL 8
+#define MOD_NUM_COIL 12
 
 // Register addresses
 // coils start at 00001-09999
@@ -38,6 +42,7 @@
 #define MOD_MOTOR_ENABLE_COIL 6
 #define MOD_MOTOR_DIRECTION_COIL 7
 #define MOD_GRADIENT_HIGH_COIL 8
+#define MOD_ACQUISITION_COIL 9
 
 // input registers start at 30001-39999
 #define MOD_COUNTER_INP 30001

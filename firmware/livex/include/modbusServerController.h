@@ -35,4 +35,10 @@ union ModbusFloat
 } registers;
 };
 
+union FloatSplit
+{
+  float value;
+  uint16_t parts[2];
+};
+
 #endif
