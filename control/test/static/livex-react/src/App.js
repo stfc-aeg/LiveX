@@ -15,8 +15,9 @@ import AutoSetPointControl from './components/AutoSetPointControl';
 import Motor from './components/Motor';
 import React from "react";
 import { TitleCard, StatusBox, OdinApp } from 'odin-react';
-import { WithEndpoint, useAdapterEndpoint } from 'odin-react';;
-
+import { WithEndpoint, useAdapterEndpoint } from 'odin-react';
+import Metadata from './components/Metadata';
+import Camera from './components/Camera';
 
 const EndPointButton = WithEndpoint(Button);
 
@@ -26,7 +27,7 @@ function App(props) {
   const connectedPuttingDisable = (!(liveXEndPoint.data.status?.connected || false)) || (liveXEndPoint.loading == "putting")
 
   return (
-    <OdinApp title="LiveX Controls" navLinks={["controls", "monitoring", "cameras"]}>
+    <OdinApp title="LiveX Controls" navLinks={["furnace control", "metadata", "setup", "sequencing", "camera control", "monitoring"]}>
     <Col>
     <Container>
       <Col>
@@ -88,13 +89,35 @@ function App(props) {
         connectedPuttingDisable={connectedPuttingDisable}>
       </AutoSetPointControl>
 
-      <Motor
+      </Col>
+
+    </Container>
+    <Col>
+    <Motor
         liveXEndPoint={liveXEndPoint}
         connectedPuttingDisable={connectedPuttingDisable}>
       </Motor>
-
       </Col>
-    </Container>
+    </Col>
+    <Col>
+      <Metadata
+        liveXEndPoint={liveXEndPoint}
+        connectedPuttingDisable={connectedPuttingDisable}>
+      </Metadata>
+    </Col>
+    <Col>
+      setup
+    </Col>
+    <Col>
+      sequencer
+    </Col>
+    <Col>
+      camera control
+    <Camera
+      liveXEndPoint={liveXEndPoint}
+      connectedPuttingDisable={connectedPuttingDisable}>
+    </Camera>
+
     </Col>
     <Col>
     <TemperatureGraph

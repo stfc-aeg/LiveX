@@ -18,6 +18,8 @@ from livex.controls.pid import PID
 from livex.controls.gradient import Gradient
 from livex.controls.autoSetPointControl import AutoSetPointControl
 from livex.controls.motor import Motor
+from livex.controls.metadata import Metadata
+from livex.controls.camera import Camera
 
 from livex.util import LiveXError
 from livex.util import read_decode_input_reg, read_decode_holding_reg
@@ -90,6 +92,9 @@ class LiveX():
         self.aspc = AutoSetPointControl(self.mod_client, modAddr.aspc_addresses)
         self.motor = Motor(self.mod_client, modAddr.motor_addresses)
 
+        self.metadata = Metadata()
+        self.camera = Camera(instance_count=1)
+
         # Other display controls
         self.thermocouple_a = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp)
         self.thermocouple_b = read_decode_input_reg(self.mod_client, modAddr.thermocouple_b_inp)
@@ -134,7 +139,9 @@ class LiveX():
             'gradient': self.gradient.tree,
             'motor': self.motor.tree,
             'tcp': tcp,
-            'temp_monitor': (lambda: self.temp_monitor_graph, None)
+            'temp_monitor': (lambda: self.temp_monitor_graph, None),
+            'metadata': self.metadata.tree,
+            'camera': self.camera.tree
         })
 
         # Launch the background task if enabled in options
