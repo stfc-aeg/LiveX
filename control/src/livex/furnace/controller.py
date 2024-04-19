@@ -12,21 +12,21 @@ from odin._version import get_versions
 
 from pymodbus.client import ModbusTcpClient
 
+from livex.furnace.controls.pid import PID
+from livex.furnace.controls.gradient import Gradient
+from livex.furnace.controls.autoSetPointControl import AutoSetPointControl
+from livex.furnace.controls.motor import Motor
+from livex.furnace.controls.metadata import Metadata
+from livex.furnace.controls.camera import Camera
+
 from livex.modbusAddresses import modAddr
 from livex.filewriter import FileWriter
-from livex.controls.pid import PID
-from livex.controls.gradient import Gradient
-from livex.controls.autoSetPointControl import AutoSetPointControl
-from livex.controls.motor import Motor
-from livex.controls.metadata import Metadata
-from livex.controls.camera import Camera
-
 from livex.util import LiveXError
 from livex.util import read_decode_input_reg, read_decode_holding_reg
 from livex.packet_decoder import LiveXPacketDecoder
 
-class LiveX():
-    """LiveX - class that communicates with a modbus server on a PLC to drive a furnace."""
+class FurnaceController():
+    """FurnaceController - class that communicates with a modbus server on a PLC to drive a furnace."""
 
     # Thread executor used for background tasks
     executor = futures.ThreadPoolExecutor(max_workers=2)
@@ -37,10 +37,10 @@ class LiveX():
                  log_directory, log_filename,
                  temp_monitor_retention
         ):
-        """Initialise the LiveX object.
+        """Initialise the FurnaceController object.
 
-        This constructor initlialises the LiveX object, building parameter trees and
-        launching the background task to make modbus requests to the device.
+        This constructor initialises the FurnaceController object, building parameter trees and
+        launching the background task to make modbus requests to the PLC.
         """
         logging.getLogger("pymodbus").setLevel(logging.WARNING)  # Stop modbus from filling console
 
@@ -56,12 +56,6 @@ class LiveX():
 
         self.log_directory = log_directory
         self.log_filename = log_filename
-
-        # Store initialisation time
-        self.init_time = time.time()
-
-        # Get package version information
-        version_info = get_versions()
 
         # Set the background task counters to zero
         self.background_thread_counter = 0
@@ -118,8 +112,6 @@ class LiveX():
         })
 
         status = ParameterTree({
-            'odin_version': version_info['version'],
-            'server_uptime': (self.get_server_uptime, None),
             'connected': (lambda: self.connected, None),
             'reconnect': (lambda: self.reconnect, self.initialise_clients)
         })
@@ -324,17 +316,10 @@ class LiveX():
 
     # Adapter processes
 
-    def get_server_uptime(self):
-        """Get the uptime for the ODIN server.
-
-        This method returns the current uptime for the ODIN server.
-        """
-        return time.time() - self.init_time
-
     def get(self, path):
         """Get the parameter tree.
 
-        This method returns the parameter tree for use by clients via the LiveX adapter.
+        This method returns the parameter tree for use by clients via the FurnaceController adapter.
 
         :param path: path to retrieve from tree
         """
@@ -355,7 +340,7 @@ class LiveX():
             raise LiveXError(e)
 
     def cleanup(self):
-        """Clean up the LiveX instance.
+        """Clean up the FurnaceController instance.
 
         This method stops the background tasks, allowing the adapter state to be cleaned up
         correctly.

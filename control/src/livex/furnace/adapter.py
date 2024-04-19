@@ -14,25 +14,24 @@ from tornado.escape import json_decode
 from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
 from odin.adapters.parameter_tree import ParameterTreeError
 
-from livex.livex import LiveX, LiveXError
+from livex.furnace.controller import FurnaceController, LiveXError
 
-class LiveXAdapter(ApiAdapter):
-    """System info adapter class for the ODIN server.
+class FurnaceAdapter(ApiAdapter):
+    """Furnace adapter class for the ODIN server.
 
-    This adapter provides ODIN clients with information about the server and the system that it is
-    running on.
+    This adapter provides ODIN clients with access to the furnace parameters.
     """
 
     def __init__(self, **kwargs):
-        """Initialize the LiveXAdapter object.
+        """Initialize the FurnaceAdapter object.
 
-        This constructor initializes the LiveXAdapter object.
+        This constructor initializes the FurnaceAdapter object.
 
         :param kwargs: keyword arguments specifying options
         """
 
         # Intialise superclass
-        super(LiveXAdapter, self).__init__(**kwargs)
+        super(FurnaceAdapter, self).__init__(**kwargs)
 
         # Parse options
         bg_read_task_enable = bool(self.options.get('background_read_task_enable', False))
@@ -51,7 +50,7 @@ class LiveXAdapter(ApiAdapter):
 
         temp_monitor_retention = int(self.options.get('temp_monitor_retention', 60))
 
-        self.livex = LiveX(
+        self.furnace = FurnaceController(
             bg_read_task_enable, bg_read_task_interval,
             bg_stream_task_enable, pid_frequency,
             ip, port,
@@ -59,7 +58,7 @@ class LiveXAdapter(ApiAdapter):
             temp_monitor_retention
         )
 
-        logging.debug('LiveXAdapter loaded')
+        logging.debug('FurnaceAdapter loaded')
 
     @response_types('application/json', default='application/json')
     def get(self, path, request):
@@ -72,7 +71,7 @@ class LiveXAdapter(ApiAdapter):
         :return: an ApiAdapterResponse object containing the appropriate response
         """
         try:
-            response = self.livex.get(path)
+            response = self.furnace.get(path)
             status_code = 200
         except ParameterTreeError as e:
             response = {'error': str(e)}
@@ -99,8 +98,8 @@ class LiveXAdapter(ApiAdapter):
 
         try:
             data = json_decode(request.body)
-            self.livex.set(path, data)
-            response = self.livex.get(path)
+            self.furnace.set(path, data)
+            response = self.furnace.get(path)
             status_code = 200
         except LiveXError as e:
             response = {'error': str(e)}
@@ -123,7 +122,7 @@ class LiveXAdapter(ApiAdapter):
         :param request: HTTP request object
         :return: an ApiAdapterResponse object containing the appropriate response
         """
-        response = 'LiveXAdapter: DELETE on path {}'.format(path)
+        response = 'FurnaceAdapter: DELETE on path {}'.format(path)
         status_code = 200
 
         logging.debug(response)
@@ -136,7 +135,7 @@ class LiveXAdapter(ApiAdapter):
         This method cleans up the adapter state when called by the server at e.g. shutdown.
         It simplied calls the cleanup function of the LiveX instance.
         """
-        self.livex.cleanup()
+        self.furnace.cleanup()
 
     def initialize(self, adapters):
         """Get list of adapters and call relevant functions for them."""
