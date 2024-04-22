@@ -20,6 +20,27 @@ class LiveXAdapter(ApiAdapter):
         # Create acquisition controller
         self.livex = LiveXController()
 
+    @response_types('application/json', default='application/json')
+    def get(self, path, request):
+        """Handle an HTTP GET request.
+
+        This method handles an HTTP GET request, returning a JSON response.
+
+        :param path: URI path of request
+        :param request: HTTP request object
+        :return: an ApiAdapterResponse object containing the appropriate response
+        """
+        try:
+            response = self.livex.get(path)
+            status_code = 200
+        except ParameterTreeError as e:
+            response = {'error': str(e)}
+            status_code = 400
+
+        content_type = 'application/json'
+
+        return ApiAdapterResponse(response, content_type=content_type,
+                                  status_code=status_code)
 
     @request_types('application/json')
     @response_types('application/json', default='application/json')

@@ -46,19 +46,15 @@ class LiveXController():
 
     def get(self, path):
         """Get the parameter tree.
-
         This method returns the parameter tree for use by clients via the FurnaceController adapter.
-
         :param path: path to retrieve from tree
         """
         return self.param_tree.get(path)
 
     def set(self, path, data):
         """Set parameters in the parameter tree.
-
         This method simply wraps underlying ParameterTree method so that an exceptions can be
         re-raised with an appropriate LiveXError.
-
         :param path: path of parameter tree to set values for
         :param data: dictionary of new data values to set in the parameter tree
         """

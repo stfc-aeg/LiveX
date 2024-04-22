@@ -23,7 +23,8 @@ const EndPointButton = WithEndpoint(Button);
 
 function App(props) {
 
-  const liveXEndPoint = useAdapterEndpoint('livex', 'http://localhost:8888', 200);
+  const liveXEndPoint = useAdapterEndpoint('furnace', 'http://localhost:8888', 200);
+  const cameraEndPoint = useAdapterEndpoint('camera', 'http://localhost:8888', 1000);
   const connectedPuttingDisable = (!(liveXEndPoint.data.status?.connected || false)) || (liveXEndPoint.loading == "putting")
 
   return (
@@ -114,7 +115,7 @@ function App(props) {
     <Col>
       camera control
     <Camera
-      liveXEndPoint={liveXEndPoint}
+      cameraEndPoint={cameraEndPoint}
       connectedPuttingDisable={connectedPuttingDisable}>
     </Camera>
 

@@ -8,7 +8,6 @@ from tornado.ioloop import PeriodicCallback
 from tornado.concurrent import run_on_executor
 
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
-from odin._version import get_versions
 
 from pymodbus.client import ModbusTcpClient
 
@@ -314,41 +313,6 @@ class FurnaceController():
 
         logging.debug("Background thread task stopping")
 
-    # Adapter processes
-
-    def get(self, path):
-        """Get the parameter tree.
-
-        This method returns the parameter tree for use by clients via the FurnaceController adapter.
-
-        :param path: path to retrieve from tree
-        """
-        return self.param_tree.get(path)
-
-    def set(self, path, data):
-        """Set parameters in the parameter tree.
-
-        This method simply wraps underlying ParameterTree method so that an exceptions can be
-        re-raised with an appropriate LiveXError.
-
-        :param path: path of parameter tree to set values for
-        :param data: dictionary of new data values to set in the parameter tree
-        """
-        try:
-            self.param_tree.set(path, data)
-        except ParameterTreeError as e:
-            raise LiveXError(e)
-
-    def cleanup(self):
-        """Clean up the FurnaceController instance.
-
-        This method stops the background tasks, allowing the adapter state to be cleaned up
-        correctly.
-        """
-        self.mod_client.close()
-        self.tcp_client.close()
-        self.stop_background_tasks()
-
     # Background tasks
 
     def set_task_enable(self, enable):
@@ -391,3 +355,34 @@ class FurnaceController():
         self.bg_read_task_enable = False
         self.bg_stream_task_enable = False
         self.background_ioloop_task.stop()
+
+    # Adapter processes
+
+    def get(self, path):
+        """Get the parameter tree.
+        This method returns the parameter tree for use by clients via the FurnaceController adapter.
+        :param path: path to retrieve from tree
+        """
+        return self.param_tree.get(path)
+
+    def set(self, path, data):
+        """Set parameters in the parameter tree.
+        This method simply wraps underlying ParameterTree method so that an exceptions can be
+        re-raised with an appropriate LiveXError.
+        :param path: path of parameter tree to set values for
+        :param data: dictionary of new data values to set in the parameter tree
+        """
+        try:
+            self.param_tree.set(path, data)
+        except ParameterTreeError as e:
+            raise LiveXError(e)
+
+    def cleanup(self):
+        """Clean up the FurnaceController instance.
+
+        This method stops the background tasks, allowing the adapter state to be cleaned up
+        correctly.
+        """
+        self.mod_client.close()
+        self.tcp_client.close()
+        self.stop_background_tasks()
