@@ -4,14 +4,14 @@ import { Container, Stack } from 'react-bootstrap';
 import { useState, useEffect } from 'react';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
-import { TitleCard, WithEndpoint, ToggleSwitch, StatusBox, DropdownSelector, OdinGraph } from 'odin-react';
-
+import { WithEndpoint, OdinGraph } from 'odin-react';
 
 
 const EndPointFormControl = WithEndpoint(Form.Control);
-const EndpointDropdown = WithEndpoint(DropdownSelector);
 
-function Camera(props) {
+function OrcaCamera(props) {
+    const {key} = props;
+    const {name} = props;
     const {cameraEndPoint} = props;
     const {liveViewEndPoint} = props;
     const {connectedPuttingDisable} = props;
@@ -23,10 +23,8 @@ function Camera(props) {
         if (liveViewEndPoint.data?.data) {
           const base64Data = liveViewEndPoint.data.data;
           const decodedData = atob(base64Data);
-          console.log(decodedData);
           const arrayData = new Uint8Array(decodedData.split('').map(char => char.charCodeAt(0)));
           changeImgData(arrayData);
-          console.log(arrayData);
         }
       }, [liveViewEndPoint.data?.data]);
 
@@ -36,6 +34,7 @@ function Camera(props) {
             <Col>
                 <Stack>
                 <InputGroup>
+                    {key}
                     <InputGroup.Text>
                         command
                     </InputGroup.Text>
@@ -46,7 +45,7 @@ function Camera(props) {
                         disabled={connectedPuttingDisable}>
                     </EndPointFormControl>
                     <OdinGraph
-                        title="preview"
+                        title={name}
                         prop_data={imgData}
                         num_x={4096}
                         num_y={2304}
@@ -60,5 +59,5 @@ function Camera(props) {
     )
 }
 
-export default Camera;
+export default OrcaCamera;
 

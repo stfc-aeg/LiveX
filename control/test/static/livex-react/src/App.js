@@ -17,15 +17,13 @@ import React from "react";
 import { TitleCard, StatusBox, OdinApp } from 'odin-react';
 import { WithEndpoint, useAdapterEndpoint } from 'odin-react';
 import Metadata from './components/Metadata';
-import Camera from './components/Camera';
+import Cameras from './components/Cameras';
 
 const EndPointButton = WithEndpoint(Button);
 
 function App(props) {
 
   const liveXEndPoint = useAdapterEndpoint('furnace', 'http://localhost:8888', 500);
-  const cameraEndPoint = useAdapterEndpoint('camera', 'http://localhost:8888', 1000);
-  const liveViewEndPoint = useAdapterEndpoint('live_data', 'http://localhost:8888', 10000);
   const connectedPuttingDisable = (!(liveXEndPoint.data.status?.connected || false)) || (liveXEndPoint.loading == "putting")
 
   return (
@@ -115,11 +113,9 @@ function App(props) {
     </Col>
     <Col>
       camera control
-    <Camera
-      cameraEndPoint={cameraEndPoint}
-      liveViewEndPoint={liveViewEndPoint}
+    <Cameras
       connectedPuttingDisable={connectedPuttingDisable}>
-    </Camera>
+    </Cameras>
 
     </Col>
     <Col>
