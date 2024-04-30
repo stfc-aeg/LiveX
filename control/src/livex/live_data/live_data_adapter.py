@@ -106,10 +106,7 @@ class LiveDataViewer():
     def read_data_from_socket(self, msg):
 
         header = json_decode(msg[0])
-        logging.debug("Received Data with Header: %s", header)
-
-        # logging.debug("'''''''''''''''''''''''''''''''''''''''''")
-        # logging.debug(msg[1])
+        # logging.debug("Received Data with Header: %s", header)
 
         self.data_header = header
         dtype = header['dtype']
@@ -119,8 +116,12 @@ class LiveDataViewer():
         self.data_header["shape"] = [int(header["shape"][0]), int(header["shape"][1])]
         self.data = np.fromstring(msg[1], dtype=dtype)
 
-        logging.debug("Data Type: %s", self.data.dtype)
+        self.data = self.data.reshape((2304, 4096))  # Height and width of ORCA
+        self.data = self.data[::-8, ::8]  # downsample by 32x and flip y-axis
 
+        self.data = np.ascontiguousarray(self.data)  # So that it can be zipped
+
+        # logging.debug("Data Type: %s", self.data.dtype)
         # np.reshape(self.data, [int(header["shape"][0]), int(header["shape"][1])])
         logging.debug(self.data)
         self.clipped_data = self.clip_data(self.min, self.max)

@@ -23,7 +23,7 @@ const EndPointButton = WithEndpoint(Button);
 
 function App(props) {
 
-  const liveXEndPoint = useAdapterEndpoint('furnace', 'http://localhost:8888', 500);
+  const liveXEndPoint = useAdapterEndpoint('furnace', 'http://localhost:8888', 1000);
   const connectedPuttingDisable = (!(liveXEndPoint.data.status?.connected || false)) || (liveXEndPoint.loading == "putting")
 
   return (
@@ -116,12 +116,10 @@ function App(props) {
     <Cameras
       connectedPuttingDisable={connectedPuttingDisable}>
     </Cameras>
-
     </Col>
     <Col>
     <TemperatureGraph
-      liveXEndPoint={liveXEndPoint}
-      connectedPuttingDisable={connectedPuttingDisable}>
+      liveXEndPoint={liveXEndPoint}>
     </TemperatureGraph>
     </Col>
     </OdinApp>

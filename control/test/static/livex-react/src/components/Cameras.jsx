@@ -15,23 +15,23 @@ const EndPointFormControl = WithEndpoint(Form.Control);
 function Cameras(props) {
     const {connectedPuttingDisable} = props;
 
-    const cameraEndPoint = useAdapterEndpoint('camera', 'http://localhost:8888', 1000);
+    const cameraEndPoint = useAdapterEndpoint('camera', 'http://localhost:8888', 10000);
     const liveViewEndPoint = useAdapterEndpoint('live_data', 'http://localhost:8888', 10000);
 
     const [cameras, setCameras] = useState([]);
 
     useEffect(() => {
+        console.log("sorting cam arrays");
         const cameraArray = cameraEndPoint.data?.cameras;
         setCameras(cameraArray || []);
     }, [cameraEndPoint.data?.cameras]);  // Run only once after initial render
 
     return (
-
         <Container>
             <Col>
             {cameras.map((camera, index) => (
                 <OrcaCamera
-                    key={index}
+                    index={index}
                     name={camera.camera_name}
                     cameraEndPoint={cameraEndPoint}
                     liveViewEndPoint={liveViewEndPoint}
