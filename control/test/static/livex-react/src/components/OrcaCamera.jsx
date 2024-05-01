@@ -5,10 +5,12 @@ import { useState, useEffect } from 'react';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
 import { WithEndpoint, OdinGraph } from 'odin-react';
+import Button from 'react-bootstrap/Button';
 
 let render = 0;
 
 const EndPointFormControl = WithEndpoint(Form.Control);
+const EndPointButton = WithEndpoint(Button);
 
 function OrcaCamera(props) {
     const {index} = props;
@@ -55,6 +57,23 @@ function OrcaCamera(props) {
                         fullpath={"cameras/" + index.toString() + "/command"}
                         disabled={connectedPuttingDisable}>
                     </EndPointFormControl>
+                </InputGroup>
+                </Stack>
+
+                <Stack>
+                <InputGroup>
+                    <InputGroup.Text>
+                        exposure_time
+                    </InputGroup.Text>
+                    <EndPointFormControl
+                        endpoint={cameraEndPoint}
+                        type="number"
+                        fullpath={"cameras/" + index.toString() + "/config/exposure_time"}
+                        disabled={connectedPuttingDisable}>
+                    </EndPointFormControl>
+                </InputGroup>
+                </Stack>
+
                     <OdinGraph
                         title={name}
                         prop_data={imgData}
@@ -62,8 +81,7 @@ function OrcaCamera(props) {
                         type="heatmap"
                         colorscale="Greys">
                     </OdinGraph>
-                </InputGroup>
-                </Stack>
+
             </Col>
         </Container>
 
