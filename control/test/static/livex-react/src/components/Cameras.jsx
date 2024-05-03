@@ -1,8 +1,8 @@
 import React from 'react';
 import Col from 'react-bootstrap/Col';
-import { Container, Stack } from 'react-bootstrap';
+import { Container } from 'react-bootstrap';
 import { useState, useEffect } from 'react';
-import { WithEndpoint, useAdapterEndpoint, OdinGraph } from 'odin-react';
+import { useAdapterEndpoint } from 'odin-react';
 
 import OrcaCamera from './OrcaCamera';
 
