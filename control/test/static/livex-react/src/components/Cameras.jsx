@@ -15,10 +15,8 @@ function Cameras(props) {
     const [cameras, setCameras] = useState([]);
 
     useEffect(() => {
-        console.log("sorting cam arrays");
         const cameraArray = cameraEndPoint.data?.cameras;
         setCameras(cameraArray || []);
-        console.log("cameraArray:", cameraArray);
     }, [cameraEndPoint.data?.cameras]);  // Run only once after initial render
 
     return (
