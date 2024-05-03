@@ -64,7 +64,7 @@ function LiveViewSocket(props) {
       }, [autoFetch, delay, fetchImage]);
 
       return (
-        <TitleCard title={name}>
+        <TitleCard title={`${name} preview`}>
         <Form>
           <Form.Group as={Row} className="mb-3">
             <Form.Label column sm="2">Width</Form.Label>
