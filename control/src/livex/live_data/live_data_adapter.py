@@ -123,7 +123,6 @@ class LiveDataViewer():
 
         # logging.debug("Data Type: %s", self.data.dtype)
         # np.reshape(self.data, [int(header["shape"][0]), int(header["shape"][1])])
-        logging.debug(self.data)
         self.clipped_data = self.clip_data(self.min, self.max)
 
     def clip_data(self, min, max):
