@@ -1,12 +1,10 @@
 import logging
 import numpy as np
+import cv2
 
-# compression test options
-import gzip
 import base64
-import json
+import time
 
-import zmq
 
 from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
@@ -26,7 +24,6 @@ class LiveDataAdapter(ApiAdapter):
         super(LiveDataAdapter, self).__init__(**kwargs)
 
         endpoint = self.options.get(ENDPOINT_CONFIG_NAME, DEFAULT_ENDPOINT)
-        logging.debug("######################################################################################")
 
         self.live_viewer = LiveDataViewer(endpoint)
 
@@ -69,6 +66,11 @@ class LiveDataViewer():
 
         logging.debug("Initialising Live Data Viewer")
 
+        # defaults, to be done via config
+        self.colour = 'plasma'
+        self.resize_x = 640
+        self.resize_y = 480
+
         self.endpoint = endpoint
         self.data_header = {"Error": "No Header Yet",
                             "shape": [256, 256]}
@@ -78,6 +80,8 @@ class LiveDataViewer():
 
         self.min = None
         self.max = None
+        # self.image stores the image data, updated only when image is rendered
+        self.image = 0
 
         try:
             self.ipc_channel = SubSocket(self, endpoint)
@@ -87,21 +91,13 @@ class LiveDataViewer():
         self.param_tree = ParameterTree({
             "endpoint": (self.endpoint, None),
             "header": (lambda: self.data_header, None),
-            "data": (self.get_data, None),
+            "data": (lambda: self.image, None),
             "clipping":
                 {
                     "min": (lambda: self.min, self.set_clip_min),
                     "max": (lambda: self.max, self.set_clip_max)
                 }
-
         })
-
-    def get(self, path):
-        # logging.debug(self.param_tree)
-        return self.param_tree.get(path)
-
-    def set(self, path, data):
-        self.param_tree.set(path, data)
 
     def read_data_from_socket(self, msg):
 
@@ -114,19 +110,82 @@ class LiveDataViewer():
             dtype = "float32"
 
         self.data_header["shape"] = [int(header["shape"][0]), int(header["shape"][1])]
+
         self.data = np.fromstring(msg[1], dtype=dtype)
 
-        self.data = self.data.reshape((2304, 4096))  # Height and width of ORCA
-        self.data = self.data[::-8, ::8]  # downsample by 32x and flip y-axis
+        # opencv for img rendering
+        self.process_image()
 
-        self.data = np.ascontiguousarray(self.data)  # So that it can be zipped
-
-        # logging.debug("Data Type: %s", self.data.dtype)
-        # np.reshape(self.data, [int(header["shape"][0]), int(header["shape"][1])])
         self.clipped_data = self.clip_data(self.min, self.max)
 
-    def clip_data(self, min, max):
+    def process_image(self):
+        """Use opencv to resize the data.
+        using parameter tree values."""
+        self.data = self.data.reshape((2304, 4096))  # Height and width of ORCA
 
+        self.data = cv2.resize(self.data, (640, 480))  # TODO: size specified in tree
+
+        self.data = cv2.applyColorMap((self.data/256).astype(np.uint8), self.get_colour_map())
+
+        # 165ms at full size
+        _, buffer = cv2.imencode('.jpg', self.data)
+        buffer = np.array(buffer)
+
+        zipped_data = base64.b64encode(buffer)
+        self.image = zipped_data.decode('utf-8')
+
+    def get_colour_map(self):
+        """Return the appropriate colourmap, defaulting to 'bone' (greyscale)."""
+        colour = self.colour.upper()
+        if colour == 'AUTUMN':
+            return cv2.COLORMAP_AUTUMN
+        elif colour == 'BONE':
+            return cv2.COLORMAP_BONE
+        elif colour == 'JET':
+            return cv2.COLORMAP_JET
+        elif colour == 'WINTER':
+            return cv2.COLORMAP_WINTER
+        elif colour == 'RAINBOW':
+            return cv2.COLORMAP_RAINBOW
+        elif colour == 'OCEAN':
+            return cv2.COLORMAP_OCEAN
+        elif colour == 'SUMMER':
+            return cv2.COLORMAP_SUMMER
+        elif colour == 'SPRING':
+            return cv2.COLORMAP_SPRING
+        elif colour == 'COOL':
+            return cv2.COLORMAP_COOL
+        elif colour == 'HSV':
+            return cv2.COLORMAP_HSV
+        elif colour == 'PINK':
+            return cv2.COLORMAP_PINK
+        elif colour == 'HOT':
+            return cv2.COLORMAP_HOT
+        elif colour == 'PARULA':
+            return cv2.COLORMAP_PARULA
+        elif colour == 'MAGMA':
+            return cv2.COLORMAP_MAGMA
+        elif colour == 'INFERNO':
+            return cv2.COLORMAP_INFERNO
+        elif colour == 'PLASMA':
+            return cv2.COLORMAP_PLASMA
+        elif colour == 'VIRIDIS':
+            return cv2.COLORMAP_VIRIDIS
+        elif colour == 'CIVIDIS':
+            return cv2.COLORMAP_CIVIDIS
+        elif colour == 'TWILIGHT':
+            return cv2.COLORMAP_TWILIGHT
+        elif colour == 'TWILIGHT_SHIFTED':
+            return cv2.COLORMAP_TWILIGHT_SHIFTED
+        elif colour == 'TURBO':
+            return cv2.COLORMAP_TURBO
+        elif colour == 'DEEPGREEN':
+            return cv2.COLORMAP_DEEPGREEN
+        else:
+            print(f"No valid colormap found for {colour}. Defaulting to COLORMAP_BONE.")
+            return cv2.COLORMAP_BONE
+
+    def clip_data(self, min, max):
         try:
             clipped_data = np.clip(self.data, min, max)
         except ValueError:
@@ -143,13 +202,23 @@ class LiveDataViewer():
         self.clip_data(self.min, max)
 
     def get_data(self):
-
-        # zipped_data = gzip.compress(self.clipped_data)
-        zipped_data = base64.b64encode(self.data)
-        # temp_data = self.data
-        # logging.debug(self.data)
-        # logging.debug(zipped_data.decode('utf-8'))
+        _, buffer = cv2.imencode('.jpg', self.data)
+        buffer = np.array(buffer)
+        zipped_data = base64.b64encode(buffer)
         return zipped_data.decode("utf-8")
+
+    def get_plotly_data(self):
+        zipped_data = base64.b64encode(self.plotly_data)
+        return zipped_data.decode("utf-8")
+
+    def get(self, path):
+        """Get attribute from parameter tree."""
+        # logging.debug(self.param_tree)
+        return self.param_tree.get(path)
+
+    def set(self, path, data):
+        """Set attribute in parameter tree."""
+        self.param_tree.set(path, data)
 
 
 class SubSocket(object):

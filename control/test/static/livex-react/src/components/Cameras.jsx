@@ -10,7 +10,8 @@ import OrcaCamera from './OrcaCamera';
 function Cameras(props) {
     const {connectedPuttingDisable} = props;
 
-    const cameraEndPoint = useAdapterEndpoint('camera', 'http://localhost:8888', 5000);
+    const cameraEndPoint = useAdapterEndpoint('camera', 'http://192.168.0.22:8888', 5000);
+    const liveViewEndPoint = useAdapterEndpoint('live_data', 'http://192.168.0.22:8888', 1000);
 
     const [cameras, setCameras] = useState([]);
 
@@ -25,7 +26,8 @@ function Cameras(props) {
             {cameras.map((camera, index) => (
                 <OrcaCamera
                     index={index}
-                    connectedPuttingDisable={connectedPuttingDisable}>
+                    connectedPuttingDisable={connectedPuttingDisable}
+                    liveViewEndPoint={liveViewEndPoint}>
                 </OrcaCamera>
             ))}
             </Col>

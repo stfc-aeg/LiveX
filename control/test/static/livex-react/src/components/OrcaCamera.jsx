@@ -4,8 +4,9 @@ import Row from 'react-bootstrap/Row';
 import { Container, Stack } from 'react-bootstrap';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
-import { useAdapterEndpoint, WithEndpoint, OdinGraph, StatusBox } from 'odin-react';
+import { useAdapterEndpoint, WithEndpoint, OdinGraph, StatusBox, TitleCard } from 'odin-react';
 import Button from 'react-bootstrap/Button';
+import { useState, useEffect } from 'react';
 
 import LiveViewSocket from './LiveViewSocket';
 
@@ -14,57 +15,70 @@ const EndPointButton = WithEndpoint(Button);
 
 function OrcaCamera(props) {
     const {index} = props;
+    const {liveViewEndPoint} = props;
     const {connectedPuttingDisable} = props;
 
     const indexString = index.toString();
     let orcaAddress = 'camera/cameras/'+indexString;
-    const orcaEndPoint = useAdapterEndpoint(orcaAddress, 'http://localhost:8888', 0);
+    const orcaEndPoint = useAdapterEndpoint(orcaAddress, 'http://192.168.0.22:8888', 0);
     const orcaData = orcaEndPoint?.data[index];
+
+    // Array of camera status names
+    const status = ['disconnected', 'connected', 'armed', 'capturing'];
+    // Current status of orcaCamera (for readability)
+    const orcaStatus = orcaData?.status?.camera_status;
+
+    const [imgData, changeImgData] = useState([{}]);
+    // Graph re-renders when data changes
+    useEffect(() => {
+        changeImgData(`data:image/jpg;base64,${liveViewEndPoint.data?.data}`);
+      }, [liveViewEndPoint.data?.data]);
 
     return (
 
         <Container>
+          <TitleCard title={orcaData?.camera_name + " control"}>
             <Col>
             <Row>
             <Col>
             <StatusBox as="span" label = "Status">
-                {(orcaData?.status?.camera_status || "Not found" )}
+                {(orcaStatus || "Not found" )}
             </StatusBox>
             </Col>
             {/* These buttons have variable output, display, and colour, depending on the camera status.
             Example, you can connect the camera if it is off, and disconnect if it's connected.
-            Otherwise, you can't interact with it. You'd need to disarm it first.*/}
+            Otherwise, you can't interact with it. You'd need to disarm it first.*/} 
             <Col>
-            <EndPointButton
+            <EndPointButton // Move between statuses 1 and 0
                 endpoint={orcaEndPoint}
-                value={orcaData?.status?.camera_status === "connected" ? "disconnect" : "connect"}
+                value={orcaStatus===status[1] ? "disconnect" : "connect"}
                 fullpath="command"
                 event_type="click"
-                disabled={!['connected', 'Disconnected'].includes(orcaData?.status?.camera_status)}
-                variant={orcaData?.status?.camera_status==="connected" ? "warning" : "success"}>
-                {orcaData?.status?.camera_status==="connected" ? 'Disconnect' : 'Connect'}
+                disabled={![status[1], status[0]].includes(orcaStatus)}
+                variant={orcaStatus===status[1] ? "warning" : "success"}>
+                {orcaStatus===status[1] ? 'Disconnect' : 'Connect'}
             </EndPointButton>
             </Col>
             <Col>
-            <EndPointButton
+            <EndPointButton // Move between statuses 2 and 1
                 endpoint={orcaEndPoint}
-                value={orcaData?.status?.camera_status === "armed" ? "disarm" : "arm"}
+                value={orcaStatus===status[2] ? "disarm" : "arm"}
                 fullpath="command"
                 event_type="click"
-                disabled={!['armed', 'connected'].includes(orcaData?.status?.camera_status)}
-                variant={orcaData?.status?.camera_status==="armed" ? "warning" : "success"}>
-                {orcaData?.status?.camera_status==="armed" ? 'Disarm' : 'Arm'}
+                disabled={![status[2], status[1]].includes(orcaStatus)}
+                variant={orcaStatus===status[2] ? "warning" : "success"}>
+                {orcaStatus===status[2] ? 'Disarm' : 'Arm'}
             </EndPointButton>
             </Col>
             <Col>
-            <EndPointButton
+            <EndPointButton // Move between statuses 3 and 2
                 endpoint={orcaEndPoint}
-                value={orcaData?.status?.camera_status === "capturing" ? "discapture" : "capture"}
+                value={orcaStatus===status[3] ? "discapture" : "capture"}
                 fullpath="command"
                 event_type="click"
-                disabled={!['capturing', 'armed'].includes(orcaData?.status?.camera_status)}
-                variant={orcaData?.status?.camera_status==="capturing" ? "warning" : "success"}>
-                {orcaData?.status?.camera_status==="capturing" ? 'Stop Capturing' : 'Capture'}
+                disabled={![status[3], status[2]].includes(orcaStatus)}
+                variant={orcaStatus===status[3] ? "warning" : "success"}>
+                {orcaStatus===status[3] ? 'Stop Capturing' : 'Capture'}
             </EndPointButton>
             </Col>
             </Row>
@@ -96,11 +110,10 @@ function OrcaCamera(props) {
                 </InputGroup>
                 </Stack>
 
-                <LiveViewSocket
-                name={orcaData?.camera_name}>
-                </LiveViewSocket>
+                {imgData && <img src={imgData} alt="Fetched" />}
 
             </Col>
+          </TitleCard>
         </Container>
 
     )
