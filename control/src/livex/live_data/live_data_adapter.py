@@ -96,6 +96,12 @@ class LiveDataViewer():
                 {
                     "min": (lambda: self.min, self.set_clip_min),
                     "max": (lambda: self.max, self.set_clip_max)
+                },
+            "image":
+                {
+                    "size_x": (lambda: self.resize_x, self.set_img_x),
+                    "size_y": (lambda: self.resize_y, self.set_img_y),
+                    "colour": (lambda: self.colour, self.set_img_colour)
                 }
         })
 
@@ -110,29 +116,38 @@ class LiveDataViewer():
             dtype = "float32"
 
         self.data_header["shape"] = [int(header["shape"][0]), int(header["shape"][1])]
-
         self.data = np.fromstring(msg[1], dtype=dtype)
 
-        # opencv for img rendering
-        self.process_image()
-
-        self.clipped_data = self.clip_data(self.min, self.max)
-
-    def process_image(self):
-        """Use opencv to resize the data.
-        using parameter tree values."""
         self.data = self.data.reshape((2304, 4096))  # Height and width of ORCA
 
-        self.data = cv2.resize(self.data, (640, 480))  # TODO: size specified in tree
-
+        # opencv data operations. resize, recolour, render
+        self.data = cv2.resize(self.data, (self.resize_x, self.resize_y))
         self.data = cv2.applyColorMap((self.data/256).astype(np.uint8), self.get_colour_map())
-
-        # 165ms at full size
-        _, buffer = cv2.imencode('.jpg', self.data)
+        _, buffer = cv2.imencode('.jpg', self.data)  # 165ms at full size
         buffer = np.array(buffer)
 
         zipped_data = base64.b64encode(buffer)
         self.image = zipped_data.decode('utf-8')
+
+        self.clipped_data = self.clip_data(self.min, self.max)
+
+    def set_img_x(self, value):
+        """Set the width of the image in pixels.
+        :param value: integer representing number of pixels.
+        """
+        self.resize_x = int(value)
+
+    def set_img_y(self, value):
+        """Set the height of the image in pixels.
+        :param value: integer representing number of pixels.
+        """
+        self.resize_y = int(value)
+
+    def set_img_colour(self, value):
+        """Set the colour of the image in the parameter tree, used to determine the colour map.
+        :param value: colour map name as a string. see get_colour_map
+        """
+        self.colour = str(value)
 
     def get_colour_map(self):
         """Return the appropriate colourmap, defaulting to 'bone' (greyscale)."""
