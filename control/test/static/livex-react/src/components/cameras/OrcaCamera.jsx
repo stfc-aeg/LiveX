@@ -4,11 +4,10 @@ import Row from 'react-bootstrap/Row';
 import { Container, Stack } from 'react-bootstrap';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
-import { useAdapterEndpoint, WithEndpoint, OdinGraph, StatusBox, TitleCard } from 'odin-react';
+import { useAdapterEndpoint, WithEndpoint, StatusBox, TitleCard } from 'odin-react';
 import Button from 'react-bootstrap/Button';
 import { useState, useEffect } from 'react';
-
-import LiveViewSocket from './LiveViewSocket';
+import ColourMapAccordion from './ColourMapAccordion';
 
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndPointButton = WithEndpoint(Button);
@@ -110,7 +109,36 @@ function OrcaCamera(props) {
                 </InputGroup>
                 </Stack>
 
-                {imgData && <img src={imgData} alt="Fetched" />}
+                <TitleCard title={`${orcaData?.camera_name} preview settings`}>
+                    <Col>
+                    <InputGroup>
+                        <InputGroup.Text xs={3}>
+                        Image Width
+                        </InputGroup.Text>
+                        <EndPointFormControl
+                            endpoint={liveViewEndPoint}
+                            type="number"
+                            fullpath={"image/size_x"}
+                            disabled={connectedPuttingDisable}>
+                        </EndPointFormControl>
+                    </InputGroup>
+                    <InputGroup>
+                        <InputGroup.Text xs={3}>
+                        Image Height
+                        </InputGroup.Text>
+                        <EndPointFormControl
+                            endpoint={liveViewEndPoint}
+                            type="number"
+                            fullpath={"image/size_y"}
+                            disabled={connectedPuttingDisable}>
+                        </EndPointFormControl>
+                    </InputGroup>
+                    
+                    <ColourMapAccordion
+                    liveViewEndPoint={liveViewEndPoint}/>
+                    </Col>
+                </TitleCard>
+                {imgData && <img src={imgData} alt="Fetched"/>}
 
             </Col>
           </TitleCard>

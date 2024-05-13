@@ -1,4 +1,4 @@
-import { checkNull } from '../utils';
+import { checkNull } from '../../utils';
 
 import React from "react";
 import { TitleCard, ToggleSwitch, DropdownSelector, StatusBox, WithEndpoint } from 'odin-react';

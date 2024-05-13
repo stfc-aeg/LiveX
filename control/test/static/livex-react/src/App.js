@@ -8,22 +8,22 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import Button from 'react-bootstrap/Button';
 
-import TemperatureGraph from './components/TemperatureGraph';
-import PidControl from './components/PidControl';
-import ThermalGradient from './components/ThermalGradient';
-import AutoSetPointControl from './components/AutoSetPointControl';
-import Motor from './components/Motor';
+import TemperatureGraph from './components/furnace/TemperatureGraph';
+import PidControl from './components/furnace/PidControl';
+import ThermalGradient from './components/furnace/ThermalGradient';
+import AutoSetPointControl from './components/furnace/AutoSetPointControl';
+import Motor from './components/furnace/Motor';
 import React from "react";
 import { TitleCard, StatusBox, OdinApp } from 'odin-react';
 import { WithEndpoint, useAdapterEndpoint } from 'odin-react';
 import Metadata from './components/Metadata';
-import Cameras from './components/Cameras';
+import Cameras from './components/cameras/Cameras';
 
 const EndPointButton = WithEndpoint(Button);
 
 function App(props) {
 
-  const liveXEndPoint = useAdapterEndpoint('furnace', 'http://localhost:8888', 1000);
+  const liveXEndPoint = useAdapterEndpoint('furnace', 'http://192.168.0.22:8888', 1000);
   const connectedPuttingDisable = (!(liveXEndPoint.data.status?.connected || false)) || (liveXEndPoint.loading == "putting")
 
   return (
