@@ -27,11 +27,13 @@ function OrcaCamera(props) {
     // Current status of orcaCamera (for readability)
     const orcaStatus = orcaData?.status?.camera_status;
 
+    const liveViewImage = liveViewEndPoint?.data?.liveview[index]?.image;
+
     const [imgData, changeImgData] = useState([{}]);
     // Graph re-renders when data changes
     useEffect(() => {
-        changeImgData(`data:image/jpg;base64,${liveViewEndPoint.data?.data}`);
-      }, [liveViewEndPoint.data?.data]);
+        changeImgData(`data:image/jpg;base64,${liveViewImage?.data}`);
+      }, [liveViewImage?.data]);
 
     return (
 
@@ -118,7 +120,7 @@ function OrcaCamera(props) {
                         <EndPointFormControl
                             endpoint={liveViewEndPoint}
                             type="number"
-                            fullpath={"image/size_x"}
+                            fullpath={"liveview/"+ indexString + "/image/size_x"}
                             disabled={connectedPuttingDisable}>
                         </EndPointFormControl>
                     </InputGroup>
@@ -129,13 +131,14 @@ function OrcaCamera(props) {
                         <EndPointFormControl
                             endpoint={liveViewEndPoint}
                             type="number"
-                            fullpath={"image/size_y"}
+                            fullpath={"liveview/"+ indexString + "/image/size_y"}
                             disabled={connectedPuttingDisable}>
                         </EndPointFormControl>
                     </InputGroup>
                     
                     <ColourMapAccordion
-                    liveViewEndPoint={liveViewEndPoint}/>
+                    liveViewEndPoint={liveViewEndPoint}
+                    index={index}/>
                     </Col>
                 </TitleCard>
                 {imgData && <img src={imgData} alt="Fetched"/>}

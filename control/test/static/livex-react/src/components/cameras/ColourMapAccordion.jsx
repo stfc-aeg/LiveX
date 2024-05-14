@@ -5,6 +5,9 @@ const EndPointButton = WithEndpoint(Button);
 
 function ColourMapAccordion(props) {
     const {liveViewEndPoint} = props;
+    const {index} = props;
+    const indexString = index.toString();
+
     const colourEffects = [
         'autumn', 'bone', 'jet', 'winter', 'rainbow', 'ocean', 'summer', 'spring',
         'cool', 'hsv', 'pink', 'hot', 'parula', 'magma', 'inferno', 'plasma',
@@ -25,7 +28,7 @@ function ColourMapAccordion(props) {
                                     variant="secondary"
                                     className="me-2 mb-2"
                                     endpoint={liveViewEndPoint}
-                                    fullpath="image/colour"
+                                    fullpath={"liveview/"+ indexString + "/image/colour"}
                                     event_type="click"
                                     value={effect}>
                                         {effect}
