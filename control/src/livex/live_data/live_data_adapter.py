@@ -4,6 +4,7 @@ import cv2
 import base64
 import zmq
 from multiprocessing import Process, Queue, Pipe
+from functools import partial
 
 from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
@@ -63,10 +64,14 @@ class LiveDataAdapter(ApiAdapter):
 
 
 class LiveDataController():
+    """Class to instantiate and manage the ParameterTree for LiveDataProcessor classes."""
 
     def __init__(self, num_endpoints, endpoints):
+        """Initialise the LiveDataController. Create a LiveDataProcessor for each endpoint
+        provided in config, then create a ParameterTree to handle behaviours for those classes.
+        :param endpoints: list of endpoints in string format"""
 
-        logging.debug("Initialising Live Data Viewer")
+        logging.debug("Initialising LiveDataController")
 
         self.processors = []
         self.tree = {
@@ -78,9 +83,61 @@ class LiveDataController():
                 LiveDataProcessor(endpoints[i])
             )
 
-            self.tree['liveview'].append(self.processors[i].tree)
+            # self.tree['liveview'].append(self.processors[i].tree)
+
+            proc = self.processors[i]
+
+            tree = {
+                "endpoint": (lambda: self.processors[i].endpoint, None),
+                "image":
+                {  # Partials provide processor as an argument
+                    "size_x": (lambda proc=proc: self.processors[i].size_x,
+                               partial(self.set_img_x, processor=proc)),
+                    "size_y": (lambda: self.processors[i].size_y, 
+                               partial(self.set_img_y, processor=proc)),
+                    "colour": (lambda: self.processors[i].colour, 
+                               partial(self.set_img_colour, processor=proc)),
+                    "data": (lambda: proc.get_image(), None)
+                }
+            }
+            self.tree['liveview'].append(tree)
 
         self.param_tree = ParameterTree(self.tree)
+
+    def update_render_info(self, processor):
+        """Pipe updated parameters to processor.
+        :param processor: LiveDataProcessor object to reference.
+        """
+        params = {
+            "size_x": processor.size_x,
+            "size_y": processor.size_y,
+            "colour": processor.colour
+        }
+        processor.pipe_parent.send(params)
+
+    def set_img_x(self, value, processor):
+        """Set the width of the image in pixels.
+        :param value: integer representing number of pixels.
+        :param processor: LiveDataProcessor object to reference
+        """
+        processor.size_x = int(value)
+        self.update_render_info(processor)
+
+    def set_img_y(self, value, processor):
+        """Set the height of the image in pixels.
+        :param value: integer representing number of pixels.
+        :param processor: LiveDataProcessor object to reference
+        """
+        processor.size_y = int(value)
+        self.update_render_info(processor)
+
+    def set_img_colour(self, value, processor):
+        """Set the colour of the image in the parameter tree, used to determine the colour map.
+        :param value: colour map name as a string. see get_colour_map
+        :param processor: LiveDataProcessor object to reference
+        """
+        processor.colour = str(value)
+        self.update_render_info(processor)
 
     def get(self, path):
         """Get attribute from parameter tree."""
@@ -110,27 +167,16 @@ class LiveDataProcessor():
         self.size_x = resize_x
         self.size_y = resize_y
         self.colour = colour
-
         self.image = 0
 
         self.pipe_parent, self.pipe_child = Pipe(duplex=True)
         self.process = Process(target=self.capture_images, args=(self,))
         self.process.start()
 
-        self.tree = {
-            "endpoint": (lambda: self.endpoint, None),
-            "image":
-            {
-                "size_x": (lambda: self.size_x, self.set_img_x),
-                "size_y": (lambda: self.size_y, self.set_img_y),
-                "colour": (lambda: self.colour, self.set_img_colour),
-                "data": (lambda: self.get_image(), None)
-            }
-        }
-
     @staticmethod
     def capture_images(processor):
-        """Continually poll the channel, reading the data if there is a reply."""
+        """Continually poll the channel, reading the data if there is a reply.
+        :param processor: LiveDataProcessor object to reference. This will be the parent class."""
         channel = IpcChannel(IpcChannel.CHANNEL_TYPE_SUB, processor.endpoint)
         channel.connect()
         channel.subscribe()
@@ -163,7 +209,6 @@ class LiveDataProcessor():
         data = data.reshape((2304, 4096)) # ORCA dimensions
 
         # OpenCV operations
-        logging.debug(f"Image operations. x: {self.size_x}, y: {self.size_y}")
         data = cv2.resize(data, (self.size_x, self.size_y))
         data = cv2.applyColorMap((data / 256).astype(np.uint8), self.get_colour_map())
         _, buffer = cv2.imencode('.jpg', data)
@@ -186,33 +231,3 @@ class LiveDataProcessor():
         if not self.image_queue.empty():
             self.image = self.image_queue.get()
         return self.image
-
-    def update_render_info(self):
-        # only thing piped TO thread
-        params = {
-            "size_x": self.size_x,
-            "size_y": self.size_y,
-            "colour": self.colour
-        }
-        self.pipe_parent.send(params)
-
-    def set_img_x(self, value):
-        """Set the width of the image in pixels.
-        :param value: integer representing number of pixels.
-        """
-        self.size_x = int(value)
-        self.update_render_info()
-
-    def set_img_y(self, value):
-        """Set the height of the image in pixels.
-        :param value: integer representing number of pixels.
-        """
-        self.size_y = int(value)
-        self.update_render_info()
-
-    def set_img_colour(self, value):
-        """Set the colour of the image in the parameter tree, used to determine the colour map.
-        :param value: colour map name as a string. see get_colour_map
-        """
-        self.colour = str(value)
-        self.update_render_info()
