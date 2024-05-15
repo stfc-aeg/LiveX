@@ -17,18 +17,21 @@ ENDPOINT_CONFIG_NAME = "live_data_endpoints"
 DEFAULT_ENDPOINT = "tcp://192.168.0.31:5020"
 
 class LiveDataAdapter(ApiAdapter):
-
+    """Liveview/data adapter for the ODIN server.
+    
+    This adapter provides ODIN clients with access to the image preview and its parameters.
+    """
     def __init__(self, **kwargs):
+        """Initialise the LiveDataAdapter object.
+        :param kwargs: keyword arguments specifying options.
+        """
         super(LiveDataAdapter, self).__init__(**kwargs)
-
-        num_endpoints = int(self.options.get('num_endpoints', 1))
-
         # Split on comma, remove whitespace if it exists
         endpoints = [
             item.strip() for item in self.options.get('livedata_endpoint', None).split(",")
         ]
 
-        self.live_viewer = LiveDataController(num_endpoints, endpoints)
+        self.live_viewer = LiveDataController(endpoints)
 
     @response_types('application/json', default='application/json')
     def get(self, path, request):
@@ -66,27 +69,27 @@ class LiveDataAdapter(ApiAdapter):
 class LiveDataController():
     """Class to instantiate and manage the ParameterTree for LiveDataProcessor classes."""
 
-    def __init__(self, num_endpoints, endpoints):
+    def __init__(self, endpoints):
         """Initialise the LiveDataController. Create a LiveDataProcessor for each endpoint
         provided in config, then create a ParameterTree to handle behaviours for those classes.
-        :param endpoints: list of endpoints in string format"""
-
-        logging.debug("Initialising LiveDataController")
+        :param endpoints: list of endpoints in string format.
+        """
+        logging.debug("Initialising LiveDataController.")
 
         self.processors = []
         self.tree = {
             "liveview": []
         }
 
-        for i in range(num_endpoints):
+        # For each provided endpoint
+        for i in range(len(endpoints)):
             self.processors.append(
                 LiveDataProcessor(endpoints[i])
             )
 
-            # self.tree['liveview'].append(self.processors[i].tree)
-
             proc = self.processors[i]
 
+            # Create 'branch' of ParameterTree for each Processor
             tree = {
                 "endpoint": (lambda: self.processors[i].endpoint, None),
                 "image":
@@ -98,6 +101,7 @@ class LiveDataController():
                     "colour": (lambda: self.processors[i].colour, 
                                partial(self.set_img_colour, processor=proc)),
                     "data": (lambda: proc.get_image(), None)
+                    # Use get_image in processor for JSON serialisation
                 }
             }
             self.tree['liveview'].append(tree)
@@ -105,9 +109,10 @@ class LiveDataController():
         self.param_tree = ParameterTree(self.tree)
 
     def update_render_info(self, processor):
-        """Pipe updated parameters to processor.
+        """Pipe updated parameters to processor thread.
         :param processor: LiveDataProcessor object to reference.
         """
+        # Could be done programmatically but not enough to warrant this complexity
         params = {
             "size_x": processor.size_x,
             "size_y": processor.size_y,
@@ -152,31 +157,41 @@ class LiveDataController():
         """Clean up the LiveDataController instance.
         This method terminates thread processes, allowing shutdown.
         """
-        for process in self.processes:
-            process.terminate()
+        logging.debug(f"Terminating {len(self.processors)} processes.")
+        for processer in self.processors:
+            processer.process.terminate()
 
 
 class LiveDataProcessor():
-    """Class to process images received on the capture_images threads.
-    Also handles the parameter tree for values associated with that image."""
+    """Class to process image data received on a multiprocess that it instantiates."""
 
-    def __init__(self, endpoint, resize_x=2048, resize_y=1152, colour='bone'):
+    def __init__(self, endpoint, size_x=640, size_y=480, colour='bone'):
+        """Initialise the LiveDataProcessor object.
+        This method constructs the Queue, Pipes and Process necessary for multiprocessing.
+        :param endpoint: string representation of endpoint for image data.
+        :param size_x: integer width of image in pixels (default 640).
+        :param size_y: integer height of image in pixels (default 480).
+        :param colour: string of opencv colourmap label (default 'bone').
+        For colourmap options, see https://docs.opencv.org/3.4/d3/d50/group__imgproc__colormap.html
+        """
         self.endpoint = endpoint
-        self.image_queue = Queue(maxsize=1)
-
-        self.size_x = resize_x
-        self.size_y = resize_y
+        self.size_x = size_x
+        self.size_y = size_y
         self.colour = colour
         self.image = 0
 
+        self.image_queue = Queue(maxsize=1)
         self.pipe_parent, self.pipe_child = Pipe(duplex=True)
         self.process = Process(target=self.capture_images, args=(self,))
         self.process.start()
 
     @staticmethod
     def capture_images(processor):
-        """Continually poll the channel, reading the data if there is a reply.
-        :param processor: LiveDataProcessor object to reference. This will be the parent class."""
+        """Create an IPC channel with the processor's endpoint and get data from it.
+        Continuously polls the pipe (for processor parameters) and the channel (for images).
+        On successful poll, clears queue to get latest image, to avoid historical data.
+        :param processor: LiveDataProcessor object to reference.
+        """
         channel = IpcChannel(IpcChannel.CHANNEL_TYPE_SUB, processor.endpoint)
         channel.connect()
         channel.subscribe()
@@ -199,7 +214,7 @@ class LiveDataProcessor():
                 processor.read_data_from_socket(latest_message)
 
     def read_data_from_socket(self, msg):
-        """Decode, interpret, and operate on the data received.
+        """Decode, interpret, and resize/recolour/render the data received.
         :param msg: JSON message of header and image data.
         """
         header = json_decode(msg[0])
@@ -227,7 +242,6 @@ class LiveDataProcessor():
 
     def get_image(self):
         """If it exists, update the image with one from the queue. Then return the image."""
-        # if pipe has image, set self.image to pipe.get
         if not self.image_queue.empty():
             self.image = self.image_queue.get()
         return self.image
