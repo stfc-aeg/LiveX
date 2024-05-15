@@ -2,7 +2,8 @@ import logging
 import numpy as np
 import cv2
 import base64
-from multiprocessing import Process, Queue
+import zmq
+from multiprocessing import Process, Queue, Pipe
 
 from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
@@ -13,20 +14,6 @@ from odin_data.ipc_channel import IpcChannel
 
 ENDPOINT_CONFIG_NAME = "live_data_endpoints"
 DEFAULT_ENDPOINT = "tcp://192.168.0.31:5020"
-
-def capture_images(receiver):
-    """Continually poll the channel, reading the data if there is a reply."""
-    channel = IpcChannel(IpcChannel.CHANNEL_TYPE_SUB, receiver.endpoint)
-    channel.connect()
-    channel.subscribe()
-
-    while True:
-        poll_success = channel.poll(1000)
-        if poll_success:
-            receiver.read_data_from_socket(channel.socket.recv_multipart())
-        else:
-            logging.debug(f"No reply received on {receiver.endpoint} within timeout period.")
-
 
 class LiveDataAdapter(ApiAdapter):
 
@@ -81,28 +68,17 @@ class LiveDataController():
 
         logging.debug("Initialising Live Data Viewer")
 
-        self.receivers = []
-        self.processes = []
-
-        self.image_queues = []
+        self.processors = []
         self.tree = {
             "liveview": []
         }
 
         for i in range(num_endpoints):
+            self.processors.append(
+                LiveDataProcessor(endpoints[i])
+            )
 
-            self.image_queues.append(
-                Queue(maxsize=1)
-            )
-            self.receivers.append(
-                LiveDataProcessor(endpoints[i], self.image_queues[i])
-            )
-            self.processes.append(
-                Process(target=capture_images, args=(self.receivers[i],))
-            )
-            self.processes[i].start()
-
-            self.tree['liveview'].append(self.receivers[i].tree)
+            self.tree['liveview'].append(self.processors[i].tree)
 
         self.param_tree = ParameterTree(self.tree)
 
@@ -127,24 +103,54 @@ class LiveDataProcessor():
     """Class to process images received on the capture_images threads.
     Also handles the parameter tree for values associated with that image."""
 
-    def __init__(self, endpoint, image_queue, resize_x=2048, resize_y=1152, colour='bone'):
+    def __init__(self, endpoint, resize_x=2048, resize_y=1152, colour='bone'):
         self.endpoint = endpoint
-        self.resize_x = resize_x
-        self.resize_y = resize_y
+        self.image_queue = Queue(maxsize=1)
+
+        self.size_x = resize_x
+        self.size_y = resize_y
         self.colour = colour
-        self.image_queue = image_queue
+
         self.image = 0
+
+        self.pipe_parent, self.pipe_child = Pipe(duplex=True)
+        self.process = Process(target=self.capture_images, args=(self,))
+        self.process.start()
 
         self.tree = {
             "endpoint": (lambda: self.endpoint, None),
             "image":
             {
-                "size_x": (lambda: self.resize_x, self.set_img_x),
-                "size_y": (lambda: self.resize_y, self.set_img_y),
+                "size_x": (lambda: self.size_x, self.set_img_x),
+                "size_y": (lambda: self.size_y, self.set_img_y),
                 "colour": (lambda: self.colour, self.set_img_colour),
                 "data": (lambda: self.get_image(), None)
             }
         }
+
+    @staticmethod
+    def capture_images(processor):
+        """Continually poll the channel, reading the data if there is a reply."""
+        channel = IpcChannel(IpcChannel.CHANNEL_TYPE_SUB, processor.endpoint)
+        channel.connect()
+        channel.subscribe()
+
+        while True:
+            pipe_poll_success = processor.pipe_child.poll()  # Do not need to wait for this, take the update if it's there
+            if pipe_poll_success:
+                params = processor.pipe_child.recv()
+                for param, value in params.items():
+                    setattr(processor, param, value)
+
+            poll_success = channel.poll(10)
+            if poll_success:
+                # Continuously read values until the queue is empty - ensuring images are up-to-date
+                while True:
+                    try:
+                        latest_message = channel.socket.recv_multipart(flags=zmq.NOBLOCK)
+                    except zmq.Again:
+                        break
+                processor.read_data_from_socket(latest_message)
 
     def read_data_from_socket(self, msg):
         """Decode, interpret, and operate on the data received.
@@ -157,8 +163,8 @@ class LiveDataProcessor():
         data = data.reshape((2304, 4096)) # ORCA dimensions
 
         # OpenCV operations
-        logging.debug(f"Image operations. x: {self.resize_x}, y: {self.resize_y}")
-        data = cv2.resize(data, (self.resize_x, self.resize_y))
+        logging.debug(f"Image operations. x: {self.size_x}, y: {self.size_y}")
+        data = cv2.resize(data, (self.size_x, self.size_y))
         data = cv2.applyColorMap((data / 256).astype(np.uint8), self.get_colour_map())
         _, buffer = cv2.imencode('.jpg', data)
         buffer = np.array(buffer)
@@ -183,27 +189,30 @@ class LiveDataProcessor():
 
     def update_render_info(self):
         # only thing piped TO thread
-        for key in self.param_tree:
-            if key is not "data":
-                pipe_dream = {key: self.param_tree.get(key)}
-
-        # only thing piped BACK is image
+        params = {
+            "size_x": self.size_x,
+            "size_y": self.size_y,
+            "colour": self.colour
+        }
+        self.pipe_parent.send(params)
 
     def set_img_x(self, value):
         """Set the width of the image in pixels.
         :param value: integer representing number of pixels.
         """
-        self.resize_x = int(value)
+        self.size_x = int(value)
         self.update_render_info()
 
     def set_img_y(self, value):
         """Set the height of the image in pixels.
         :param value: integer representing number of pixels.
         """
-        self.resize_y = int(value)
+        self.size_y = int(value)
+        self.update_render_info()
 
     def set_img_colour(self, value):
         """Set the colour of the image in the parameter tree, used to determine the colour map.
         :param value: colour map name as a string. see get_colour_map
         """
         self.colour = str(value)
+        self.update_render_info()
