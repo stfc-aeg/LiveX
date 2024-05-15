@@ -28,7 +28,7 @@ function ColourMapAccordion(props) {
                                     variant="secondary"
                                     className="me-2 mb-2"
                                     endpoint={liveViewEndPoint}
-                                    fullpath={"liveview/"+ indexString + "/image/colour"}
+                                    fullpath={"image/colour"}
                                     event_type="click"
                                     value={effect}>
                                         {effect}

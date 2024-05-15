@@ -14,7 +14,6 @@ const EndPointButton = WithEndpoint(Button);
 
 function OrcaCamera(props) {
     const {index} = props;
-    const {liveViewEndPoint} = props;
     const {connectedPuttingDisable} = props;
 
     const indexString = index.toString();
@@ -22,18 +21,22 @@ function OrcaCamera(props) {
     const orcaEndPoint = useAdapterEndpoint(orcaAddress, 'http://192.168.0.22:8888', 0);
     const orcaData = orcaEndPoint?.data[index];
 
+    let liveViewAddress = 'live_data/liveview/'+indexString;
+    const liveViewEndPoint = useAdapterEndpoint(liveViewAddress, 'http://192.168.0.22:8888', 500);
+    const liveViewData = liveViewEndPoint?.data[index];
+
+    console.log(liveViewData);
+
     // Array of camera status names
     const status = ['disconnected', 'connected', 'armed', 'capturing'];
     // Current status of orcaCamera (for readability)
     const orcaStatus = orcaData?.status?.camera_status;
 
-    const liveViewImage = liveViewEndPoint?.data?.liveview[index]?.image;
-
     const [imgData, changeImgData] = useState([{}]);
     // Graph re-renders when data changes
     useEffect(() => {
-        changeImgData(`data:image/jpg;base64,${liveViewImage?.data}`);
-      }, [liveViewImage?.data]);
+        changeImgData(`data:image/jpg;base64,${liveViewData?.image?.data}`);
+      }, [liveViewData?.image?.data]);
 
     return (
 
@@ -120,7 +123,7 @@ function OrcaCamera(props) {
                         <EndPointFormControl
                             endpoint={liveViewEndPoint}
                             type="number"
-                            fullpath={"liveview/"+ indexString + "/image/size_x"}
+                            fullpath={"image/size_x"}
                             disabled={connectedPuttingDisable}>
                         </EndPointFormControl>
                     </InputGroup>
@@ -131,7 +134,7 @@ function OrcaCamera(props) {
                         <EndPointFormControl
                             endpoint={liveViewEndPoint}
                             type="number"
-                            fullpath={"liveview/"+ indexString + "/image/size_y"}
+                            fullpath={"image/size_y"}
                             disabled={connectedPuttingDisable}>
                         </EndPointFormControl>
                     </InputGroup>
