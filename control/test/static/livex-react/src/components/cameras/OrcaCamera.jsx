@@ -4,13 +4,14 @@ import Row from 'react-bootstrap/Row';
 import { Container, Stack } from 'react-bootstrap';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
-import { useAdapterEndpoint, WithEndpoint, StatusBox, TitleCard } from 'odin-react';
+import { useAdapterEndpoint, WithEndpoint, StatusBox, TitleCard, DropdownSelector } from 'odin-react';
 import Button from 'react-bootstrap/Button';
 import { useState, useEffect } from 'react';
-import ColourMapAccordion from './ColourMapAccordion';
+import { Dropdown } from 'react-bootstrap';
 
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndPointButton = WithEndpoint(Button);
+const EndPointDropdownSelector = WithEndpoint(DropdownSelector);
 
 function OrcaCamera(props) {
     const {index} = props;
@@ -25,13 +26,19 @@ function OrcaCamera(props) {
     const liveViewEndPoint = useAdapterEndpoint(liveViewAddress, 'http://192.168.0.22:8888', 500);
     const liveViewData = liveViewEndPoint?.data[index];
 
-    console.log(liveViewData);
-
     // Array of camera status names
-    const status = ['disconnected', 'connected', 'armed', 'capturing'];
+    const status = ['disconnected', 'connected', 'capturing'];
     // Current status of orcaCamera (for readability)
     const orcaStatus = orcaData?.status?.camera_status;
 
+    // Colours
+    const colourEffects = [
+        'autumn', 'bone', 'jet', 'winter', 'rainbow', 'ocean', 'summer', 'spring',
+        'cool', 'hsv', 'pink', 'hot', 'parula', 'magma', 'inferno', 'plasma',
+        'viridis', 'cividis', 'twilight', 'twilight_shifted', 'turbo', 'deepgreen'
+    ];
+
+    // Handle image data
     const [imgData, changeImgData] = useState([{}]);
     // Graph re-renders when data changes
     useEffect(() => {
@@ -51,7 +58,7 @@ function OrcaCamera(props) {
             </Col>
             {/* These buttons have variable output, display, and colour, depending on the camera status.
             Example, you can connect the camera if it is off, and disconnect if it's connected.
-            Otherwise, you can't interact with it. You'd need to disarm it first.*/} 
+            Otherwise, you can't interact with it. You'd need to disarm it first.*/}
             <Col>
             <EndPointButton // Move between statuses 1 and 0
                 endpoint={orcaEndPoint}
@@ -64,25 +71,14 @@ function OrcaCamera(props) {
             </EndPointButton>
             </Col>
             <Col>
-            <EndPointButton // Move between statuses 2 and 1
+            <EndPointButton // Move between statuses 3 and 2
                 endpoint={orcaEndPoint}
-                value={orcaStatus===status[2] ? "disarm" : "arm"}
+                value={orcaStatus===status[2] ? "discapture" : "capture"}
                 fullpath="command"
                 event_type="click"
                 disabled={![status[2], status[1]].includes(orcaStatus)}
                 variant={orcaStatus===status[2] ? "warning" : "success"}>
-                {orcaStatus===status[2] ? 'Disarm' : 'Arm'}
-            </EndPointButton>
-            </Col>
-            <Col>
-            <EndPointButton // Move between statuses 3 and 2
-                endpoint={orcaEndPoint}
-                value={orcaStatus===status[3] ? "discapture" : "capture"}
-                fullpath="command"
-                event_type="click"
-                disabled={![status[3], status[2]].includes(orcaStatus)}
-                variant={orcaStatus===status[3] ? "warning" : "success"}>
-                {orcaStatus===status[3] ? 'Stop Capturing' : 'Capture'}
+                {orcaStatus===status[2] ? 'Stop Capturing' : 'Capture'}
             </EndPointButton>
             </Col>
             </Row>
@@ -138,10 +134,25 @@ function OrcaCamera(props) {
                             disabled={connectedPuttingDisable}>
                         </EndPointFormControl>
                     </InputGroup>
-                    
-                    <ColourMapAccordion
-                    liveViewEndPoint={liveViewEndPoint}
-                    index={index}/>
+
+                    <InputGroup className="mb-3">
+                    <InputGroup.Text>Image Colour Map</InputGroup.Text>
+                        <EndPointDropdownSelector
+                        endpoint={liveViewEndPoint}
+                        event_type="select"
+                        fullpath="image/colour"
+                        buttonText={liveViewData?.image?.colour}
+                        variant="outline-secondary">
+                            {colourEffects.map((effect, index) => (
+                                <Dropdown.Item
+                                    key={index}
+                                    eventKey={effect}>
+                                        {effect}
+                                </Dropdown.Item>
+                            ))}
+                        </EndPointDropdownSelector>
+
+                </InputGroup>
                     </Col>
                 </TitleCard>
                 {imgData && <img src={imgData} alt="Fetched"/>}
