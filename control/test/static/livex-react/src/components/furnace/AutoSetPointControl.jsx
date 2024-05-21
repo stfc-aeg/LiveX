@@ -41,9 +41,12 @@ function AutoSetPointControl(props){
               </StatusBox>
             </Col>
             <Col>
+            <InputGroup>
+              <InputGroup.Text>Heating/Cooling:</InputGroup.Text>
               <EndpointDropdown
                 endpoint={liveXEndPoint} event_type="select"
                 fullpath="autosp/heating"
+                variant='outline-secondary'
                 buttonText={liveXEndPoint.data.autosp?.heating_options[liveXEndPoint.data.autosp.heating] || "Unknown"} disabled={connectedPuttingDisable}>
                 {liveXEndPoint.data.autosp?.heating_options ? liveXEndPoint.data.autosp.heating_options.map(
                 (selection, index) => (
@@ -54,6 +57,8 @@ function AutoSetPointControl(props){
                   </Dropdown.Item>
                 )) : <></> }
               </EndpointDropdown>
+            </InputGroup>
+
             </Col>
             <Col>
               <InputGroup>

@@ -44,21 +44,25 @@ function Motor(props){
               </StatusBox>
             </Col>
             <Col>
-              <EndpointDropdown
-                endpoint={liveXEndPoint}
-                event_type="select"
-                fullpath="motor/direction"
-                buttonText={motorDirections[liveXEndPoint.data.motor?.direction] || "Unknown"}
-                disabled={connectedPuttingDisable}>
-                  {motorDirections ? motorDirections.map(
-                  (selection, index) => (
-                    <Dropdown.Item
-                      eventKey={index}
-                      key={index}>
-                        {selection}
-                    </Dropdown.Item>
-                  )) : <></> }
-              </EndpointDropdown>
+              <InputGroup>
+                <InputGroup.Text>Motor direction:</InputGroup.Text>
+                <EndpointDropdown
+                  endpoint={liveXEndPoint}
+                  event_type="select"
+                  fullpath="motor/direction"
+                  variant="outline-secondary"
+                  buttonText={motorDirections[liveXEndPoint.data.motor?.direction] || "Unknown"}
+                  disabled={connectedPuttingDisable}>
+                    {motorDirections ? motorDirections.map(
+                    (selection, index) => (
+                      <Dropdown.Item
+                        eventKey={index}
+                        key={index}>
+                          {selection}
+                      </Dropdown.Item>
+                    )) : <></> }
+                </EndpointDropdown>
+              </InputGroup>
             </Col>
             <Col>
               <InputGroup>
