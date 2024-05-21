@@ -22,6 +22,7 @@ class LiveDataProcessor():
         self.endpoint = endpoint
         self.size_x = size_x
         self.size_y = size_y
+        self.dimensions = [size_x, size_y]
         self.colour = colour
         self.image = 0
 

@@ -23,7 +23,7 @@ function OrcaCamera(props) {
     const orcaData = orcaEndPoint?.data[index];
 
     let liveViewAddress = 'live_data/liveview/'+indexString;
-    const liveViewEndPoint = useAdapterEndpoint(liveViewAddress, 'http://192.168.0.22:8888', 500);
+    const liveViewEndPoint = useAdapterEndpoint(liveViewAddress, 'http://192.168.0.22:8888', 1000);
     const liveViewData = liveViewEndPoint?.data[index];
 
     // Array of camera status names
@@ -40,6 +40,21 @@ function OrcaCamera(props) {
 
     // Handle image data
     const [imgData, changeImgData] = useState([{}]);
+    const [width, setWidth] = useState('');
+    const [height, setHeight] = useState('');
+    const [dimensions, setDimensions] = useState('');
+
+    const heightChange = (e) => {
+        let newHeight = e.target.value;
+        setHeight(newHeight);
+        setDimensions([width, newHeight]);
+    };
+    const widthChange = (e) => {
+        let newWidth = e.target.value;
+        setWidth(newWidth);
+        setDimensions([newWidth, height]);
+    };
+
     // Graph re-renders when data changes
     useEffect(() => {
         changeImgData(`data:image/jpg;base64,${liveViewData?.image?.data}`);
@@ -110,32 +125,13 @@ function OrcaCamera(props) {
                 </InputGroup>
                 </Stack>
 
-                <TitleCard title={`${orcaData?.camera_name} preview settings`}>
+                <TitleCard title={`${orcaData?.camera_name} preview`}>
+                    <Row>
+                    {imgData && <img src={imgData} alt="Fetched"/>}
+                    </Row>
                     <Col>
-                    <InputGroup>
-                        <InputGroup.Text xs={3}>
-                        Image Width
-                        </InputGroup.Text>
-                        <EndPointFormControl
-                            endpoint={liveViewEndPoint}
-                            type="number"
-                            fullpath={"image/size_x"}
-                            disabled={connectedPuttingDisable}>
-                        </EndPointFormControl>
-                    </InputGroup>
-                    <InputGroup>
-                        <InputGroup.Text xs={3}>
-                        Image Height
-                        </InputGroup.Text>
-                        <EndPointFormControl
-                            endpoint={liveViewEndPoint}
-                            type="number"
-                            fullpath={"image/size_y"}
-                            disabled={connectedPuttingDisable}>
-                        </EndPointFormControl>
-                    </InputGroup>
-
-                    <InputGroup className="mb-3">
+                    <Form>
+                    <InputGroup className="mt-3">
                     <InputGroup.Text>Image Colour Map</InputGroup.Text>
                         <EndPointDropdownSelector
                         endpoint={liveViewEndPoint}
@@ -151,11 +147,48 @@ function OrcaCamera(props) {
                                 </Dropdown.Item>
                             ))}
                         </EndPointDropdownSelector>
+                      </InputGroup>
+                    <Row>
+                      <Col>
+                        
+                      </Col>
+                    </Row>
+                    <InputGroup>
+                        <InputGroup.Text>
+                            Image Width
+                        </InputGroup.Text>
+                        <Form.Control
+                        type="number"
+                        placeholder="Width"
+                        value={width}
+                        onChange={widthChange}
+                        />
+                    </InputGroup>
 
-                </InputGroup>
+                    <InputGroup>
+                        <InputGroup.Text>
+                            Image Width
+                        </InputGroup.Text>
+                        <Form.Control
+                        type="number"
+                        placeholder="Height"
+                        value={height}
+                        onChange={heightChange}
+                        />
+                    </InputGroup>
+
+                    <EndPointButton
+                    endpoint={liveViewEndPoint}
+                    value={dimensions}
+                    fullpath={"image/dimensions"}
+                    event_type="click"
+                    variant="outline-primary"
+                    className="mb-3">
+                        Update image dimensions
+                    </EndPointButton>
+                    </Form>
                     </Col>
                 </TitleCard>
-                {imgData && <img src={imgData} alt="Fetched"/>}
 
             </Col>
           </TitleCard>

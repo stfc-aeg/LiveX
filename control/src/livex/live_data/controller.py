@@ -35,8 +35,9 @@ class LiveDataController():
                 {  # Partials provide processor as an argument
                     "size_x": (lambda proc=proc: self.processors[i].size_x,
                                partial(self.set_img_x, processor=proc)),
-                    "size_y": (lambda: self.processors[i].size_y, 
+                    "size_y": (lambda: self.processors[i].size_y,
                                partial(self.set_img_y, processor=proc)),
+                    "dimensions": (lambda: self.processors[i].dimensions, partial(self.set_img_dims, processor=proc)),
                     "colour": (lambda: self.processors[i].colour, 
                                partial(self.set_img_colour, processor=proc)),
                     "data": (lambda: proc.get_image(), None)
@@ -53,6 +54,7 @@ class LiveDataController():
         """
         # Could be done programmatically but not enough to warrant this complexity
         params = {
+            "dimensions": processor.dimensions,
             "size_x": processor.size_x,
             "size_y": processor.size_y,
             "colour": processor.colour
@@ -73,6 +75,16 @@ class LiveDataController():
         :param processor: LiveDataProcessor object to reference
         """
         processor.size_y = int(value)
+        self.update_render_info(processor)
+
+    def set_img_dims(self, value, processor):
+        """Set both image dimensions, width and height (x and y).
+        :param value: array of integers representing width/height in pixels.
+        :param processor: LiveDataProcessor object to reference.
+        """
+        processor.dimensions = value
+        processor.size_x = int(processor.dimensions[0])
+        processor.size_y = int(processor.dimensions[1])
         self.update_render_info(processor)
 
     def set_img_colour(self, value, processor):
