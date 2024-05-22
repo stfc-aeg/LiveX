@@ -9,6 +9,8 @@ import Button from 'react-bootstrap/Button';
 import { useState, useEffect } from 'react';
 import { Dropdown } from 'react-bootstrap';
 
+import { checkNullNoDp } from '../../utils';
+
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndPointButton = WithEndpoint(Button);
 const EndPointDropdownSelector = WithEndpoint(DropdownSelector);
@@ -19,7 +21,7 @@ function OrcaCamera(props) {
 
     const indexString = index.toString();
     let orcaAddress = 'camera/cameras/'+indexString;
-    const orcaEndPoint = useAdapterEndpoint(orcaAddress, 'http://192.168.0.22:8888', 0);
+    const orcaEndPoint = useAdapterEndpoint(orcaAddress, 'http://192.168.0.22:8888', 1000);
     const orcaData = orcaEndPoint?.data[index];
 
     let liveViewAddress = 'live_data/liveview/'+indexString;
@@ -30,6 +32,7 @@ function OrcaCamera(props) {
     const status = ['disconnected', 'connected', 'capturing'];
     // Current status of orcaCamera (for readability)
     const orcaStatus = orcaData?.status?.camera_status;
+    const orcaFrame = orcaData?.status.frame_number;
 
     // Colours
     const colourEffects = [
@@ -61,34 +64,36 @@ function OrcaCamera(props) {
       }, [liveViewData?.image?.data]);
 
     return (
-
         <Container>
           <TitleCard title={orcaData?.camera_name + " control"}>
             <Col>
             <Row>
             <Col>
-            <StatusBox as="span" label = "Status">
+            <StatusBox as="span" label="Status">
                 {(orcaStatus || "Not found" )}
+            </StatusBox>
+            <StatusBox label="Frame count">
+                {checkNullNoDp(orcaData?.status.frame_number)}
             </StatusBox>
             </Col>
             {/* These buttons have variable output, display, and colour, depending on the camera status.
-            Example, you can connect the camera if it is off, and disconnect if it's connected.
-            Otherwise, you can't interact with it. You'd need to disarm it first.*/}
+            Example, when the camera isn't connected, you can connect. If it's connected, you can disconnect.
+            When capturing, that button is disabled - you need to move it out of that state first.*/}
             <Col>
             <EndPointButton // Move between statuses 1 and 0
                 endpoint={orcaEndPoint}
-                value={orcaStatus===status[1] ? "disconnect" : "connect"}
+                value={orcaStatus!==status[0] ? "disconnect" : "connect"}
                 fullpath="command"
                 event_type="click"
                 disabled={![status[1], status[0]].includes(orcaStatus)}
-                variant={orcaStatus===status[1] ? "warning" : "success"}>
-                {orcaStatus===status[1] ? 'Disconnect' : 'Connect'}
+                variant={orcaStatus!==status[0] ? "warning" : "connect"}>
+                {orcaStatus!==status[0] ? 'Disconnect' : 'Connect'}
             </EndPointButton>
             </Col>
             <Col>
-            <EndPointButton // Move between statuses 3 and 2
+            <EndPointButton // Move between statuses 3 and 1
                 endpoint={orcaEndPoint}
-                value={orcaStatus===status[2] ? "discapture" : "capture"}
+                value={orcaStatus===status[2] ? "end_capture" : "capture"}
                 fullpath="command"
                 event_type="click"
                 disabled={![status[2], status[1]].includes(orcaStatus)}
@@ -159,7 +164,7 @@ function OrcaCamera(props) {
                         </InputGroup.Text>
                         <Form.Control
                         type="number"
-                        placeholder="Width"
+                        placeholder={liveViewData?.image.size_x || "Width"}
                         value={width}
                         onChange={widthChange}
                         />
@@ -167,11 +172,11 @@ function OrcaCamera(props) {
 
                     <InputGroup>
                         <InputGroup.Text>
-                            Image Width
+                            Image Height
                         </InputGroup.Text>
                         <Form.Control
                         type="number"
-                        placeholder="Height"
+                        placeholder={liveViewData?.image.size_y || "Height"}
                         value={height}
                         onChange={heightChange}
                         />
