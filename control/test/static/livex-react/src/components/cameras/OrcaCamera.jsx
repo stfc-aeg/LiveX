@@ -22,7 +22,6 @@ function OrcaCamera(props) {
     const indexString = index.toString();
     let orcaAddress = 'camera/cameras/'+indexString;
     const orcaEndPoint = useAdapterEndpoint(orcaAddress, 'http://192.168.0.22:8888', 1000);
-    const orcaData = orcaEndPoint?.data[index];
 
     let liveViewAddress = 'live_data/liveview/'+indexString;
     const liveViewEndPoint = useAdapterEndpoint(liveViewAddress, 'http://192.168.0.22:8888', 1000);
@@ -31,8 +30,7 @@ function OrcaCamera(props) {
     // Array of camera status names
     const status = ['disconnected', 'connected', 'capturing'];
     // Current status of orcaCamera (for readability)
-    const orcaStatus = orcaData?.status?.camera_status;
-    const orcaFrame = orcaData?.status.frame_number;
+    const orcaStatus = orcaEndPoint?.data[index]?.status?.camera_status;
 
     // Colours
     const colourEffects = [
@@ -65,7 +63,7 @@ function OrcaCamera(props) {
 
     return (
         <Container>
-          <TitleCard title={orcaData?.camera_name + " control"}>
+          <TitleCard title={orcaEndPoint?.data[index]?.camera_name + " control"}>
             <Col>
             <Row>
             <Col>
@@ -73,7 +71,7 @@ function OrcaCamera(props) {
                 {(orcaStatus || "Not found" )}
             </StatusBox>
             <StatusBox label="Frame count">
-                {checkNullNoDp(orcaData?.status.frame_number)}
+                {checkNullNoDp(orcaEndPoint?.data[index]?.status.frame_number)}
             </StatusBox>
             </Col>
             {/* These buttons have variable output, display, and colour, depending on the camera status.
@@ -86,7 +84,7 @@ function OrcaCamera(props) {
                 fullpath="command"
                 event_type="click"
                 disabled={![status[1], status[0]].includes(orcaStatus)}
-                variant={orcaStatus!==status[0] ? "warning" : "connect"}>
+                variant={orcaStatus!==status[0] ? "warning" : "success"}>
                 {orcaStatus!==status[0] ? 'Disconnect' : 'Connect'}
             </EndPointButton>
             </Col>
@@ -130,7 +128,7 @@ function OrcaCamera(props) {
                 </InputGroup>
                 </Stack>
 
-                <TitleCard title={`${orcaData?.camera_name} preview`}>
+                <TitleCard title={`${orcaEndPoint?.data[index]?.camera_name} preview`}>
                     <Row>
                     {imgData && <img src={imgData} alt="Fetched"/>}
                     </Row>
@@ -153,45 +151,47 @@ function OrcaCamera(props) {
                             ))}
                         </EndPointDropdownSelector>
                       </InputGroup>
+
                     <Row>
                       <Col>
-                        
+                        <InputGroup>
+                            <InputGroup.Text>
+                                Image Width
+                            </InputGroup.Text>
+                            <Form.Control
+                            type="number"
+                            placeholder={liveViewData?.image.size_x || "Width"}
+                            value={width}
+                            onChange={widthChange}
+                            />
+                        </InputGroup>
+
+                        <InputGroup>
+                            <InputGroup.Text>
+                                Image Height
+                            </InputGroup.Text>
+                            <Form.Control
+                            type="number"
+                            placeholder={liveViewData?.image.size_y || "Height"}
+                            value={height}
+                            onChange={heightChange}
+                            />
+                        </InputGroup>
+                      </Col>
+                      <Col xs="3" className="mt-2">
+                        <EndPointButton
+                        endpoint={liveViewEndPoint}
+                        value={dimensions}
+                        fullpath={"image/dimensions"}
+                        event_type="click"
+                        variant="outline-primary"
+                        className="mb-3">
+                            Update image dimensions
+                        </EndPointButton>
                       </Col>
                     </Row>
-                    <InputGroup>
-                        <InputGroup.Text>
-                            Image Width
-                        </InputGroup.Text>
-                        <Form.Control
-                        type="number"
-                        placeholder={liveViewData?.image.size_x || "Width"}
-                        value={width}
-                        onChange={widthChange}
-                        />
-                    </InputGroup>
-
-                    <InputGroup>
-                        <InputGroup.Text>
-                            Image Height
-                        </InputGroup.Text>
-                        <Form.Control
-                        type="number"
-                        placeholder={liveViewData?.image.size_y || "Height"}
-                        value={height}
-                        onChange={heightChange}
-                        />
-                    </InputGroup>
-
-                    <EndPointButton
-                    endpoint={liveViewEndPoint}
-                    value={dimensions}
-                    fullpath={"image/dimensions"}
-                    event_type="click"
-                    variant="outline-primary"
-                    className="mb-3">
-                        Update image dimensions
-                    </EndPointButton>
                     </Form>
+
                     </Col>
                 </TitleCard>
 
