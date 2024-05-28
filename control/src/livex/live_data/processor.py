@@ -20,9 +20,12 @@ class LiveDataProcessor():
         For colourmap options, see https://docs.opencv.org/3.4/d3/d50/group__imgproc__colormap.html
         """
         self.endpoint = endpoint
+        self.max_size_x = 4096
+        self.max_size_y = 2304
         self.size_x = size_x
         self.size_y = size_y
         self.dimensions = [size_x, size_y]
+        self.resolution = 100
         self.colour = colour
         self.image = 0
 
@@ -31,9 +34,9 @@ class LiveDataProcessor():
 
         # Region of interest limits. 0 to dimension until changed
         self.roi_y_lower = 0
-        self.roi_y_upper = self.size_y
+        self.roi_y_upper = self.max_size_y
         self.roi_x_lower = 0
-        self.roi_x_upper = self.size_x
+        self.roi_x_upper = self.max_size_x
 
         self.image_queue = Queue(maxsize=1)
         self.pipe_parent, self.pipe_child = Pipe(duplex=True)

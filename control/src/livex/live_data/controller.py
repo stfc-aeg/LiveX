@@ -39,6 +39,8 @@ class LiveDataController():
                     "size_y": (lambda proc=proc: proc.size_y,
                                partial(self.set_img_y, processor=proc)),
                     "dimensions": (lambda proc=proc: proc.dimensions, partial(self.set_img_dims, processor=proc)),
+                    "resolution": (lambda proc=proc: proc.resolution,
+                                   partial(self.set_resolution, processor=proc)),
                     "colour": (lambda proc=proc: proc.colour, 
                                partial(self.set_img_colour, processor=proc)),
                     "data": (lambda proc=proc: proc.get_image(), None),
@@ -63,6 +65,17 @@ class LiveDataController():
         processor.clip_max = int(value[1])
         self.update_render_info(processor)
 
+    def set_resolution(self, value, processor):
+        """Set the resolution of the image.
+        :param value: Resolution expressed as a percentage.
+        :param processor: LiveDataProcessor object
+        """
+        value = int(value)
+        processor.resolution = value
+        processor.size_x = int(processor.max_size_x*(value/100))
+        processor.size_y = int(processor.max_size_y*(value/100))
+        self.update_render_info(processor)
+
     def set_roi_boundaries(self, value, processor):
         """Set the region of interest boundaries for the image.
         :param value: array of RoI boundaries, expressed in %. [[x_low, x_high], [y_low, y_high]]
@@ -76,8 +89,6 @@ class LiveDataController():
         processor.roi_x_upper = int(processor.size_x * (value[0][1]/100))
         processor.roi_y_lower = int(processor.size_y * (value[1][0]/100))
         processor.roi_y_upper = int(processor.size_y * (value[1][1]/100))
-        logging.debug("New region of interest boundaries")
-        logging.debug(f"x: {processor.roi_x_lower}, x_high: {processor.roi_x_upper}, y: {processor.roi_y_lower}, y_high: {processor.roi_y_upper}")
         self.update_render_info(processor)
 
     def update_render_info(self, processor):

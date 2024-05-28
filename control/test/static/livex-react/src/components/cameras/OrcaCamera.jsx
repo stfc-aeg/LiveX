@@ -14,7 +14,8 @@ import { checkNullNoDp } from '../../utils';
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndPointButton = WithEndpoint(Button);
 const EndPointDropdownSelector = WithEndpoint(DropdownSelector);
-const EndPointSlider = WithEndpoint(OdinDoubleSlider);
+const EndPointDoubleSlider = WithEndpoint(OdinDoubleSlider);
+const EndPointSlider = WithEndpoint(Form.Range);
 
 function OrcaCamera(props) {
     const {index} = props;
@@ -40,6 +41,10 @@ function OrcaCamera(props) {
         'viridis', 'cividis', 'twilight', 'twilight_shifted', 'turbo', 'deepgreen'
     ];
 
+    const commonImageResolutions = [
+        10, 25, 50, 75, 100
+    ];
+
     // Handle image data
     const [imgData, changeImgData] = useState([{}]);
     const [width, setWidth] = useState('');
@@ -48,8 +53,8 @@ function OrcaCamera(props) {
 
     const [roiX, setRoiX] = useState('');
     const [roiY, setRoiY] = useState('');
-    const [roiBoundaries, setRoiBoundaries] = useState('');
-    
+    const [roiBoundaries, setRoiBoundaries] = useState([[0, 100], [0, 100]]);
+
     const roiXChange = (e) => {
         let newRoiX = e.target.value;
         setRoiX(newRoiX);
@@ -146,8 +151,10 @@ function OrcaCamera(props) {
 
                 <TitleCard title={`${orcaEndPoint?.data[index]?.camera_name} preview`}>
                     <Row>
+
                     <img
-                      src={imgData} alt="Fetched"
+                      src={imgData}
+                      alt="Fetched"
                     />
                     </Row>
                     <Col>
@@ -209,6 +216,39 @@ function OrcaCamera(props) {
                       </Col>
                     </Row>
                     <Row className="mt-3">
+                      <Col xs="8">
+                        <Form>
+                          <Form.Label>Resolution. Current: {liveViewData?.image?.resolution}</Form.Label>
+                          <EndPointSlider
+                          endpoint={liveViewEndPoint}
+                          fullpath="image/resolution"
+                          min={1}
+                          max={100}
+                          step={1}
+                          ></EndPointSlider>
+                        </Form>
+                      </Col>
+                      <Col xs="4">
+                      <InputGroup className="mt-3">
+                        <InputGroup.Text>Common Resolutions</InputGroup.Text>
+                        <EndPointDropdownSelector
+                          endpoint={liveViewEndPoint}
+                          event_type="select"
+                          fullpath="image/resolution"
+                          buttonText={liveViewData?.image?.resolution}
+                          variant="outline-secondary">
+                              {commonImageResolutions.map((effect, index) => (
+                                <Dropdown.Item
+                                    key={index}
+                                    eventKey={effect}>
+                                        {effect}
+                                </Dropdown.Item>
+                              ))}
+                          </EndPointDropdownSelector>
+                        </InputGroup>
+                      </Col>
+                    </Row>
+                    <Row className="mt-3">
                         <Col xs="6">
                             <OdinDoubleSlider
                             onChange={roiXChange}
@@ -239,20 +279,18 @@ function OrcaCamera(props) {
                         </EndPointButton>
                     </Row>
                     <Row className="mt-3">
-                    <EndPointSlider
+                    <EndPointDoubleSlider
                         endpoint={liveViewEndPoint}
                         fullpath="image/clip_range"
                         min="0"
                         max="65535"
                         steps="100"
                         title="Clipping range">
-                        </EndPointSlider>
+                        </EndPointDoubleSlider>
                     </Row>
                     </Form>
-
                     </Col>
                 </TitleCard>
-
             </Col>
           </TitleCard>
         </Container>
