@@ -26,6 +26,15 @@ class LiveDataProcessor():
         self.colour = colour
         self.image = 0
 
+        self.clip_min = 0
+        self.clip_max = 65535
+
+        # Region of interest limits. 0 to dimension until changed
+        self.roi_y_lower = 0
+        self.roi_y_upper = self.size_y
+        self.roi_x_lower = 0
+        self.roi_x_upper = self.size_x
+
         self.image_queue = Queue(maxsize=1)
         self.pipe_parent, self.pipe_child = Pipe(duplex=True)
         self.process = Process(target=self.capture_images, args=(self,))
@@ -71,8 +80,13 @@ class LiveDataProcessor():
 
         # OpenCV operations
         data = cv2.resize(data, (self.size_x, self.size_y))
-        data = cv2.applyColorMap((data / 256).astype(np.uint8), self.get_colour_map())
-        _, buffer = cv2.imencode('.jpg', data)
+
+        data = np.clip(data, self.clip_min, self.clip_max)
+        roi_data = data[self.roi_y_lower:self.roi_y_upper,
+                        self.roi_x_lower:self.roi_x_upper]
+
+        colour_data = cv2.applyColorMap((roi_data / 256).astype(np.uint8), self.get_colour_map())
+        _, buffer = cv2.imencode('.jpg', colour_data)
         buffer = np.array(buffer)
 
         zipped_data = base64.b64encode(buffer)

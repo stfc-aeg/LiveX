@@ -4,7 +4,7 @@ import Row from 'react-bootstrap/Row';
 import { Container, Stack } from 'react-bootstrap';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
-import { useAdapterEndpoint, WithEndpoint, StatusBox, TitleCard, DropdownSelector } from 'odin-react';
+import { useAdapterEndpoint, WithEndpoint, StatusBox, TitleCard, DropdownSelector, OdinDoubleSlider } from 'odin-react';
 import Button from 'react-bootstrap/Button';
 import { useState, useEffect } from 'react';
 import { Dropdown } from 'react-bootstrap';
@@ -14,6 +14,7 @@ import { checkNullNoDp } from '../../utils';
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndPointButton = WithEndpoint(Button);
 const EndPointDropdownSelector = WithEndpoint(DropdownSelector);
+const EndPointSlider = WithEndpoint(OdinDoubleSlider);
 
 function OrcaCamera(props) {
     const {index} = props;
@@ -44,6 +45,21 @@ function OrcaCamera(props) {
     const [width, setWidth] = useState('');
     const [height, setHeight] = useState('');
     const [dimensions, setDimensions] = useState('');
+
+    const [roiX, setRoiX] = useState('');
+    const [roiY, setRoiY] = useState('');
+    const [roiBoundaries, setRoiBoundaries] = useState('');
+    
+    const roiXChange = (e) => {
+        let newRoiX = e.target.value;
+        setRoiX(newRoiX);
+        setRoiBoundaries([newRoiX, roiY]);
+    }
+    const roiYChange = (e) => {
+        let newRoiY = e.target.value;
+        setRoiY(newRoiY);
+        setRoiBoundaries([roiX, newRoiY]);
+    }
 
     const heightChange = (e) => {
         let newHeight = e.target.value;
@@ -130,7 +146,9 @@ function OrcaCamera(props) {
 
                 <TitleCard title={`${orcaEndPoint?.data[index]?.camera_name} preview`}>
                     <Row>
-                    {imgData && <img src={imgData} alt="Fetched"/>}
+                    <img
+                      src={imgData} alt="Fetched"
+                    />
                     </Row>
                     <Col>
                     <Form>
@@ -153,7 +171,7 @@ function OrcaCamera(props) {
                       </InputGroup>
 
                     <Row>
-                      <Col>
+                      <Col xs="6">
                         <InputGroup>
                             <InputGroup.Text>
                                 Image Width
@@ -178,17 +196,57 @@ function OrcaCamera(props) {
                             />
                         </InputGroup>
                       </Col>
-                      <Col xs="3" className="mt-2">
+                      <Col xs="6" className="mt-3">
                         <EndPointButton
                         endpoint={liveViewEndPoint}
                         value={dimensions}
                         fullpath={"image/dimensions"}
                         event_type="click"
                         variant="outline-primary"
-                        className="mb-3">
+                        className="mb-2">
                             Update image dimensions
                         </EndPointButton>
                       </Col>
+                    </Row>
+                    <Row className="mt-3">
+                        <Col xs="6">
+                            <OdinDoubleSlider
+                            onChange={roiXChange}
+                            min="0"
+                            max="100"
+                            steps="1"
+                            title="Region of Interest X boundaries (%)">
+                            </OdinDoubleSlider>
+                        </Col>
+                        <Col xs="6">
+                            <OdinDoubleSlider
+                            onChange={roiYChange}
+                            min="0"
+                            max="100"
+                            steps="1"
+                            title="Region of Interest Y boundaries (%)">
+                            </OdinDoubleSlider>
+                        </Col>
+                    </Row>
+                    <Row>
+                        <EndPointButton
+                            endpoint={liveViewEndPoint}
+                            fullpath={"image/roi"}
+                            value={roiBoundaries}
+                            event_type="click"
+                            variant="outline-primary">
+                                Update Region of Interest Boundaries
+                        </EndPointButton>
+                    </Row>
+                    <Row className="mt-3">
+                    <EndPointSlider
+                        endpoint={liveViewEndPoint}
+                        fullpath="image/clip_range"
+                        min="0"
+                        max="65535"
+                        steps="100"
+                        title="Clipping range">
+                        </EndPointSlider>
                     </Row>
                     </Form>
 

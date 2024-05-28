@@ -33,20 +33,52 @@ class LiveDataController():
                 "endpoint": (lambda: self.processors[i].endpoint, None),
                 "image":
                 {  # Partials provide processor as an argument
-                    "size_x": (lambda proc=proc: self.processors[i].size_x,
+                    # Unclear if `proc=proc` is definitely required but it is not intrusive
+                    "size_x": (lambda proc=proc: proc.size_x,
                                partial(self.set_img_x, processor=proc)),
-                    "size_y": (lambda: self.processors[i].size_y,
+                    "size_y": (lambda proc=proc: proc.size_y,
                                partial(self.set_img_y, processor=proc)),
-                    "dimensions": (lambda: self.processors[i].dimensions, partial(self.set_img_dims, processor=proc)),
-                    "colour": (lambda: self.processors[i].colour, 
+                    "dimensions": (lambda proc=proc: proc.dimensions, partial(self.set_img_dims, processor=proc)),
+                    "colour": (lambda proc=proc: proc.colour, 
                                partial(self.set_img_colour, processor=proc)),
-                    "data": (lambda: proc.get_image(), None)
+                    "data": (lambda proc=proc: proc.get_image(), None),
                     # Use get_image in processor for JSON serialisation
+                    "clip_range": (lambda proc=proc: [proc.clip_min, proc.clip_max],
+                                   partial(self.set_img_clip, processor=proc)),
+                    "roi": (lambda proc=proc: [
+                        proc.roi_x_lower, proc.roi_x_upper, proc.roi_y_lower, proc.roi_y_upper],
+                        partial(self.set_roi_boundaries, processor=proc))
                 }
             }
             self.tree['liveview'].append(tree)
 
         self.param_tree = ParameterTree(self.tree)
+
+    def set_img_clip(self, value, processor):
+        """Set the image clipping range.
+        :param value: array of clip range limits, min to max
+        :param processor: LiveDataProcessor object
+        """
+        processor.clip_min = int(value[0])
+        processor.clip_max = int(value[1])
+        self.update_render_info(processor)
+
+    def set_roi_boundaries(self, value, processor):
+        """Set the region of interest boundaries for the image.
+        :param value: array of RoI boundaries, expressed in %. [[x_low, x_high], [y_low, y_high]]
+        :param processor: LiveDataProcessor object
+        """
+        # Make sure all values in array are integers
+        value = [[int(x) for x in axis] for axis in value]
+
+        # Translate Array to Relative Dimensions/Image Size
+        processor.roi_x_lower = int(processor.size_x * (value[0][0]/100))
+        processor.roi_x_upper = int(processor.size_x * (value[0][1]/100))
+        processor.roi_y_lower = int(processor.size_y * (value[1][0]/100))
+        processor.roi_y_upper = int(processor.size_y * (value[1][1]/100))
+        logging.debug("New region of interest boundaries")
+        logging.debug(f"x: {processor.roi_x_lower}, x_high: {processor.roi_x_upper}, y: {processor.roi_y_lower}, y_high: {processor.roi_y_upper}")
+        self.update_render_info(processor)
 
     def update_render_info(self, processor):
         """Pipe updated parameters to processor thread.
@@ -57,7 +89,13 @@ class LiveDataController():
             "dimensions": processor.dimensions,
             "size_x": processor.size_x,
             "size_y": processor.size_y,
-            "colour": processor.colour
+            "colour": processor.colour,
+            "clip_min": processor.clip_min,
+            "clip_max": processor.clip_max,
+            "roi_x_lower": processor.roi_x_lower,
+            "roi_x_upper": processor.roi_x_upper,
+            "roi_y_lower": processor.roi_y_lower,
+            "roi_y_upper": processor.roi_y_upper
         }
         processor.pipe_parent.send(params)
 
