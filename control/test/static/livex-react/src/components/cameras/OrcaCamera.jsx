@@ -11,6 +11,8 @@ import { Dropdown } from 'react-bootstrap';
 
 import { checkNullNoDp } from '../../utils';
 
+import ClickableImage from './ClickableImage';
+
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndPointButton = WithEndpoint(Button);
 const EndPointDropdownSelector = WithEndpoint(DropdownSelector);
@@ -46,7 +48,6 @@ function OrcaCamera(props) {
     ];
 
     // Handle image data
-    const [imgData, changeImgData] = useState([{}]);
     const [width, setWidth] = useState('');
     const [height, setHeight] = useState('');
     const [dimensions, setDimensions] = useState('');
@@ -76,11 +77,6 @@ function OrcaCamera(props) {
         setWidth(newWidth);
         setDimensions([newWidth, height]);
     };
-
-    // Graph re-renders when data changes
-    useEffect(() => {
-        changeImgData(`data:image/jpg;base64,${liveViewData?.image?.data}`);
-      }, [liveViewData?.image?.data]);
 
     return (
         <Container>
@@ -152,10 +148,9 @@ function OrcaCamera(props) {
                 <TitleCard title={`${orcaEndPoint?.data[index]?.camera_name} preview`}>
                     <Row>
 
-                    <img
-                      src={imgData}
-                      alt="Fetched"
-                    />
+                    <ClickableImage
+                      liveViewData={liveViewData}>
+                    </ClickableImage>
                     </Row>
                     <Col>
                     <Form>
