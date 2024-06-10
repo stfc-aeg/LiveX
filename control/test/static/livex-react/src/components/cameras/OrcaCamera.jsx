@@ -150,7 +150,9 @@ function OrcaCamera(props) {
 
                     <ClickableImage
                       endpoint={liveViewEndPoint}
-                      liveViewData={liveViewData}>
+                      liveViewData={liveViewData}
+                      path="image"
+                      paramToUpdate="roi">
                     </ClickableImage>
                     </Row>
                     <Col>

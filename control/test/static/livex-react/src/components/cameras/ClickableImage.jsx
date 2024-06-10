@@ -5,6 +5,8 @@ function ClickableImage(props){
     // 'liveViewData' is the image source, assuming a path
     const {endpoint} = props;
     const {liveViewData} = props;
+    const {path} = props;
+    const {paramToUpdate} = props;
 
     const [imgData, changeImgData] = useState([{}]);
     useEffect(() => {
@@ -75,8 +77,8 @@ function ClickableImage(props){
         setEndPoint(null); // Resetting end point prevents handleMouseMove drawing more rectangles
 
         // Send the coordinate data
-        const sendVal = {["roi"]: coords};
-        endpoint.put(sendVal, 'image');
+        const sendVal = {[paramToUpdate]: coords};
+        endpoint.put(sendVal, path);
         console.log("sendval:", sendVal);
       }
     }, [startPoint, getPoint, calculateRectangle]);
