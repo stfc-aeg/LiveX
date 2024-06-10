@@ -33,10 +33,18 @@ class LiveDataProcessor():
         self.clip_max = 65535
 
         # Region of interest limits. 0 to dimension until changed
-        self.roi_y_lower = 0
-        self.roi_y_upper = self.max_size_y
-        self.roi_x_lower = 0
-        self.roi_x_upper = self.max_size_x
+        self.roi = {
+            'x_lower': 0,
+            'x_upper': self.max_size_x,
+            'y_lower': 0,
+            'y_upper': self.max_size_y,
+            'percent': {
+                'x_lower': 0,
+                'x_upper': 100,
+                'y_lower': 0,
+                'y_upper': 100
+            }
+        }
 
         self.image_queue = Queue(maxsize=1)
         self.pipe_parent, self.pipe_child = Pipe(duplex=True)
@@ -85,8 +93,8 @@ class LiveDataProcessor():
         data = cv2.resize(data, (self.size_x, self.size_y))
 
         data = np.clip(data, self.clip_min, self.clip_max)
-        roi_data = data[self.roi_y_lower:self.roi_y_upper,
-                        self.roi_x_lower:self.roi_x_upper]
+        roi_data = data[self.roi['y_lower']:self.roi['y_upper'],
+                        self.roi['x_lower']:self.roi['x_upper']]
 
         colour_data = cv2.applyColorMap((roi_data / 256).astype(np.uint8), self.get_colour_map())
         _, buffer = cv2.imencode('.jpg', colour_data)

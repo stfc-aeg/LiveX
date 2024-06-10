@@ -48,7 +48,7 @@ class LiveDataController():
                     "clip_range": (lambda proc=proc: [proc.clip_min, proc.clip_max],
                                    partial(self.set_img_clip, processor=proc)),
                     "roi": (lambda proc=proc: [
-                        proc.roi_x_lower, proc.roi_x_upper, proc.roi_y_lower, proc.roi_y_upper],
+                        proc.roi['x_lower'], proc.roi['x_upper'], proc.roi['y_lower'], proc.roi['y_upper']],
                         partial(self.set_roi_boundaries, processor=proc))
                 }
             }
@@ -81,14 +81,26 @@ class LiveDataController():
         :param value: array of RoI boundaries, expressed in %. [[x_low, x_high], [y_low, y_high]]
         :param processor: LiveDataProcessor object
         """
-        # Make sure all values in array are integers
-        value = [[int(x) for x in axis] for axis in value]
+        x_low, x_high = value[0]
+        y_low, y_high = value[1]
+
+        img_x = processor.size_x
+        img_y = processor.size_y
 
         # Translate Array to Relative Dimensions/Image Size
-        processor.roi_x_lower = int(processor.size_x * (value[0][0]/100))
-        processor.roi_x_upper = int(processor.size_x * (value[0][1]/100))
-        processor.roi_y_lower = int(processor.size_y * (value[1][0]/100))
-        processor.roi_y_upper = int(processor.size_y * (value[1][1]/100))
+        processor.roi['x_lower'] = int(x_low)
+        processor.roi['x_upper'] = int(x_high)
+        processor.roi['y_lower'] = int(y_low)
+        processor.roi['y_upper'] = int(y_high)
+
+        # Percentage of image selected is boundary/size * 100
+        processor.roi['percent']['x_lower'] = int((x_low/img_x) * 100)
+        processor.roi['percent']['x_upper'] = int((x_high/img_x) * 100)
+        processor.roi['percent']['y_lower'] = int((y_low/img_y) * 100)
+        processor.roi['percent']['y_upper'] = int((y_high/img_y) * 100)
+
+        logging.debug(f"roi: {processor.roi}")
+
         self.update_render_info(processor)
 
     def update_render_info(self, processor):
@@ -103,10 +115,7 @@ class LiveDataController():
             "colour": processor.colour,
             "clip_min": processor.clip_min,
             "clip_max": processor.clip_max,
-            "roi_x_lower": processor.roi_x_lower,
-            "roi_x_upper": processor.roi_x_upper,
-            "roi_y_lower": processor.roi_y_lower,
-            "roi_y_upper": processor.roi_y_upper
+            "roi": processor.roi
         }
         processor.pipe_parent.send(params)
 
@@ -134,6 +143,19 @@ class LiveDataController():
         processor.dimensions = value
         processor.size_x = int(processor.dimensions[0])
         processor.size_y = int(processor.dimensions[1])
+
+        # Update region of interest values for new resolution
+        processor.roi['x_lower'] = int(
+            (processor.roi['percent']['x_lower'] / 100) * processor.size_x)
+        processor.roi['x_upper'] = int(
+            (processor.roi['percent']['x_upper'] / 100) * processor.size_x)
+        processor.roi['y_lower'] = int(
+            (processor.roi['percent']['y_lower'] / 100) * processor.size_y)
+        processor.roi['y_upper'] = int(
+            (processor.roi['percent']['y_upper'] / 100) * processor.size_y)
+        
+        logging.debug(f"roi: {processor.roi}")
+
         self.update_render_info(processor)
 
     def set_img_colour(self, value, processor):

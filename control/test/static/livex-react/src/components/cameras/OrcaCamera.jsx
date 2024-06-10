@@ -149,6 +149,7 @@ function OrcaCamera(props) {
                     <Row>
 
                     <ClickableImage
+                      endpoint={liveViewEndPoint}
                       liveViewData={liveViewData}>
                     </ClickableImage>
                     </Row>

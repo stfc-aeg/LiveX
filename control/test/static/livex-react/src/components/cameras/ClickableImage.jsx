@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 
 function ClickableImage(props){
+    // Endpoint is used to send selected coordinates, index refers to image path of multiple cameras
+    // 'liveViewData' is the image source, assuming a path
+    const {endpoint} = props;
     const {liveViewData} = props;
 
     const [imgData, changeImgData] = useState([{}]);
@@ -12,6 +15,7 @@ function ClickableImage(props){
     const [startPoint, setStartPoint] = useState([]);
     const [endPoint, setEndPoint] = useState([]);
     const [points, setPoints] = useState([]);
+    const [coords, setCoords] = useState([]);
 
     // Both mouseDown and mouseUp need this
     const getPoint = useCallback(e => {
@@ -43,6 +47,9 @@ function ClickableImage(props){
         ];
 
         setPoints(rectanglePoints);
+        // Coordinates are processed in live_data/controller.py as
+        // [[x_lower, x_upper], [y_lower, y_upper]]
+        setCoords([[minX, maxX], [minY, maxY]]);
     }, [startPoint, endPoint]);
 
     const handleMouseDown = useCallback(e => {
@@ -66,6 +73,11 @@ function ClickableImage(props){
 
         setStartPoint(null); // Reset start point after creating rectangle
         setEndPoint(null); // Resetting end point prevents handleMouseMove drawing more rectangles
+
+        // Send the coordinate data
+        const sendVal = {["roi"]: coords};
+        endpoint.put(sendVal, 'image');
+        console.log("sendval:", sendVal);
       }
     }, [startPoint, getPoint, calculateRectangle]);
     
