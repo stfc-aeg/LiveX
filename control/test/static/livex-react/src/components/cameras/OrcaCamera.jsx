@@ -253,6 +253,7 @@ function OrcaCamera(props) {
                             min="0"
                             max="100"
                             steps="1"
+                            disabled={true}
                             title="Region of Interest X boundaries (%)">
                             </OdinDoubleSlider>
                         </Col>
@@ -262,6 +263,7 @@ function OrcaCamera(props) {
                             min="0"
                             max="100"
                             steps="1"
+                            disabled={true}
                             title="Region of Interest Y boundaries (%)">
                             </OdinDoubleSlider>
                         </Col>
@@ -274,6 +276,14 @@ function OrcaCamera(props) {
                             event_type="click"
                             variant="outline-primary">
                                 Update Region of Interest Boundaries
+                        </EndPointButton>
+                        <EndPointButton
+                          endpoint={liveViewEndPoint}
+                          fullpath={"image/roi"}
+                          event_type="click"
+                          value={[[0, liveViewData?.image.size_x], [0, liveViewData?.image.size_y]]}
+                          variant="outline-primary">
+                            Reset Region of Interest Boundaries
                         </EndPointButton>
                     </Row>
                     <Row className="mt-3">

@@ -99,8 +99,6 @@ class LiveDataController():
         processor.roi['percent']['y_lower'] = int((y_low/img_y) * 100)
         processor.roi['percent']['y_upper'] = int((y_high/img_y) * 100)
 
-        logging.debug(f"roi: {processor.roi}")
-
         self.update_render_info(processor)
 
     def update_render_info(self, processor):
@@ -153,8 +151,6 @@ class LiveDataController():
             (processor.roi['percent']['y_lower'] / 100) * processor.size_y)
         processor.roi['y_upper'] = int(
             (processor.roi['percent']['y_upper'] / 100) * processor.size_y)
-        
-        logging.debug(f"roi: {processor.roi}")
 
         self.update_render_info(processor)
 
