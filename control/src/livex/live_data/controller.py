@@ -76,6 +76,17 @@ class LiveDataController():
         processor.size_y = int(processor.max_size_y*(value/100))
         self.update_render_info(processor)
 
+    def is_roi_full_image(self, processor):
+        """Check if a region of interest has been specified for a given processor.
+        i.e.: is the ROI anything more focused than the entire image
+        :return: True if yes (full image), False if no (ROI specified)
+        """
+        return (processor.roi['x_lower'] == 0 and
+                processor.roi['x_upper'] == processor.size_x and
+                processor.roi['y_lower'] == 0 and
+                processor.roi['y_upper'] == processor.size_y
+        )
+
     def set_roi_boundaries(self, value, processor):
         """Set the region of interest boundaries for the image.
         :param value: array of RoI boundaries, expressed in %. [[x_low, x_high], [y_low, y_high]]
@@ -86,6 +97,14 @@ class LiveDataController():
 
         img_x = processor.size_x
         img_y = processor.size_y
+
+        # If ROI is not full image, add on current lower bound to selection
+        # This places the pixel selection within the new ROI
+        if not self.is_roi_full_image(processor):
+            x_low  += processor.roi['x_lower']
+            x_high += processor.roi['x_lower']
+            y_low  += processor.roi['y_lower']
+            y_high += processor.roi['y_lower']
 
         # Translate Array to Relative Dimensions/Image Size
         processor.roi['x_lower'] = int(x_low)
