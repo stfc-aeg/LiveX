@@ -98,9 +98,15 @@ class LiveDataController():
         img_x = processor.size_x
         img_y = processor.size_y
 
+        # If provided value is full image size, we don't care about existing ROI
+        value_is_reset = (
+            x_low == 0 and x_high == img_x and
+            y_low == 0 and y_high == img_y
+        )
+
         # If ROI is not full image, add on current lower bound to selection
         # This places the pixel selection within the new ROI
-        if not self.is_roi_full_image(processor):
+        if not self.is_roi_full_image(processor) and not value_is_reset:
             x_low  += processor.roi['x_lower']
             x_high += processor.roi['x_lower']
             y_low  += processor.roi['y_lower']
