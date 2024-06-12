@@ -4,6 +4,10 @@ import base64
 import zmq
 from multiprocessing import Process, Queue, Pipe
 
+import logging
+import matplotlib.pyplot as plt
+import matplotlib.backends as mpl_bk
+
 from tornado.escape import json_decode
 from odin_data.ipc_channel import IpcChannel
 
@@ -27,10 +31,16 @@ class LiveDataProcessor():
         self.dimensions = [size_x, size_y]
         self.resolution = 100
         self.colour = colour
+
         self.image = 0
+        self.histogram = None
 
         self.clip_min = 0
         self.clip_max = 65535
+
+        # Matplotlib fontmanager and PngImagePlugin fill log, so i disable them
+        logging.getLogger('matplotlib.font_manager').disabled = True
+        logging.getLogger('PIL').disabled=True
 
         # Region of interest limits. 0 to dimension until changed
         self.roi = {
@@ -47,6 +57,7 @@ class LiveDataProcessor():
         }
 
         self.image_queue = Queue(maxsize=1)
+        self.hist_queue = Queue(maxsize=1)
         self.pipe_parent, self.pipe_child = Pipe(duplex=True)
         self.process = Process(target=self.capture_images, args=(self,))
         self.process.start()
@@ -87,13 +98,14 @@ class LiveDataProcessor():
 
         dtype = 'float32' if header['dtype'] == "float" else header['dtype']
         data = np.frombuffer(msg[1], dtype=dtype)
-        data = data.reshape((2304, 4096)) # ORCA dimensions
+        reshaped_data = data.reshape((2304, 4096)) # ORCA dimensions
 
         # OpenCV operations
-        data = cv2.resize(data, (self.size_x, self.size_y))
+        resized_data = cv2.resize(reshaped_data, (self.size_x, self.size_y))
 
-        data = np.clip(data, self.clip_min, self.clip_max)
-        roi_data = data[self.roi['y_lower']:self.roi['y_upper'],
+        clipped_data = np.clip(resized_data, self.clip_min, self.clip_max)
+
+        roi_data = clipped_data[self.roi['y_lower']:self.roi['y_upper'],
                         self.roi['x_lower']:self.roi['x_upper']]
 
         colour_data = cv2.applyColorMap((roi_data / 256).astype(np.uint8), self.get_colour_map())
@@ -107,9 +119,46 @@ class LiveDataProcessor():
 
         self.image_queue.put(zipped_data.decode('utf-8'))
 
+        bins_size = 100
+        bins_count = (self.clip_max - self.clip_min + 1) // bins_size
+
+        # Create histogram
+        fig, ax = plt.subplots(figsize=(8,4), dpi=100)
+        ax.hist(data, bins=bins_count, alpha=0.75, color='blue')
+
+        # No y-axis
+        ax.yaxis.set_visible(False)
+        ax.spines['left'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        # Make x-axis take entire width
+        ax.set_xlim(left=0, right=max(data))
+
+        fig.tight_layout()
+
+        # Generate matplotlib figure and convert it to array
+        fig.canvas.draw()
+        histData = np.frombuffer(fig.canvas.renderer.buffer_rgba(), dtype=np.uint8)
+        width, height = fig.canvas.get_width_height()
+        # Resize frombuffer array to 3d
+        histData = histData.reshape((height, width, 4))
+        histData = cv2.cvtColor(histData, cv2.COLOR_RGBA2BGR)
+
+        _, histImage = cv2.imencode('.jpg', histData)
+        zipped_data = base64.b64encode(histImage)
+        while (not self.hist_queue.empty()):
+            self.hist_queue.get()
+        self.hist_queue.put(zipped_data.decode('utf-8'))
+
     def get_colour_map(self):
         """Get the colour map based on the colour string. Defaults to 'bone' (greyscale)."""
         return getattr(cv2, f'COLORMAP_{self.colour.upper()}', cv2.COLORMAP_BONE)
+
+    def get_histogram(self):
+        """If it exists, update the histogram with one from the queue, then return it."""
+        if not self.hist_queue.empty():
+            self.histogram = self.hist_queue.get()
+        return self.histogram
 
     def get_image(self):
         """If it exists, update the image with one from the queue. Then return the image."""

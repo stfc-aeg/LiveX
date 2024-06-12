@@ -49,7 +49,8 @@ class LiveDataController():
                                    partial(self.set_img_clip, processor=proc)),
                     "roi": (lambda proc=proc: [
                         proc.roi['x_lower'], proc.roi['x_upper'], proc.roi['y_lower'], proc.roi['y_upper']],
-                        partial(self.set_roi_boundaries, processor=proc))
+                        partial(self.set_roi_boundaries, processor=proc)),
+                    "histogram": (lambda proc=proc: proc.get_histogram(), None)
                 }
             }
             self.tree['liveview'].append(tree)

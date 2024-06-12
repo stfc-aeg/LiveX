@@ -56,6 +56,11 @@ function OrcaCamera(props) {
     const [roiY, setRoiY] = useState('');
     const [roiBoundaries, setRoiBoundaries] = useState([[0, 100], [0, 100]]);
 
+    const [histData, changeHistData] = useState([{}]);
+    useEffect(() => {
+        changeHistData(`data:image/jpg;base64,${liveViewData?.image?.histogram}`);
+    }, [liveViewData?.image?.histogram]);
+
     const roiXChange = (e) => {
         let newRoiX = e.target.value;
         setRoiX(newRoiX);
@@ -154,6 +159,8 @@ function OrcaCamera(props) {
                       path="image"
                       paramToUpdate="roi">
                     </ClickableImage>
+
+                    <img src={histData}></img>
                     </Row>
                     <Col>
                     <Form>
