@@ -79,7 +79,7 @@ function ClickableImage(props){
         // Send the coordinate data
         const sendVal = {[paramToUpdate]: coords};
         endpoint.put(sendVal, path);
-        console.log("sendval:", sendVal);
+        setPoints([]);
       }
     }, [startPoint, getPoint, calculateRectangle]);
     
