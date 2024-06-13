@@ -155,12 +155,20 @@ function OrcaCamera(props) {
 
                     <ClickableImage
                       endpoint={liveViewEndPoint}
-                      liveViewData={liveViewData}
+                      imgSrc={liveViewData?.image?.data}
                       path="image"
                       paramToUpdate="roi">
                     </ClickableImage>
 
-                    <img src={histData}></img>
+                    <ClickableImage
+                      endpoint={liveViewEndPoint}
+                      imgSrc={liveViewData?.image?.histogram}
+                      path="image"
+                      paramToUpdate="clip_range"
+                      maximiseAxis="y"
+                      rectOutlineColour='black'
+                      rectRgbaProperties='rgba(50,50,50,0.05)'>
+                    </ClickableImage>
                     </Row>
                     <Col>
                     <Form>
