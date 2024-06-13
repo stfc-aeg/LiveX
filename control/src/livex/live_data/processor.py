@@ -6,7 +6,6 @@ from multiprocessing import Process, Queue, Pipe
 
 import logging
 import matplotlib.pyplot as plt
-import matplotlib.backends as mpl_bk
 
 from tornado.escape import json_decode
 from odin_data.ipc_channel import IpcChannel
@@ -38,9 +37,9 @@ class LiveDataProcessor():
         self.clip_min = 0
         self.clip_max = 65535
 
-        # Matplotlib fontmanager and PngImagePlugin fill log, so i disable them
+        # Matplotlib fontmanager and PngImagePlugin fill log, so they are disabled here
         logging.getLogger('matplotlib.font_manager').disabled = True
-        logging.getLogger('PIL').disabled=True
+        logging.getLogger('PIL.PngImagePlugin').disabled=True
 
         # Region of interest limits. 0 to dimension until changed
         self.roi = {
@@ -123,18 +122,17 @@ class LiveDataProcessor():
         bins_count = (self.clip_max - self.clip_min + 1) // bins_size
 
         # Create histogram
-        fig, ax = plt.subplots(figsize=(8,4), dpi=100)
+        fig, ax = plt.subplots(figsize=(8,2), dpi=100)
         ax.hist(data, bins=bins_count, alpha=0.75, color='blue')
 
         # No y-axis
         ax.yaxis.set_visible(False)
-        ax.spines['left'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.spines['top'].set_visible(False)
+        for spine in ['top', 'left', 'right']:
+            ax.spines[spine].set_visible(False)
         # Make x-axis take entire width
         ax.set_xlim(left=0, right=max(data))
 
-        fig.tight_layout()
+        fig.tight_layout(pad=0.05)
 
         # Generate matplotlib figure and convert it to array
         fig.canvas.draw()
