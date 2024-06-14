@@ -264,46 +264,7 @@ function OrcaCamera(props) {
                         </InputGroup>
                       </Col>
                     </Row>
-                    <Row className="mt-3">
-                        <Col xs="6">
-                            <OdinDoubleSlider
-                            onChange={roiXChange}
-                            min="0"
-                            max="100"
-                            steps="1"
-                            disabled={true}
-                            title="Region of Interest X boundaries (%)">
-                            </OdinDoubleSlider>
-                        </Col>
-                        <Col xs="6">
-                            <OdinDoubleSlider
-                            onChange={roiYChange}
-                            min="0"
-                            max="100"
-                            steps="1"
-                            disabled={true}
-                            title="Region of Interest Y boundaries (%)">
-                            </OdinDoubleSlider>
-                        </Col>
-                    </Row>
-                    <Row>
-                        <EndPointButton
-                            endpoint={liveViewEndPoint}
-                            fullpath={"image/roi"}
-                            value={roiBoundaries}
-                            event_type="click"
-                            variant="outline-primary">
-                                Update Region of Interest Boundaries
-                        </EndPointButton>
-                        <EndPointButton
-                          endpoint={liveViewEndPoint}
-                          fullpath={"image/roi"}
-                          event_type="click"
-                          value={[[0, liveViewData?.image.size_x], [0, liveViewData?.image.size_y]]}
-                          variant="outline-primary">
-                            Reset Region of Interest Boundaries
-                        </EndPointButton>
-                    </Row>
+
                     <Row className="mt-3">
                     <EndPointDoubleSlider
                         endpoint={liveViewEndPoint}
@@ -321,6 +282,16 @@ function OrcaCamera(props) {
                         variant="outline-primary">
                         Reset Clipping Range to 100%
                     </EndPointButton>
+                    </Row>
+                    <Row className="mt-3">
+                        <EndPointButton
+                          endpoint={liveViewEndPoint}
+                          fullpath={"image/roi"}
+                          event_type="click"
+                          value={[[0, liveViewData?.image.size_x], [0, liveViewData?.image.size_y]]}
+                          variant="outline-primary">
+                            Reset Region of Interest to Full Image
+                        </EndPointButton>
                     </Row>
                     </Form>
                     </Col>
