@@ -1,15 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 
 function ClickableImage(props){
-    // Endpoint is used to send selected coordinates, index refers to image path of multiple cameras
-    // 'imgSrc' is the image data. this could be from an endpoint e.g.: liveDataEndpoint?.image.data
-    // fullpath is the path the coordinates should be written to, no trailing or leading slashes
-    // paramToUpdate is the parameter you are updating. The 'final' part of the address
-    // maximiseAxis is 'x' or 'y' and overrides user selection to the bounds of that axis
-    // rectOutlineColour is a string representing the desired colour of the selection border
-    // rectRgbaProperties is the fill style for the polygon. format: 'rgba(R,G,B,A)'.
-    // rgba properties are 0->255 or 0->1 for alpha (transparency)
-    const {endpoint, imgSrc, fullpath, paramToUpdate, maximiseAxis=null, rectOutlineColour='white', rectRgbaProperties='rgba(255,255,255,0.33)' } = props;
+    /*
+    - Endpoint is used to send selected coordinates, index refers to image path of multiple cameras
+    - 'imgSrc' is the image data. this could be from an endpoint e.g.: liveDataEndpoint?.image.data
+    - fullpath is the path the coordinates should be written to, no trailing or leading slashes
+    - paramToUpdate is the parameter you are updating. The 'final' part of the address
+    - maximiseAxis is 'x' or 'y' and overrides user selection to the bounds of that axis
+    - valuesAsPercentages changes output from pixel values to relative percentage selected.
+    For example, x values  100-120 on a 300px-wide image. This returns [33.33,40], not [100,120].
+    - rectOutlineColour is a string representing the desired colour of the selection border
+    - rectRgbaProperties is the fill style for the polygon. format: 'rgba(R,G,B,A)'.
+      rgba properties are 0->255 or 0->1 for alpha (transparency)
+    */
+    const {endpoint, imgSrc, fullpath, paramToUpdate, maximiseAxis=null, valuesAsPercentages=false, rectOutlineColour='white', rectRgbaProperties='rgba(255,255,255,0.33)' } = props;
 
     const maxAxis = maximiseAxis ? maximiseAxis.toLowerCase() : null;
 
@@ -91,13 +95,33 @@ function ClickableImage(props){
         setStartPoint(null); // Reset start point after creating rectangle
         setEndPoint(null); // Resetting end point prevents handleMouseMove drawing more rectangles
 
+        // Get data to send
+        var sendData = coords;
+
+        // Adjust to percentages if needed
+        if (valuesAsPercentages) {
+          let canvas = document.getElementById('canvas');
+          let width = canvas.clientWidth;
+          let height = canvas.clientHeight;
+
+          // Calculate new percentage coordinates to 2 d.p.
+          let xMin = parseFloat(((coords[0][0] / width) * 100).toFixed(2));
+          let xMax = parseFloat(((coords[0][1] / width) * 100).toFixed(2));
+          const yMin = parseFloat(((coords[1][0] / height) * 100).toFixed(2));
+          const yMax = parseFloat(((coords[1][1] / height) * 100).toFixed(2));
+          sendData = [[xMin, xMax], [yMin, yMax]];
+          // setCoords([[xMin, xMax], [yMin, yMax]]);
+          console.log("percentage data:", sendData);
+        }
+
         // Send the coordinate data
-        const sendVal = {[paramToUpdate]: coords};
+        const sendVal = {[paramToUpdate]: sendData};
+        console.log("sendval:", JSON.stringify(sendVal));
         endpoint.put(sendVal, fullpath);
         setPoints([]);
       }
     }, [startPoint, getPoint, calculateRectangle]);
-    
+
     // Only insert polygon tags if there's enough entries in the array
     return (
       <div style={{position:'relative', display:'inline-block',

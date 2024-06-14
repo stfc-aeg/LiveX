@@ -41,12 +41,14 @@ class LiveDataController():
                     "dimensions": (lambda proc=proc: proc.dimensions, partial(self.set_img_dims, processor=proc)),
                     "resolution": (lambda proc=proc: proc.resolution,
                                    partial(self.set_resolution, processor=proc)),
-                    "colour": (lambda proc=proc: proc.colour, 
+                    "colour": (lambda proc=proc: proc.colour,
                                partial(self.set_img_colour, processor=proc)),
                     "data": (lambda proc=proc: proc.get_image(), None),
                     # Use get_image in processor for JSON serialisation
-                    "clip_range": (lambda proc=proc: [proc.clip_min, proc.clip_max],
-                                   partial(self.set_img_clip, processor=proc)),
+                    "clip_range_values": (lambda proc=proc: [proc.clipping['min'], proc.clipping['max']],
+                                   partial(self.set_img_clip_value, processor=proc)),
+                    "clip_range_percent": (lambda proc=proc: [proc.clipping['percent']['min'], proc.clipping['percent']['max']],
+                                        partial(self.set_img_clip_percent, processor=proc)),
                     "roi": (lambda proc=proc: [
                         proc.roi['x_lower'], proc.roi['x_upper'], proc.roi['y_lower'], proc.roi['y_upper']],
                         partial(self.set_roi_boundaries, processor=proc)),
@@ -57,13 +59,50 @@ class LiveDataController():
 
         self.param_tree = ParameterTree(self.tree)
 
-    def set_img_clip(self, value, processor):
-        """Set the image clipping range.
+    def update_render_info(self, processor):
+        """Pipe updated parameters to processor thread.
+        :param processor: LiveDataProcessor object to reference.
+        """
+        # Could be done programmatically but not enough to warrant this complexity
+        params = {
+            "dimensions": processor.dimensions,
+            "size_x": processor.size_x,
+            "size_y": processor.size_y,
+            "colour": processor.colour,
+            "clipping": processor.clipping,
+            "roi": processor.roi
+        }
+        processor.pipe_parent.send(params)
+
+    def set_img_clip_value(self, value, processor):
+        """Set the image clipping range absolutely.
         :param value: array of clip range limits, min to max
         :param processor: LiveDataProcessor object
         """
-        processor.clip_min = int(value[0])
-        processor.clip_max = int(value[1])
+        processor.clipping['min'] = int(value[0])
+        processor.clipping['max'] = int(value[1])
+
+        processor.clipping['percent']['min'] = (int(value[0]) / processor.cam_pixel_max) * 100
+        processor.clipping['percent']['max'] = (int(value[1]) / processor.cam_pixel_max) * 100
+        
+        # Round for readability
+        processor.clipping['percent']['min'] = round(processor.clipping['percent']['min'], 2)
+        processor.clipping['percent']['max'] = round(processor.clipping['percent']['max'], 2)
+
+        self.update_render_info(processor)
+
+    def set_img_clip_percent(self, value, processor):
+        """Set the image clipping range proportionally.
+        :param value: array of clip range limits. This is provided by a clickableimage component
+        so it takes the form [[xmin, xmax], [ymin, ymax]]. Here, y is irrelevant.
+        :param processor: LiveDataProcessor object
+        """
+        processor.clipping['percent']['min'] = value[0][0]
+        processor.clipping['percent']['max'] = value[0][1]
+
+        processor.clipping['min'] = int(value[0][0]/100 * processor.cam_pixel_max)
+        processor.clipping['max'] = int(value[0][1]/100 * processor.cam_pixel_max)
+
         self.update_render_info(processor)
 
     def set_resolution(self, value, processor):
@@ -126,22 +165,6 @@ class LiveDataController():
         processor.roi['percent']['y_upper'] = int((y_high/img_y) * 100)
 
         self.update_render_info(processor)
-
-    def update_render_info(self, processor):
-        """Pipe updated parameters to processor thread.
-        :param processor: LiveDataProcessor object to reference.
-        """
-        # Could be done programmatically but not enough to warrant this complexity
-        params = {
-            "dimensions": processor.dimensions,
-            "size_x": processor.size_x,
-            "size_y": processor.size_y,
-            "colour": processor.colour,
-            "clip_min": processor.clip_min,
-            "clip_max": processor.clip_max,
-            "roi": processor.roi
-        }
-        processor.pipe_parent.send(params)
 
     def set_img_x(self, value, processor):
         """Set the width of the image in pixels.

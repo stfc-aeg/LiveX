@@ -34,8 +34,9 @@ class LiveDataProcessor():
         self.image = 0
         self.histogram = None
 
-        self.clip_min = 0
-        self.clip_max = 65535
+        # Minimum and maximum values that the camera data can be. e.g.: 16-bit pixel data, 65535
+        self.cam_pixel_min = 0
+        self.cam_pixel_max = 65535
 
         # Matplotlib fontmanager and PngImagePlugin fill log, so they are disabled here
         logging.getLogger('matplotlib.font_manager').disabled = True
@@ -52,6 +53,14 @@ class LiveDataProcessor():
                 'x_upper': 100,
                 'y_lower': 0,
                 'y_upper': 100
+            }
+        }
+        self.clipping = {
+            'min': 0,
+            'max': 65535,
+            'percent': {
+                'min': 0,
+                'max': 100
             }
         }
 
@@ -97,14 +106,16 @@ class LiveDataProcessor():
 
         dtype = 'float32' if header['dtype'] == "float" else header['dtype']
         data = np.frombuffer(msg[1], dtype=dtype)
-        reshaped_data = data.reshape((2304, 4096)) # ORCA dimensions
+
+        # For histogram, it's easier to clip the data before reshaping it
+        clipped_data = np.clip(data, self.clipping['min'], self.clipping['max'])
+
+        reshaped_data = clipped_data.reshape((2304, 4096)) # ORCA dimensions
 
         # OpenCV operations
         resized_data = cv2.resize(reshaped_data, (self.size_x, self.size_y))
 
-        clipped_data = np.clip(resized_data, self.clip_min, self.clip_max)
-
-        roi_data = clipped_data[self.roi['y_lower']:self.roi['y_upper'],
+        roi_data = resized_data[self.roi['y_lower']:self.roi['y_upper'],
                         self.roi['x_lower']:self.roi['x_upper']]
 
         colour_data = cv2.applyColorMap((roi_data / 256).astype(np.uint8), self.get_colour_map())
@@ -119,11 +130,12 @@ class LiveDataProcessor():
         self.image_queue.put(zipped_data.decode('utf-8'))
 
         bins_size = 100
-        bins_count = (self.clip_max - self.clip_min + 1) // bins_size
+        bins_count = (self.clipping['max'] - self.clipping['min'] + 1) // bins_size
+        logging.debug(f"bins count: {bins_count}")
 
         # Create histogram
         fig, ax = plt.subplots(figsize=(8,2), dpi=100)
-        ax.hist(data, bins=bins_count, alpha=0.75, color='blue')
+        ax.hist(clipped_data, bins=bins_count, alpha=0.75, color='blue')
 
         # No y-axis
         ax.yaxis.set_visible(False)
@@ -141,6 +153,9 @@ class LiveDataProcessor():
         # Resize frombuffer array to 3d
         histData = histData.reshape((height, width, 4))
         histData = cv2.cvtColor(histData, cv2.COLOR_RGBA2BGR)
+
+        # Must explicitly close figures
+        plt.close(fig)
 
         _, histImage = cv2.imencode('.jpg', histData)
         zipped_data = base64.b64encode(histImage)

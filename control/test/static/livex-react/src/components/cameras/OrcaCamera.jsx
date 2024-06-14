@@ -31,6 +31,8 @@ function OrcaCamera(props) {
     const liveViewEndPoint = useAdapterEndpoint(liveViewAddress, 'http://192.168.0.22:8888', 1000);
     const liveViewData = liveViewEndPoint?.data[index];
 
+
+
     // Array of camera status names
     const status = ['disconnected', 'connected', 'capturing'];
     // Current status of orcaCamera (for readability)
@@ -156,18 +158,19 @@ function OrcaCamera(props) {
                     <ClickableImage
                       endpoint={liveViewEndPoint}
                       imgSrc={liveViewData?.image?.data}
-                      path="image"
+                      fullpath="image"
                       paramToUpdate="roi">
                     </ClickableImage>
 
                     <ClickableImage
                       endpoint={liveViewEndPoint}
                       imgSrc={liveViewData?.image?.histogram}
-                      path="image"
-                      paramToUpdate="clip_range"
+                      fullpath="image"
+                      paramToUpdate="clip_range_percent"
                       maximiseAxis="y"
                       rectOutlineColour='black'
-                      rectRgbaProperties='rgba(50,50,50,0.05)'>
+                      rectRgbaProperties='rgba(50,50,50,0.05)'
+                      valuesAsPercentages={true}>
                     </ClickableImage>
                     </Row>
                     <Col>
@@ -304,12 +307,20 @@ function OrcaCamera(props) {
                     <Row className="mt-3">
                     <EndPointDoubleSlider
                         endpoint={liveViewEndPoint}
-                        fullpath="image/clip_range"
+                        fullpath="image/clip_range_values"
                         min="0"
                         max="65535"
                         steps="100"
                         title="Clipping range">
-                        </EndPointDoubleSlider>
+                    </EndPointDoubleSlider>
+                    <EndPointButton
+                        endpoint={liveViewEndPoint}
+                        fullpath={"image/clip_range_percent"}
+                        event_type="click"
+                        value={[[0, 100], [0, 100]]}
+                        variant="outline-primary">
+                        Reset Clipping Range to 100%
+                    </EndPointButton>
                     </Row>
                     </Form>
                     </Col>
