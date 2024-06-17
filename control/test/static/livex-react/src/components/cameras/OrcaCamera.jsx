@@ -268,7 +268,7 @@ function OrcaCamera(props) {
                     <Row className="mt-3">
                     <EndPointDoubleSlider
                         endpoint={liveViewEndPoint}
-                        fullpath="image/clip_range_values"
+                        fullpath="image/clip_range_value"
                         min="0"
                         max="65535"
                         steps="100"
