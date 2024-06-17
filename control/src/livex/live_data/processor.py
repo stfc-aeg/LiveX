@@ -142,7 +142,7 @@ class LiveDataProcessor():
         for spine in ['top', 'left', 'right']:
             ax.spines[spine].set_visible(False)
         # Make x-axis take entire width
-        ax.set_xlim(left=0, right=max(data))
+        ax.set_xlim(left=self.clipping['min'], right=self.clipping['max'])
 
         fig.tight_layout(pad=0.05)
 

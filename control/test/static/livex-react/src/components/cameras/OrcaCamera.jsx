@@ -276,9 +276,9 @@ function OrcaCamera(props) {
                     </EndPointDoubleSlider>
                     <EndPointButton
                         endpoint={liveViewEndPoint}
-                        fullpath={"image/clip_range_percent"}
+                        fullpath={"image/clip_range_value"}
                         event_type="click"
-                        value={[[0, 100], [0, 100]]}
+                        value={[0, 65535]}
                         variant="outline-primary">
                         Reset Clipping Range to 100%
                     </EndPointButton>

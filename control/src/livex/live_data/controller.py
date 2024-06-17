@@ -45,7 +45,7 @@ class LiveDataController():
                                partial(self.set_img_colour, processor=proc)),
                     "data": (lambda proc=proc: proc.get_image(), None),
                     # Use get_image in processor for JSON serialisation
-                    "clip_range_values": (lambda proc=proc: [proc.clipping['min'], proc.clipping['max']],
+                    "clip_range_value": (lambda proc=proc: [proc.clipping['min'], proc.clipping['max']],
                                    partial(self.set_img_clip_value, processor=proc)),
                     "clip_range_percent": (lambda proc=proc: [proc.clipping['percent']['min'], proc.clipping['percent']['max']],
                                         partial(self.set_img_clip_percent, processor=proc)),
@@ -74,6 +74,15 @@ class LiveDataController():
         }
         processor.pipe_parent.send(params)
 
+    def is_clipping_full_range(self, processor):
+        """Check if image clipping is 'enabled' (any value less than full range is selected).
+        :param processor: LiveDataProcessor object
+        :return bool: True if yes (full range), False if no.
+        """
+        # Could be done via percentage, no real difference
+        return (processor.clipping['min'] == 0 and
+                processor.clipping['max'] == processor.cam_max_pixel)
+
     def set_img_clip_value(self, value, processor):
         """Set the image clipping range absolutely.
         :param value: array of clip range limits, min to max
@@ -97,11 +106,34 @@ class LiveDataController():
         so it takes the form [[xmin, xmax], [ymin, ymax]]. Here, y is irrelevant.
         :param processor: LiveDataProcessor object
         """
-        processor.clipping['percent']['min'] = value[0][0]
-        processor.clipping['percent']['max'] = value[0][1]
+        percent_min = value[0][0]
+        percent_max = value[0][1]
 
-        processor.clipping['min'] = int(value[0][0]/100 * processor.cam_pixel_max)
-        processor.clipping['max'] = int(value[0][1]/100 * processor.cam_pixel_max)
+        logging.debug(f"percent_min: {percent_min}, percent_max: {percent_max}")
+        logging.debug(f"cur_min: {processor.clipping['percent']['min']}, cur_max: {processor.clipping['percent']['max']}")
+
+        # Current percentage selected expressed as a value between 0 and 1
+        scalar = (processor.clipping['percent']['max'] - processor.clipping['percent']['min']) / 100
+
+        logging.debug(f"scalar: {scalar}")
+
+        # Percentage is used to calculate from whole range
+        # So max and min values are scaled to selected range and added to existing
+        # Min = min + new_min(scaled)
+        new_min = processor.clipping['percent']['min'] + percent_min*scalar
+        # new_max = processor.clipping['percent']['min'] + percent_max*scalar
+        new_max = processor.clipping['percent']['max'] - ((100-percent_max)*scalar)
+
+        processor.clipping['percent']['min'] = new_min
+        processor.clipping['percent']['max'] = new_max
+
+        logging.debug(f"new_min: {new_min}, new_max: {new_max}")
+
+        # percentage/100 * max = 0->1 multiplier of range
+        processor.clipping['min'] = int(processor.clipping['percent']['min']/100 * processor.cam_pixel_max)
+        processor.clipping['max'] = int(processor.clipping['percent']['max']/100 * processor.cam_pixel_max)
+
+        logging.debug(f"new abs min: {processor.clipping['min']}, new max: {processor.clipping['max']}")
 
         self.update_render_info(processor)
 
