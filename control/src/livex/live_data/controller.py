@@ -109,13 +109,8 @@ class LiveDataController():
         percent_min = value[0][0]
         percent_max = value[0][1]
 
-        logging.debug(f"percent_min: {percent_min}, percent_max: {percent_max}")
-        logging.debug(f"cur_min: {processor.clipping['percent']['min']}, cur_max: {processor.clipping['percent']['max']}")
-
         # Current percentage selected expressed as a value between 0 and 1
         scalar = (processor.clipping['percent']['max'] - processor.clipping['percent']['min']) / 100
-
-        logging.debug(f"scalar: {scalar}")
 
         # Percentage is used to calculate from whole range
         # So max and min values are scaled to selected range and added to existing
@@ -127,13 +122,9 @@ class LiveDataController():
         processor.clipping['percent']['min'] = new_min
         processor.clipping['percent']['max'] = new_max
 
-        logging.debug(f"new_min: {new_min}, new_max: {new_max}")
-
         # percentage/100 * max = 0->1 multiplier of range
         processor.clipping['min'] = int(processor.clipping['percent']['min']/100 * processor.cam_pixel_max)
         processor.clipping['max'] = int(processor.clipping['percent']['max']/100 * processor.cam_pixel_max)
-
-        logging.debug(f"new abs min: {processor.clipping['min']}, new max: {processor.clipping['max']}")
 
         self.update_render_info(processor)
 

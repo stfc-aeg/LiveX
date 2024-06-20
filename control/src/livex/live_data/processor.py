@@ -131,11 +131,11 @@ class LiveDataProcessor():
 
         bins_size = 100
         bins_count = (self.clipping['max'] - self.clipping['min'] + 1) // bins_size
-        logging.debug(f"bins count: {bins_count}")
 
         # Create histogram
+        flat_roi_data = roi_data.flatten()
         fig, ax = plt.subplots(figsize=(8,2), dpi=100)
-        ax.hist(clipped_data, bins=bins_count, alpha=0.75, color='blue')
+        ax.hist(flat_roi_data, bins=bins_count, alpha=0.75, color='blue')
 
         # No y-axis
         ax.yaxis.set_visible(False)
