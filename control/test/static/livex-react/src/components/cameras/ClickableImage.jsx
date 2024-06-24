@@ -125,9 +125,9 @@ function ClickableImage(props){
     // Only insert polygon tags if there's enough entries in the array
     return (
       <div style={{position:'relative', display:'inline-block',
-      maxWidth:'100%', maxHeight:'100%'}}>
+      width:'100%', height:'auto'}}>
         <svg
-            id="canvas" 
+            id="canvas"
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -145,8 +145,8 @@ function ClickableImage(props){
         </svg>
         <img src={imgData} style={{
           display:'block',
-          maxWidth:'100%',
-          maxHeight:'100%'
+          width:'100%',
+          height:'auto'
           }}></img>
       </div>
     );

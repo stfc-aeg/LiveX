@@ -159,7 +159,8 @@ function OrcaCamera(props) {
                       endpoint={liveViewEndPoint}
                       imgSrc={liveViewData?.image?.data}
                       fullpath="image"
-                      paramToUpdate="roi">
+                      paramToUpdate="roi"
+                      valuesAsPercentages={true}>
                     </ClickableImage>
 
                     <ClickableImage
@@ -246,7 +247,7 @@ function OrcaCamera(props) {
                       </Col>
                       <Col xs="4">
                       <InputGroup className="mt-3">
-                        <InputGroup.Text>Common Resolutions</InputGroup.Text>
+                        <InputGroup.Text>Common Resolutions (%)</InputGroup.Text>
                         <EndPointDropdownSelector
                           endpoint={liveViewEndPoint}
                           event_type="select"
@@ -288,7 +289,7 @@ function OrcaCamera(props) {
                           endpoint={liveViewEndPoint}
                           fullpath={"image/roi"}
                           event_type="click"
-                          value={[[0, liveViewData?.image.size_x], [0, liveViewData?.image.size_y]]}
+                          value={[[0, 100], [0, 100]]}
                           variant="outline-primary">
                             Reset Region of Interest to Full Image
                         </EndPointButton>

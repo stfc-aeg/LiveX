@@ -74,121 +74,6 @@ class LiveDataController():
         }
         processor.pipe_parent.send(params)
 
-    def is_clipping_full_range(self, processor):
-        """Check if image clipping is 'enabled' (any value less than full range is selected).
-        :param processor: LiveDataProcessor object
-        :return bool: True if yes (full range), False if no.
-        """
-        # Could be done via percentage, no real difference
-        return (processor.clipping['min'] == 0 and
-                processor.clipping['max'] == processor.cam_max_pixel)
-
-    def set_img_clip_value(self, value, processor):
-        """Set the image clipping range absolutely.
-        :param value: array of clip range limits, min to max
-        :param processor: LiveDataProcessor object
-        """
-        processor.clipping['min'] = int(value[0])
-        processor.clipping['max'] = int(value[1])
-
-        processor.clipping['percent']['min'] = (int(value[0]) / processor.cam_pixel_max) * 100
-        processor.clipping['percent']['max'] = (int(value[1]) / processor.cam_pixel_max) * 100
-        
-        # Round for readability
-        processor.clipping['percent']['min'] = round(processor.clipping['percent']['min'], 2)
-        processor.clipping['percent']['max'] = round(processor.clipping['percent']['max'], 2)
-
-        self.update_render_info(processor)
-
-    def set_img_clip_percent(self, value, processor):
-        """Set the image clipping range proportionally.
-        :param value: array of clip range limits. This is provided by a clickableimage component
-        so it takes the form [[xmin, xmax], [ymin, ymax]]. Here, y is irrelevant.
-        :param processor: LiveDataProcessor object
-        """
-        percent_min = value[0][0]
-        percent_max = value[0][1]
-
-        # Current percentage selected expressed as a value between 0 and 1
-        scalar = (processor.clipping['percent']['max'] - processor.clipping['percent']['min']) / 100
-
-        # Percentage is used to calculate from whole range
-        # So max and min values are scaled to selected range and added to existing
-        # Min = min + new_min(scaled)
-        new_min = processor.clipping['percent']['min'] + percent_min*scalar
-        # new_max = processor.clipping['percent']['min'] + percent_max*scalar
-        new_max = processor.clipping['percent']['max'] - ((100-percent_max)*scalar)
-
-        processor.clipping['percent']['min'] = new_min
-        processor.clipping['percent']['max'] = new_max
-
-        # percentage/100 * max = 0->1 multiplier of range
-        processor.clipping['min'] = int(processor.clipping['percent']['min']/100 * processor.cam_pixel_max)
-        processor.clipping['max'] = int(processor.clipping['percent']['max']/100 * processor.cam_pixel_max)
-
-        self.update_render_info(processor)
-
-    def set_resolution(self, value, processor):
-        """Set the resolution of the image.
-        :param value: Resolution expressed as a percentage.
-        :param processor: LiveDataProcessor object
-        """
-        value = int(value)
-        processor.resolution = value
-        processor.size_x = int(processor.max_size_x*(value/100))
-        processor.size_y = int(processor.max_size_y*(value/100))
-        self.update_render_info(processor)
-
-    def is_roi_full_image(self, processor):
-        """Check if a region of interest has been specified for a given processor.
-        i.e.: is the ROI anything more focused than the entire image
-        :return: True if yes (full image), False if no (ROI specified)
-        """
-        return (processor.roi['x_lower'] == 0 and
-                processor.roi['x_upper'] == processor.size_x and
-                processor.roi['y_lower'] == 0 and
-                processor.roi['y_upper'] == processor.size_y
-        )
-
-    def set_roi_boundaries(self, value, processor):
-        """Set the region of interest boundaries for the image.
-        :param value: array of RoI boundaries, expressed in %. [[x_low, x_high], [y_low, y_high]]
-        :param processor: LiveDataProcessor object
-        """
-        x_low, x_high = value[0]
-        y_low, y_high = value[1]
-
-        img_x = processor.size_x
-        img_y = processor.size_y
-
-        # If provided value is full image size, we don't care about existing ROI
-        value_is_reset = (
-            x_low == 0 and x_high == img_x and
-            y_low == 0 and y_high == img_y
-        )
-
-        # If ROI is not full image, add on current lower bound to selection
-        # This places the pixel selection within the new ROI
-        if not self.is_roi_full_image(processor) and not value_is_reset:
-            x_low  += processor.roi['x_lower']
-            x_high += processor.roi['x_lower']
-            y_low  += processor.roi['y_lower']
-            y_high += processor.roi['y_lower']
-
-        # Translate Array to Relative Dimensions/Image Size
-        processor.roi['x_lower'] = int(x_low)
-        processor.roi['x_upper'] = int(x_high)
-        processor.roi['y_lower'] = int(y_low)
-        processor.roi['y_upper'] = int(y_high)
-
-        # Percentage of image selected is boundary/size * 100
-        processor.roi['percent']['x_lower'] = int((x_low/img_x) * 100)
-        processor.roi['percent']['x_upper'] = int((x_high/img_x) * 100)
-        processor.roi['percent']['y_lower'] = int((y_low/img_y) * 100)
-        processor.roi['percent']['y_upper'] = int((y_high/img_y) * 100)
-
-        self.update_render_info(processor)
-
     def set_img_x(self, value, processor):
         """Set the width of the image in pixels.
         :param value: integer representing number of pixels.
@@ -232,6 +117,130 @@ class LiveDataController():
         :param processor: LiveDataProcessor object to reference
         """
         processor.colour = str(value)
+        self.update_render_info(processor)
+
+    def scale_percent_to_selection(self, new_percentages, current_percentages):
+        """Scale selected percentages to fit an existing selection.
+        e.g.: specifying a further region of interest within an already-specified one.
+        :param new_percentages: array of upper and lower boundaries selected. [min, max]
+        :param current_percentages: array of current boundaries. [min, max]
+        :return: new minimum and maximum boundaries.
+        """
+        select_min = min(new_percentages)
+        select_max = max(new_percentages)
+        cur_min = min(current_percentages)
+        cur_max = max(current_percentages)
+
+        # Current percentage selected expressed as a value between 0 and 1
+        scalar = (cur_max - cur_min) / 100
+
+        # Min and max values are scaled to the currently-selected range, and added to boundaries.
+        new_min = cur_min + select_min*scalar
+        new_max = cur_max - ((100-select_max)*scalar)
+
+        return new_min, new_max
+
+    def set_img_clip_value(self, value, processor):
+        """Set the image clipping range absolutely.
+        :param value: array of clip range limits, min to max
+        :param processor: LiveDataProcessor object
+        """
+        processor.clipping['min'] = int(value[0])
+        processor.clipping['max'] = int(value[1])
+
+        processor.clipping['percent']['min'] = (int(value[0]) / processor.cam_pixel_max) * 100
+        processor.clipping['percent']['max'] = (int(value[1]) / processor.cam_pixel_max) * 100
+        
+        # Round for readability
+        processor.clipping['percent']['min'] = round(processor.clipping['percent']['min'], 2)
+        processor.clipping['percent']['max'] = round(processor.clipping['percent']['max'], 2)
+
+        self.update_render_info(processor)
+
+    def set_img_clip_percent(self, value, processor):
+        """Set the image clipping range proportionally.
+        :param value: array of clip range limits. This is provided by a clickableimage component
+        so it takes the form [[xmin, xmax], [ymin, ymax]]. Here, y is irrelevant.
+        :param processor: LiveDataProcessor object
+        """
+        select_min = value[0][0]
+        select_max = value[0][1]
+        cur_min = processor.clipping['percent']['min']
+        cur_max = processor.clipping['percent']['max']
+
+        new_min, new_max = self.scale_percent_to_selection(
+            [select_min, select_max],
+            [cur_min, cur_max]
+        )
+
+        processor.clipping['percent']['min'] = new_min
+        processor.clipping['percent']['max'] = new_max
+
+        # percentage/100 * max = 0->1 multiplier of range
+        processor.clipping['min'] = int(processor.clipping['percent']['min']/100 * processor.cam_pixel_max)
+        processor.clipping['max'] = int(processor.clipping['percent']['max']/100 * processor.cam_pixel_max)
+
+        self.update_render_info(processor)
+
+    def set_resolution(self, value, processor):
+        """Set the resolution of the image.
+        :param value: Resolution expressed as a percentage.
+        :param processor: LiveDataProcessor object
+        """
+        value = int(value)
+        processor.resolution = value
+        new_x = int(processor.max_size_x*(value/100))
+        new_y = int(processor.max_size_y*(value/100))
+        self.set_img_dims([new_x, new_y], processor)
+
+    def set_roi_boundaries(self, value, processor):
+        """Set the region of interest boundaries for the image.
+        Has an override - giving 0 and 100 as both x and y boundaries resets to full size.
+        :param value: array of RoI boundaries in %. [[x_low, x_high], [y_low, y_high]].
+        :param processor: LiveData Processor object.
+        """
+        x_low, x_high = value[0]
+        y_low, y_high = value[1]
+
+        img_x = processor.size_x
+        img_y = processor.size_y
+
+        # If provided value is full image size, we don't care about existing ROI, to allow reset.
+        value_is_reset = (
+            x_low == 0 and x_high == 100 and
+            y_low == 0 and y_high == 100
+        )
+        if value_is_reset:  # Pretend we're picking from full image. End value will be full size
+            cur_x_low = 0
+            cur_x_high = 100
+            cur_y_low = 0
+            cur_y_high = 100
+        else:  # If not reset, get real current value
+            cur_x_low = processor.roi['percent']['x_lower']
+            cur_x_high = processor.roi['percent']['x_upper']
+            cur_y_low = processor.roi['percent']['y_lower']
+            cur_y_high = processor.roi['percent']['y_upper']
+
+        new_x_low, new_x_high = self.scale_percent_to_selection(
+            [x_low, x_high],
+            [cur_x_low, cur_x_high]
+        )
+        new_y_low, new_y_high = self.scale_percent_to_selection(
+            [y_low, y_high],
+            [cur_y_low, cur_y_high]
+        )
+
+        # New pixel value is max_size * (%/100)
+        processor.roi['x_lower'] = int(img_x * (new_x_low/100))
+        processor.roi['x_upper'] = int(img_x * (new_x_high/100))
+        processor.roi['y_lower'] = int(img_y * (new_y_low/100))
+        processor.roi['y_upper'] = int(img_y * (new_y_high/100))
+        # Set percentage to new percentage
+        processor.roi['percent']['x_lower'] = new_x_low
+        processor.roi['percent']['x_upper'] = new_x_high
+        processor.roi['percent']['y_lower'] = new_y_low
+        processor.roi['percent']['y_upper'] = new_y_high
+
         self.update_render_info(processor)
 
     def get(self, path):
