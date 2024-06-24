@@ -6,7 +6,7 @@ import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import { TitleCard, WithEndpoint, ToggleSwitch, StatusBox } from 'odin-react';
 
-import { checkNull  } from '../utils';
+import { checkNull  } from '../../utils';
 
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndPointToggle = WithEndpoint(ToggleSwitch);

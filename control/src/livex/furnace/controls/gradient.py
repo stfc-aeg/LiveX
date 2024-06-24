@@ -15,7 +15,7 @@ class Gradient():
         self.distance     = read_decode_holding_reg(self.client, self.addresses['distance'])
         self.actual       = read_decode_input_reg(self.client, self.addresses['actual'])
         self.theoretical  = read_decode_input_reg(self.client, self.addresses['theoretical'])
-        self.high         = read_coil(self.client, self.addresses['high']) # used as index for high-heater selection
+        self.high         = read_coil(self.client, self.addresses['high'], asInt=True) # used as index for high-heater selection
         self.high_options = self.addresses['high_options']
 
         self.tree = ParameterTree({

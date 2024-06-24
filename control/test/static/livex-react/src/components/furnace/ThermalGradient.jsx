@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { checkNull } from '../utils';
+import { checkNull } from '../../utils';
 
 import { TitleCard, ToggleSwitch, DropdownSelector, StatusBox, WithEndpoint } from 'odin-react';
 import InputGroup from 'react-bootstrap/InputGroup';
@@ -67,11 +67,13 @@ function ThermalGradient(props){
                 fullpath="gradient/distance"
                 disabled={connectedPuttingDisable}></EndPointFormControl>
             </InputGroup>
-                High: 
-            <EndpointDropdown
+            <InputGroup>
+                <InputGroup.Text> Gradient high towards heater: </InputGroup.Text>
+                <EndpointDropdown
                 endpoint={liveXEndPoint}
                 event_type="select"
                 fullpath="gradient/high_heater"
+                variant="outline-secondary"
                 buttonText={liveXEndPoint.data.gradient?.high_heater_options[liveXEndPoint.data.gradient.high_heater] || "Unknown"}
                 disabled={connectedPuttingDisable}>
                 {liveXEndPoint.data.gradient?.high_heater_options ? liveXEndPoint.data.gradient.high_heater_options.map(
@@ -83,6 +85,7 @@ function ThermalGradient(props){
                     </Dropdown.Item>
                 )) : <></> }
             </EndpointDropdown>
+            </InputGroup>
             </Col>
         </Row>
         </Container>

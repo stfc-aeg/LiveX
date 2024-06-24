@@ -8,23 +8,23 @@ from tornado.ioloop import PeriodicCallback
 from tornado.concurrent import run_on_executor
 
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
-from odin._version import get_versions
 
 from pymodbus.client import ModbusTcpClient
 
+from livex.furnace.controls.pid import PID
+from livex.furnace.controls.gradient import Gradient
+from livex.furnace.controls.autoSetPointControl import AutoSetPointControl
+from livex.furnace.controls.motor import Motor
+from livex.furnace.controls.metadata import Metadata
+
 from livex.modbusAddresses import modAddr
 from livex.filewriter import FileWriter
-from livex.controls.pid import PID
-from livex.controls.gradient import Gradient
-from livex.controls.autoSetPointControl import AutoSetPointControl
-from livex.controls.motor import Motor
-
 from livex.util import LiveXError
 from livex.util import read_decode_input_reg, read_decode_holding_reg
 from livex.packet_decoder import LiveXPacketDecoder
 
-class LiveX():
-    """LiveX - class that communicates with a modbus server on a PLC to drive a furnace."""
+class FurnaceController():
+    """FurnaceController - class that communicates with a modbus server on a PLC to drive a furnace."""
 
     # Thread executor used for background tasks
     executor = futures.ThreadPoolExecutor(max_workers=2)
@@ -35,10 +35,10 @@ class LiveX():
                  log_directory, log_filename,
                  temp_monitor_retention
         ):
-        """Initialise the LiveX object.
+        """Initialise the FurnaceController object.
 
-        This constructor initlialises the LiveX object, building parameter trees and
-        launching the background task to make modbus requests to the device.
+        This constructor initialises the FurnaceController object, building parameter trees and
+        launching the background task to make modbus requests to the PLC.
         """
         logging.getLogger("pymodbus").setLevel(logging.WARNING)  # Stop modbus from filling console
 
@@ -54,12 +54,6 @@ class LiveX():
 
         self.log_directory = log_directory
         self.log_filename = log_filename
-
-        # Store initialisation time
-        self.init_time = time.time()
-
-        # Get package version information
-        version_info = get_versions()
 
         # Set the background task counters to zero
         self.background_thread_counter = 0
@@ -90,6 +84,8 @@ class LiveX():
         self.aspc = AutoSetPointControl(self.mod_client, modAddr.aspc_addresses)
         self.motor = Motor(self.mod_client, modAddr.motor_addresses)
 
+        self.metadata = Metadata()
+
         # Other display controls
         self.thermocouple_a = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp)
         self.thermocouple_b = read_decode_input_reg(self.mod_client, modAddr.thermocouple_b_inp)
@@ -113,8 +109,6 @@ class LiveX():
         })
 
         status = ParameterTree({
-            'odin_version': version_info['version'],
-            'server_uptime': (self.get_server_uptime, None),
             'connected': (lambda: self.connected, None),
             'reconnect': (lambda: self.reconnect, self.initialise_clients)
         })
@@ -134,7 +128,8 @@ class LiveX():
             'gradient': self.gradient.tree,
             'motor': self.motor.tree,
             'tcp': tcp,
-            'temp_monitor': (lambda: self.temp_monitor_graph, None)
+            'temp_monitor': (lambda: self.temp_monitor_graph, None),
+            'metadata': self.metadata.tree
         })
 
         # Launch the background task if enabled in options
@@ -315,48 +310,6 @@ class LiveX():
 
         logging.debug("Background thread task stopping")
 
-    # Adapter processes
-
-    def get_server_uptime(self):
-        """Get the uptime for the ODIN server.
-
-        This method returns the current uptime for the ODIN server.
-        """
-        return time.time() - self.init_time
-
-    def get(self, path):
-        """Get the parameter tree.
-
-        This method returns the parameter tree for use by clients via the LiveX adapter.
-
-        :param path: path to retrieve from tree
-        """
-        return self.param_tree.get(path)
-
-    def set(self, path, data):
-        """Set parameters in the parameter tree.
-
-        This method simply wraps underlying ParameterTree method so that an exceptions can be
-        re-raised with an appropriate LiveXError.
-
-        :param path: path of parameter tree to set values for
-        :param data: dictionary of new data values to set in the parameter tree
-        """
-        try:
-            self.param_tree.set(path, data)
-        except ParameterTreeError as e:
-            raise LiveXError(e)
-
-    def cleanup(self):
-        """Clean up the LiveX instance.
-
-        This method stops the background tasks, allowing the adapter state to be cleaned up
-        correctly.
-        """
-        self.mod_client.close()
-        self.tcp_client.close()
-        self.stop_background_tasks()
-
     # Background tasks
 
     def set_task_enable(self, enable):
@@ -399,3 +352,34 @@ class LiveX():
         self.bg_read_task_enable = False
         self.bg_stream_task_enable = False
         self.background_ioloop_task.stop()
+
+    # Adapter processes
+
+    def get(self, path):
+        """Get the parameter tree.
+        This method returns the parameter tree for use by clients via the FurnaceController adapter.
+        :param path: path to retrieve from tree
+        """
+        return self.param_tree.get(path)
+
+    def set(self, path, data):
+        """Set parameters in the parameter tree.
+        This method simply wraps underlying ParameterTree method so that an exceptions can be
+        re-raised with an appropriate LiveXError.
+        :param path: path of parameter tree to set values for
+        :param data: dictionary of new data values to set in the parameter tree
+        """
+        try:
+            self.param_tree.set(path, data)
+        except ParameterTreeError as e:
+            raise LiveXError(e)
+
+    def cleanup(self):
+        """Clean up the FurnaceController instance.
+
+        This method stops the background tasks, allowing the adapter state to be cleaned up
+        correctly.
+        """
+        self.mod_client.close()
+        self.tcp_client.close()
+        self.stop_background_tasks()

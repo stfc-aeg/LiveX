@@ -2,18 +2,12 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import Col from 'react-bootstrap/Col';
 import { Container } from 'react-bootstrap';
-import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
-import Button from 'react-bootstrap/Button';
-import InputGroup from 'react-bootstrap/InputGroup';
-import { OdinGraph, TitleCard, WithEndpoint } from 'odin-react';
+import { OdinGraph, TitleCard } from 'odin-react';
 
-const EndPointFormControl = WithEndpoint(Form.Control);
-const EndPointButton = WithEndpoint(Button);
 
 function TemperatureGraph(props) {
     const {liveXEndPoint} = props;
-    const {connectedPuttingDisable} = props;
 
     const [tempData, changeTempData] = useState([{}]);
 
