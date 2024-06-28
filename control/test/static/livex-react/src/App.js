@@ -18,6 +18,7 @@ import { TitleCard, StatusBox, OdinApp } from 'odin-react';
 import { WithEndpoint, useAdapterEndpoint } from 'odin-react';
 import Metadata from './components/Metadata';
 import Cameras from './components/cameras/Cameras';
+import Trigger from './components/Trigger';
 
 const EndPointButton = WithEndpoint(Button);
 
@@ -107,6 +108,7 @@ function App(props) {
     </Col>
     <Col>
       setup
+      <Trigger></Trigger>
     </Col>
     <Col>
       sequencer
