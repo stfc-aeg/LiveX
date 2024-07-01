@@ -105,3 +105,14 @@ class modAddr():
         'speed': motor_speed_hold,
         'lvdt': motor_lvdt_inp
     }
+
+    # Trigger adapter addresses
+    trig_furnace_intvl_hold   = 40001
+    trig_widefov_intvl_hold   = 40002
+    trig_narrowfov_intvl_hold = 40003
+
+    trig_enable_coil = 0
+    trig_val_updated_coil = 1
+    trig_furnace_enable_coil = 2
+    trig_widefov_enable_coil = 3
+    trig_narrowfov_enable_coil = 4
