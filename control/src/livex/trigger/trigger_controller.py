@@ -55,7 +55,7 @@ class TriggerController():
     def update_interval(self, address, value):
         """Update the given interval address with given value and update the 'new-val' coil."""
         write_modbus_float(self.mod_client, float(value), address)
-        self.mod_client.write_coil(modAddr.trig_val_updated_coil, 1)
+        write_coil(self.mod_client, modAddr.trig_val_updated_coil, 1)
         self.check_all_enabled()
 
     def update_furnace_interval(self, value):
