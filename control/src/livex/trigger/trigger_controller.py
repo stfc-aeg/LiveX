@@ -22,6 +22,11 @@ class TriggerController():
         self.freq_wideFov = frequencies['wideFov']
         self.freq_narrowFov = frequencies['narrowFov']
 
+        # Intervals in microseconds
+        self.intvl_furnace = 1_000_000 // self.freq_furnace
+        self.intvl_wideFov = 1_000_000 // self.freq_wideFov
+        self.intvl_narrowFov = 1_000_000//self.freq_narrowFov
+
         self.all_enabled = False
         self.furnace_enabled = False
         self.widefov_enabled = False
@@ -49,13 +54,14 @@ class TriggerController():
 
     def update_interval(self, address, value):
         """Update the given interval address with given value and update the 'new-val' coil."""
-        self.mod_client.write_register(address, int(value))
+        write_modbus_float(self.mod_client, float(value), address)
         self.mod_client.write_coil(modAddr.trig_val_updated_coil, 1)
         self.check_all_enabled()
 
     def update_furnace_interval(self, value):
         """Update the interval of the furnace timer."""
-        self.update_interval(modAddr.trig_furnace_intvl_hold, value)
+        self.intvl_furnace = 1_000_000 // value
+        self.update_interval(modAddr.trig_furnace_intvl_hold, self.intvl_furnace)
 
     def toggle_furnace_enable(self, value):
         """Toggle the furnace timer."""
@@ -65,7 +71,8 @@ class TriggerController():
 
     def update_widefov_interval(self, value):
         """Update the interval of the WideFov camera timer."""
-        self.update_interval(modAddr.trig_widefov_intvl_hold, value)
+        self.intvl_wideFov = 1_000_000 // value
+        self.update_interval(modAddr.trig_widefov_intvl_hold, self.intvl_wideFov)
 
     def toggle_widefov_enable(self, value):
         """Toggle the widefov timer."""
@@ -75,7 +82,8 @@ class TriggerController():
 
     def update_narrowfov_interval(self, value):
         """Update the interval of the NarrowFov camera timer."""
-        self.update_interval(modAddr.trig_narrowfov_intvl_hold, value)
+        self.intvl_narrowFov = 1_000_000 // value
+        self.update_interval(modAddr.trig_narrowfov_intvl_hold, self.intvl_narrowFov)
 
     def toggle_narrowfov_enable(self, value):
         """Toggle the narrowfov timer."""

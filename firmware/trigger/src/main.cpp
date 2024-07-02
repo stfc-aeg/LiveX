@@ -1,8 +1,3 @@
-/*
-    This sketch shows the Ethernet event usage
-
-*/
-
 #include <Arduino.h>
 #include <ETH.h>
 #include <Wire.h>
@@ -16,6 +11,7 @@
 #include <driver/timer.h>
 
 #include <config.h>
+#include <modbusServerController.h>
 
 static bool eth_connected = false;
 
@@ -29,7 +25,12 @@ byte subnet[] = { 255, 255, 255, 0 };
 WiFiServer server(502);
 
 // EthernetServer ethServer(502);
-ModbusTCPServer modbus_server;
+ModbusServerController modbus_server;
+
+// WANT TO REPLACE THIS WITH MODBUSSERVERCONTROLLER
+// SO I CAN WRITE HOLDING REGISTERS
+// AND SEND HIGHER TIMER INTERVALS VIA THE ADAPTER
+// SHOULD WORK PERFECTLY AFTER THAT
 
 hw_timer_t *furnaceTimer = NULL;
 hw_timer_t *wideFovTimer = NULL;
@@ -90,29 +91,35 @@ void Task1Code(void * pvParameters)
     if (narrowfovEnabled && !narrowfovSetting)      { timerAlarmDisable(narrowFovTimer); narrowfovEnabled = false; }
     else if (!narrowfovEnabled && narrowfovSetting) { timerAlarmEnable(narrowFovTimer); narrowfovEnabled = true; }
 
-    if (!(furnaceEnabled || widefovEnabled || narrowfovEnabled)) // No timers enabled, check parameters
+    // Check if any values have been updated
+    bool value_updated = modbus_server.coilRead(TRIG_VAL_UPDATED_COIL);
+    if (value_updated)
     {
-      // Check if any values have been updated
-      bool value_updated = modbus_server.coilRead(TRIG_VAL_UPDATED_COIL);
-      if (value_updated)
-      {  // If they have, then update all timer intervals
-        Serial.print("changing timer values:");
-        int new_interval = modbus_server.holdingRegisterRead(TRIG_FURNACE_INTVL_HOLD);
+      // Only update a timer if it isn't already running.
+      if (!furnaceEnabled)
+      {
+        int new_interval = modbus_server.combineHoldingRegisters(TRIG_FURNACE_INTVL_HOLD);
         timerAlarmWrite(furnaceTimer, new_interval, true);
-        Serial.print(new_interval);
-        new_interval = modbus_server.holdingRegisterRead(TRIG_WIDEFOV_INTVL_HOLD);
+      }
+      if (!widefovEnabled)
+      {
+        int new_interval = modbus_server.combineHoldingRegisters(TRIG_WIDEFOV_INTVL_HOLD);
         timerAlarmWrite(wideFovTimer, new_interval, true);
-        Serial.print(new_interval);
-        new_interval = modbus_server.holdingRegisterRead(TRIG_NARROWFOV_INTVL_HOLD);
+      }
+      if (!narrowfovEnabled)
+      {
+        int new_interval = modbus_server.combineHoldingRegisters(TRIG_NARROWFOV_INTVL_HOLD);
         timerAlarmWrite(narrowFovTimer, new_interval, true);
-        Serial.println(new_interval);
       }
     }
+
 
     if (furnaceFlag && wideFovFlag && narrowFovFlag)
     {
       Serial.print(".");
-      furnaceFlag, wideFovFlag, narrowFovFlag = false;
+      furnaceFlag = false;
+      wideFovFlag = false;
+      narrowFovFlag = false;
     }
     delay(1);
   }

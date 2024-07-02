@@ -108,8 +108,8 @@ class modAddr():
 
     # Trigger adapter addresses
     trig_furnace_intvl_hold   = 40001
-    trig_widefov_intvl_hold   = 40002
-    trig_narrowfov_intvl_hold = 40003
+    trig_widefov_intvl_hold   = 40003
+    trig_narrowfov_intvl_hold = 40005
 
     trig_enable_coil = 0
     trig_val_updated_coil = 1

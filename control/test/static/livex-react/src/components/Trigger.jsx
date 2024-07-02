@@ -10,7 +10,6 @@ import { TitleCard, WithEndpoint, useAdapterEndpoint, ToggleSwitch, StatusBox, D
 
 
 const EndPointFormControl = WithEndpoint(Form.Control);
-const EndpointDropdown = WithEndpoint(DropdownSelector);
 const EndpointButton = WithEndpoint(Button);
 
 function Trigger() {
@@ -73,6 +72,47 @@ function Trigger() {
               >
                 Toggle narrowFov: {triggerEndPoint?.data.enable?.  narrowFov ? "Disable" : "Enable"}
             </EndpointButton>
+          </Col>
+        </Row>
+        <Row>
+          <Col>
+            <InputGroup>
+              <InputGroup.Text>
+                Furnace frequency
+              </InputGroup.Text>
+              <EndPointFormControl
+                endpoint={triggerEndPoint}
+                type="number"
+                fullpath={"frequency/furnace"}
+                value={triggerEndPoint.data.frequency?.furnace}>
+              </EndPointFormControl>
+            </InputGroup>
+          </Col>
+          <Col>
+            <InputGroup>
+              <InputGroup.Text>
+                widefov frequency
+              </InputGroup.Text>
+              <EndPointFormControl
+                endpoint={triggerEndPoint}
+                type="number"
+                fullpath={"frequency/wideFov"}
+                value={triggerEndPoint.data.frequency?.wideFov}>
+              </EndPointFormControl>
+            </InputGroup>
+          </Col>
+          <Col>
+            <InputGroup>
+              <InputGroup.Text>
+                narrowfov frequency
+              </InputGroup.Text>
+              <EndPointFormControl
+                endpoint={triggerEndPoint}
+                type="number"
+                fullpath={"frequency/narrowFov"}
+                value={triggerEndPoint.data.frequency?.narrowFov}>
+              </EndPointFormControl>
+            </InputGroup>
           </Col>
         </Row>
 
