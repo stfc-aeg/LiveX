@@ -216,23 +216,21 @@ class FurnaceController():
         in the parameter tree.
         """
         while self.bg_stream_task_enable:
-
-            try:
-                reading = self.tcp_client.recv(self.packet_decoder.size) # fff: 12
-                logging.debug(self.packet_decoder.counter)
-                reading = self.packet_decoder.unpack(reading)
-
-            except socket.timeout:
-                logging.debug("TCP Socket timeout: read no data")
-            except Exception as e:
-                logging.debug(f"Other TCP error: {str(e)}")
-                logging.debug("Halting background tasks")
-                self.stop_background_tasks()
-                break
-
-            self.tcp_reading = self.packet_decoder.as_dict()
-
             if self.start_acquisition:
+                try:
+                    reading = self.tcp_client.recv(self.packet_decoder.size) # fff: 12
+                    logging.debug(self.packet_decoder.counter)
+                    reading = self.packet_decoder.unpack(reading)
+
+                except socket.timeout:
+                    logging.debug("TCP Socket timeout: read no data")
+                except Exception as e:
+                    logging.debug(f"Other TCP error: {str(e)}")
+                    logging.debug("Halting background tasks")
+                    self.stop_background_tasks()
+                    break
+
+                self.tcp_reading = self.packet_decoder.as_dict()
 
                 self.stream_buffer['counter'].append(self.packet_decoder.counter)
                 self.stream_buffer['temperature_a'].append(self.packet_decoder.temperature_a)
