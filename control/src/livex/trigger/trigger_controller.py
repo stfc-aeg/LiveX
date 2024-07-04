@@ -60,7 +60,7 @@ class TriggerController():
 
     def update_furnace_interval(self, value):
         """Update the interval of the furnace timer."""
-        self.intvl_furnace = 1_000_000 // value
+        self.intvl_furnace = (1_000_000 / value) //2
         self.update_interval(modAddr.trig_furnace_intvl_hold, self.intvl_furnace)
 
     def toggle_furnace_enable(self, value):
@@ -71,7 +71,7 @@ class TriggerController():
 
     def update_widefov_interval(self, value):
         """Update the interval of the WideFov camera timer."""
-        self.intvl_wideFov = 1_000_000 // value
+        self.intvl_wideFov = (1_000_000 / value) // 2
         self.update_interval(modAddr.trig_widefov_intvl_hold, self.intvl_wideFov)
 
     def toggle_widefov_enable(self, value):
@@ -82,7 +82,7 @@ class TriggerController():
 
     def update_narrowfov_interval(self, value):
         """Update the interval of the NarrowFov camera timer."""
-        self.intvl_narrowFov = 1_000_000 // value
+        self.intvl_narrowFov = (1_000_000 / value)//2
         self.update_interval(modAddr.trig_narrowfov_intvl_hold, self.intvl_narrowFov)
 
     def toggle_narrowfov_enable(self, value):

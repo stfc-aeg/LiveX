@@ -44,23 +44,32 @@ volatile bool furnaceFlag = false;
 volatile bool wideFovFlag = false;
 volatile bool narrowFovFlag = false;
 
+// Is the signal 'rising' or 'falling'?
+// Want to alternate every call for 50% duty cycle
+volatile bool risingFurnace = true;
+volatile bool risingWide = true;
+volatile bool risingNarrow = true;
+
 bool runningFlag = false;
 
 void IRAM_ATTR furnaceOnTimer()
 {
-  digitalWrite(2, HIGH);
+  digitalWrite(3, risingFurnace);
+  risingFurnace = !risingFurnace;
   furnaceFlag = true;
   furnaceEnabled = true;
 }
 void IRAM_ATTR wideFovOnTimer()
 {
-  digitalWrite(32, HIGH);
+  digitalWrite(32, risingWide);
+  risingWide = !risingWide;
   wideFovFlag = true;
   widefovEnabled = true;
 }
 void IRAM_ATTR narrowFovOnTimer()
 {
-  digitalWrite(33, HIGH);
+  digitalWrite(33, risingNarrow);
+  risingNarrow = !risingNarrow;
   narrowFovFlag = true;
   narrowfovEnabled = true;
 }
@@ -166,7 +175,7 @@ void setup()
     while (1);
   }
 
-  pinMode(2, OUTPUT);  // furnace
+  pinMode(3, OUTPUT);  // furnace
   pinMode(32, OUTPUT);  // wideFov
   pinMode(33, OUTPUT);  // narrowFov
 
@@ -197,15 +206,15 @@ void setup()
   // Configure timers
   furnaceTimer = timerBegin(0, 80, true);
   timerAttachInterrupt(furnaceTimer, &furnaceOnTimer, true);
-  timerAlarmWrite(furnaceTimer, (1000000/FREQUENCY_FURNACE), true);
+  timerAlarmWrite(furnaceTimer, (1000000/FREQUENCY_FURNACE)/2, true);
 
   wideFovTimer = timerBegin(1, 80, true);
   timerAttachInterrupt(wideFovTimer, &wideFovOnTimer, true);
-  timerAlarmWrite(wideFovTimer, (1000000/FREQUENCY_WIDEFOV), true);
+  timerAlarmWrite(wideFovTimer, (1000000/FREQUENCY_WIDEFOV)/2, true);
 
   narrowFovTimer = timerBegin(2, 80, true);
   timerAttachInterrupt(narrowFovTimer, &narrowFovOnTimer, true);
-  timerAlarmWrite(narrowFovTimer, (1000000/FREQUENCY_NARROWFOV), true);
+  timerAlarmWrite(narrowFovTimer, (1000000/FREQUENCY_NARROWFOV)/2, true);
 }
 
 void loop()
