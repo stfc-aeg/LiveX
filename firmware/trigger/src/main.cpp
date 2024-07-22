@@ -40,9 +40,14 @@ bool furnaceEnabled = false;
 bool widefovEnabled = false;
 bool narrowfovEnabled = false;
 
-volatile bool furnaceFlag = false;
-volatile bool wideFovFlag = false;
-volatile bool narrowFovFlag = false;
+// For frame counting - to request a specific number or run until shut down
+volatile int furnaceFrameCount = 0;
+volatile int wideFovFrameCount = 0;
+volatile int narrowFovFrameCount = 0;
+
+int furnaceFrameTarget = 0;
+int wideFovFrameTarget = 0;
+int narrowFovFrameTarget = 0;
 
 // Is the signal 'rising' or 'falling'?
 // Want to alternate every call for 50% duty cycle
@@ -54,24 +59,34 @@ bool runningFlag = false;
 
 void IRAM_ATTR furnaceOnTimer()
 {
-  digitalWrite(3, risingFurnace);
+  // Non-zero target has been met or exceeded, return early
+  if (furnaceFrameTarget != 0 && furnaceFrameCount >= furnaceFrameTarget)
+  {
+    return;
+  }
+  digitalWrite(PIN_FURNACE, risingFurnace);
   risingFurnace = !risingFurnace;
-  furnaceFlag = true;
-  furnaceEnabled = true;
+  furnaceFrameCount++;
 }
 void IRAM_ATTR wideFovOnTimer()
 {
-  digitalWrite(32, risingWide);
+  if (wideFovFrameTarget != 0 && wideFovFrameCount >= wideFovFrameTarget)
+  {
+    return;
+  }
+  digitalWrite(PIN_WIDEFOV, risingWide);
   risingWide = !risingWide;
-  wideFovFlag = true;
-  widefovEnabled = true;
+  wideFovFrameCount++;
 }
 void IRAM_ATTR narrowFovOnTimer()
 {
-  digitalWrite(33, risingNarrow);
+  if (narrowFovFrameTarget != 0 && narrowFovFrameCount >= narrowFovFrameTarget)
+  {
+    return;
+  }
+  digitalWrite(PIN_NARROWFOV, risingNarrow);
   risingNarrow = !risingNarrow;
-  narrowFovFlag = true;
-  narrowfovEnabled = true;
+  narrowFovFrameCount++;
 }
 
 void Task1Code(void * pvParameters)
@@ -81,23 +96,28 @@ void Task1Code(void * pvParameters)
 
   for(;;)
   {
-    // Remember that timer enable flags are set within the timers
-
-    // We don't want to update parameters if any timers are going, for simplicity's sake
-
     bool furnaceSetting = modbus_server.coilRead(TRIG_FURNACE_ENABLE_COIL);
     bool widefovSetting = modbus_server.coilRead(TRIG_WIDEFOV_ENABLE_COIL);
     bool narrowfovSetting = modbus_server.coilRead(TRIG_NARROWFOV_ENABLE_COIL);
 
     // For each furnace: if enabled and wanted off, turn it off. If disabled and wanted on,
     // turn it on. Other combinations require no action.
-    if (furnaceEnabled && !furnaceSetting)      { timerAlarmDisable(furnaceTimer); furnaceEnabled = false; }
-    else if (!furnaceEnabled && furnaceSetting) { timerAlarmEnable(furnaceTimer); furnaceEnabled = true; }
+    if (furnaceEnabled && !furnaceSetting) {
+      timerAlarmDisable(furnaceTimer); furnaceEnabled = false;
+      risingFurnace = false; digitalWrite(PIN_FURNACE, risingFurnace);
+    }
+    else if (!furnaceEnabled && furnaceSetting) {timerAlarmEnable(furnaceTimer); furnaceEnabled = true; }
 
-    if (widefovEnabled && !widefovSetting)      { timerAlarmDisable(wideFovTimer); widefovEnabled = false; }
+    if (widefovEnabled && !widefovSetting) {
+      timerAlarmDisable(wideFovTimer); widefovEnabled = false;
+      risingWide = false; digitalWrite(PIN_WIDEFOV, risingWide);
+    }
     else if (!widefovEnabled && widefovSetting) { timerAlarmEnable(wideFovTimer); widefovEnabled = true; }
 
-    if (narrowfovEnabled && !narrowfovSetting)      { timerAlarmDisable(narrowFovTimer); narrowfovEnabled = false; }
+    if (narrowfovEnabled && !narrowfovSetting) {
+      timerAlarmDisable(narrowFovTimer); narrowfovEnabled = false;
+      risingNarrow = false; digitalWrite(PIN_NARROWFOV, risingNarrow);
+    }
     else if (!narrowfovEnabled && narrowfovSetting) { timerAlarmEnable(narrowFovTimer); narrowfovEnabled = true; }
 
     // Check if any values have been updated
@@ -121,15 +141,6 @@ void Task1Code(void * pvParameters)
         timerAlarmWrite(narrowFovTimer, new_interval, true);
       }
     }
-
-
-    if (furnaceFlag && wideFovFlag && narrowFovFlag)
-    {
-      Serial.print(".");
-      furnaceFlag = false;
-      wideFovFlag = false;
-      narrowFovFlag = false;
-    }
     delay(1);
   }
 }
@@ -148,26 +159,9 @@ void setup()
   ETH.config(ip, gateway, subnet);
   server.begin();
 
-  // Ethernet.init(15);
-
-  // // start the Ethernet connection and the server:
-  // Ethernet.begin(mac, ip, gateway, subnet);
-
-  // Check for Ethernet hardware present
-  // if (Ethernet.hardwareStatus() == EthernetNoHardware) {
-  //   Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
-  //   while (true) {
-  //     delay(1); // do nothing, no point running without Ethernet hardware
-  //   }
-  // }
   if (Ethernet.linkStatus() == LinkOFF) {
     Serial.println("Ethernet cable is not connected.");
   }
-
-  // start the server
-  // ethServer.begin();
-  // Serial.print("server is at");
-  // Serial.println(Ethernet.localIP());
 
   // start the Modbus TCP server
   if (!modbus_server.begin()) {
@@ -175,9 +169,10 @@ void setup()
     while (1);
   }
 
-  pinMode(3, OUTPUT);  // furnace
-  pinMode(32, OUTPUT);  // wideFov
-  pinMode(33, OUTPUT);  // narrowFov
+  // Configure pins to output
+  pinMode(PIN_FURNACE, OUTPUT);  // furnace
+  pinMode(PIN_WIDEFOV, OUTPUT);  // wideFov
+  pinMode(PIN_NARROWFOV, OUTPUT);  // narrowFov
 
   // configure eight coils at address 0x00, repeat for others
   modbus_server.configureCoils(0, 8);
