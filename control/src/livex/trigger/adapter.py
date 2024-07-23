@@ -25,7 +25,10 @@ class TriggerAdapter(ApiAdapter):
             'narrowFov': int(self.options.get('narrowFov_frequency', 120))
         }
 
-        self.trigger = TriggerController(ip, frequencies)
+        status_bg_task_enable = int(self.options.get('status_bg_task_enable', 1))
+        status_bg_task_interval = int(self.options.get('status_bg_task_interval', 10))
+
+        self.trigger = TriggerController(ip, frequencies, status_bg_task_enable, status_bg_task_interval)
 
     @response_types('application/json', default='application/json')
     def get(self, path, request):

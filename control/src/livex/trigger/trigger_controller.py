@@ -14,9 +14,11 @@ class TriggerError():
 class TriggerController():
     """Class to instantiate and manage a modbus connection to control the triggering device."""
 
-    def __init__(self, ip, frequencies):
+    def __init__(self, ip, frequencies, status_bg_task_enable, status_bg_task_interval):
 
         self.ip = ip
+        self.status_bg_task_enable = status_bg_task_enable
+        self.status_bg_task_interval = status_bg_task_interval
 
         self.furnace_freq = frequencies['furnace']
         self.widefov_freq = frequencies['wideFov']
@@ -39,21 +41,28 @@ class TriggerController():
         self.initialise_client()
         self.get_all_registers()
 
+        if self.status_bg_task_enable:
+            self.start_background_tasks()
+
         self.tree = ParameterTree({
             'furnace': {
                 'enable': (lambda: self.furnace_enabled, self.toggle_furnace_enable),
-                'frequency': (lambda: self.furnace_freq, self.update_furnace_interval),
+                'frequency': (lambda: self.furnace_freq, self.set_furnace_interval),
                 'target': (lambda: self.furnace_target, self.set_furnace_target)
             },
             'widefov': {
                 'enable': (lambda: self.widefov_enabled, self.toggle_widefov_enable),
-                'frequency': (lambda: self.widefov_freq, self.update_widefov_interval),
+                'frequency': (lambda: self.widefov_freq, self.set_widefov_interval),
                 'target': (lambda: self.widefov_target, self.set_widefov_target)
             },
             'narrowfov': {
                 'enable': (lambda: self.narrowfov_enabled, self.toggle_narrowfov_enable),
-                'frequency': (lambda: self.narrowfov_freq, self.update_narrowfov_interval),
+                'frequency': (lambda: self.narrowfov_freq, self.set_narrowfov_interval),
                 'target': (lambda: self.narrowfov_target, self.set_narrowfov_target)
+            },
+            'background': {
+                'interval': (lambda: self.status_bg_task_interval, self.set_task_interval),
+                'enable': (lambda: self.status_bg_task_enable, self.set_task_enable)
             }
         })
 
@@ -66,9 +75,9 @@ class TriggerController():
         """Read the value of all registers to update the tree."""
         ret = self.mod_client.read_coils(modAddr.trig_furnace_enable_coil, 3, slave=1)
         # See modbusAddresses.py: these coils are sequential
-        self.furnace_freq = ret.bits[0]  # Coil 2
-        self.widefov_freq = ret.bits[1]  # Coil 3
-        self.narrowfov_freq = ret.bits[2]  # Coil 4
+        self.furnace_enabled = ret.bits[0]  # Coil 2
+        self.widefov_enabled = ret.bits[1]  # Coil 3
+        self.narrowfov_enabled = ret.bits[2]  # Coil 4
 
         # Frequencies = 1_000_000 / intvl*2
         # Interval = (1_000_000 / freq) // 2
@@ -87,65 +96,88 @@ class TriggerController():
         self.widefov_target = read_decode_holding_reg(self.mod_client, modAddr.trig_widefov_target_hold)
         self.narrowfov_target = read_decode_holding_reg(self.mod_client, modAddr.trig_widefov_target_hold)
 
-
-    def check_all_enabled(self):
-        """Check if all timers are enabled."""
-        self.all_enabled = (self.furnace_enabled and self.widefov_enabled and self.narrowfov_enabled)
-        return self.all_enabled
-
-    def update_interval(self, address, value):
-        """Update the given interval address with given value and update the 'new-val' coil."""
+    def update_hold_value(self, address, value):
+        """Write a value to a given holding register(s) and mark the 'value updated' coil."""
         write_modbus_float(self.mod_client, float(value), address)
         write_coil(self.mod_client, modAddr.trig_val_updated_coil, 1)
-        self.check_all_enabled()
 
-    def update_furnace_interval(self, value):
+    def set_furnace_interval(self, value):
         """Update the interval of the furnace timer."""
         self.intvl_furnace = (1_000_000 / value) //2
-        self.update_interval(modAddr.trig_furnace_intvl_hold, self.intvl_furnace)
+        self.update_hold_value(modAddr.trig_furnace_intvl_hold, self.intvl_furnace)
 
     def toggle_furnace_enable(self, value):
         """Toggle the furnace timer."""
         self.furnace_enabled = not self.furnace_enabled
         write_coil(self.mod_client, modAddr.trig_furnace_enable_coil, bool(self.furnace_enabled))
-        self.check_all_enabled()
 
     def set_furnace_target(self, value):
         """Update the target framecount of the furnace timer."""
-        self.furnace_target = int(value)  # Not a problem if target is float, but safer to be int
-        write_modbus_float(self.mod_client, modAddr.trig_furnace_target_hold, self.furnace_target)
+        self.furnace_target = int(value)  # Target could be int or float. Int is safer
+        self.update_hold_value(modAddr.trig_furnace_target_hold, self.furnace_target)
 
-    def update_widefov_interval(self, value):
+    def set_widefov_interval(self, value):
         """Update the interval of the WideFov camera timer."""
         self.intvl_wideFov = (1_000_000 / value) // 2
-        self.update_interval(modAddr.trig_widefov_intvl_hold, self.intvl_wideFov)
+        self.update_hold_value(modAddr.trig_widefov_intvl_hold, self.intvl_wideFov)
 
     def toggle_widefov_enable(self, value):
         """Toggle the widefov timer."""
         self.widefov_enabled = not self.widefov_enabled
         write_coil(self.mod_client, modAddr.trig_widefov_enable_coil, bool(self.widefov_enabled))
-        self.check_all_enabled()
 
     def set_widefov_target(self, value):
         """Set the target of the widefov timer."""
         self.widefov_target = int(value)
-        write_modbus_float(self.mod_client, float(self.widefov_target), modAddr.trig_widefov_target_hold)
+        self.update_hold_value(modAddr.trig_widefov_target_hold, self.widefov_target)
+        # write_modbus_float(self.mod_client, float(self.widefov_target), modAddr.trig_widefov_target_hold)
 
-    def update_narrowfov_interval(self, value):
+    def set_narrowfov_interval(self, value):
         """Update the interval of the NarrowFov camera timer."""
         self.intvl_narrowFov = (1_000_000 / value)//2
-        self.update_interval(modAddr.trig_narrowfov_intvl_hold, self.intvl_narrowFov)
+        self.update_hold_value(modAddr.trig_narrowfov_intvl_hold, self.intvl_narrowFov)
 
     def toggle_narrowfov_enable(self, value):
         """Toggle the narrowfov timer."""
         self.narrowfov_enabled = not self.narrowfov_enabled
         write_coil(self.mod_client, modAddr.trig_narrowfov_enable_coil, bool(self.narrowfov_enabled))
-        self.check_all_enabled()
 
     def set_narrowfov_target(self, value):
         """"Set the target value of the narrowfov timer."""
         self.narrowfov_target = int(value)
-        write_modbus_float(self.mod_client, modAddr.trig_narrowfov_target_hold, self.narrowfov_target)
+        self.update_hold_value(modAddr.trig_narrowfov_target_hold, self.narrowfov_target)
+
+    # Background task functions
+
+    def start_background_tasks(self):
+        """Start the background tasks and reset the continuous error counter."""
+        self.error_consecutive = 0
+
+        logging.debug(f"Launching trigger status update task with interval {self.status_bg_task_interval}.")
+        self.status_ioloop_task = PeriodicCallback(
+            self.get_all_registers, (self.status_bg_task_interval * 1000)
+        )
+        self.status_ioloop_task.start()
+
+    def stop_background_tasks(self):
+        """Stop the background tasks."""
+        self.status_bg_task_enable = False
+        self.status_ioloop_task.stop()
+
+    def set_task_enable(self, enable):
+        """Set the background task enable - accordingly enable or disable the task."""
+        enable = bool(enable)
+
+        if enable != self.status_bg_task_enable:
+            if enable:
+                self.start_background_tasks()
+            else:
+                self.stop_background_tasks()
+
+    def set_task_interval(self, interval):
+        """Set the background task interval."""
+        logging.debug("Setting background task interval to %f", interval)
+        self.status_bg_task_interval = float(interval)
 
     def get(self, path):
         """Get the parameter tree.

@@ -121,8 +121,12 @@ void Task1Code(void * pvParameters)
     // if shutdown flag, or if enabled and wanted off, turn it off. If disabled and wanted on,
     // turn it on. Other combinations require no action.
     if (furnaceShutdown || (furnaceEnabled && !furnaceSetting)) {
-      timerAlarmDisable(furnaceTimer); furnaceEnabled = false;
-      risingFurnace = false; digitalWrite(PIN_FURNACE, risingFurnace);
+      timerAlarmDisable(furnaceTimer);
+      furnaceEnabled = false;
+      risingFurnace = false;
+      digitalWrite(PIN_FURNACE, risingFurnace);
+      modbus_server.coilWrite(TRIG_FURNACE_ENABLE_COIL, 0);  // ensure setting is 0 for shutdown
+      furnaceShutdown = false;
     }
     else if (!furnaceEnabled && furnaceSetting) {
       timerAlarmEnable(furnaceTimer); // Start timer
@@ -130,14 +134,22 @@ void Task1Code(void * pvParameters)
       furnaceFrameCount = 0; // Set frame count to 0
     }
     if (widefovShutdown || (widefovEnabled && !widefovSetting)) {
-      timerAlarmDisable(wideFovTimer); widefovEnabled = false;
-      risingWide = false; digitalWrite(PIN_WIDEFOV, risingWide);
+      timerAlarmDisable(wideFovTimer);
+      widefovEnabled = false;
+      risingWide = false;
+      digitalWrite(PIN_WIDEFOV, risingWide);
+      modbus_server.coilWrite(TRIG_WIDEFOV_ENABLE_COIL, 0);
+      widefovShutdown = false;
     }
     else if (!widefovEnabled && widefovSetting) { timerAlarmEnable(wideFovTimer); widefovEnabled = true; wideFovFrameCount = 0; }
 
     if (narrowfovShutdown || (narrowfovEnabled && !narrowfovSetting)) {
-      timerAlarmDisable(narrowFovTimer); narrowfovEnabled = false;
-      risingNarrow = false; digitalWrite(PIN_NARROWFOV, risingNarrow);
+      timerAlarmDisable(narrowFovTimer);
+      narrowfovEnabled = false;
+      risingNarrow = false;
+      digitalWrite(PIN_NARROWFOV, risingNarrow);
+      modbus_server.coilWrite(TRIG_NARROWFOV_ENABLE_COIL, 0);
+      narrowfovShutdown = false;
     }
     else if (!narrowfovEnabled && narrowfovSetting) { timerAlarmEnable(narrowFovTimer); narrowfovEnabled = true; narrowFovFrameCount = 0; }
 
