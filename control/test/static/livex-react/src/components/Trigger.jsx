@@ -1,13 +1,13 @@
 import React from 'react';
 import Col from 'react-bootstrap/Col';
-import { Container, Stack } from 'react-bootstrap';
+import { Container } from 'react-bootstrap';
 import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
-import Dropdown from 'react-bootstrap/Dropdown';
 import Button from 'react-bootstrap/Button';
-import { TitleCard, WithEndpoint, useAdapterEndpoint, ToggleSwitch, StatusBox, DropdownSelector } from 'odin-react';
+import { TitleCard, WithEndpoint, useAdapterEndpoint, StatusBox } from 'odin-react';
 
+import { checkNullNoDp } from '../utils';
 
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndpointButton = WithEndpoint(Button);
@@ -16,29 +16,32 @@ function Trigger() {
 
     const triggerEndPoint = useAdapterEndpoint('trigger', 'http://192.168.0.22:8888', 1000);
 
+    const orcaEndPoint = useAdapterEndpoint('camera/cameras/0', 'http://192.168.0.22:8888', 1000);
+    const liveXEndPoint = useAdapterEndpoint('furnace', 'http://192.168.0.22:8888', 1000);
+
     return (
-        <TitleCard title="metadata" type="warning">
+        <TitleCard title="trigger toggles" type="warning">
         <Container>
         <Row>
           <Col>
           <StatusBox
             type="info"
             label="furnace enable">
-              {triggerEndPoint?.data.enable?.furnace}
+              {triggerEndPoint?.data.furnace?.enable}
           </StatusBox>
           </Col>
           <Col>
           <StatusBox
             type="info"
             label="widefov enable">
-              {triggerEndPoint?.data.enable?.wideFov}
+              {triggerEndPoint?.data.widefov?.enable}
           </StatusBox>
           </Col>
           <Col>
           <StatusBox
             type="info"
             label="narrowfov enable">
-              {triggerEndPoint?.data.enable?.narrowFov}
+              {triggerEndPoint?.data.narrowfov?.enable}
           </StatusBox>
           </Col>
         </Row>
@@ -46,31 +49,31 @@ function Trigger() {
           <Col>
             <EndpointButton
               endpoint={triggerEndPoint}
-              fullpath={"enable/furnace"}
-              value={!triggerEndPoint?.data.enable?.furnace}
+              fullpath={"furnace/enable"}
+              value={!triggerEndPoint?.data.furnace?.enable}
               event_type="click"
               >
-                Toggle furnace: {triggerEndPoint?.data.enable?.furnace ? "Disable" : "Enable"}
+                Toggle furnace: {triggerEndPoint?.data.furnace?.enable ? "Disable" : "Enable"}
             </EndpointButton>
           </Col>
           <Col>
             <EndpointButton
               endpoint={triggerEndPoint}
-              fullpath={"enable/wideFov"}
-              value={!triggerEndPoint?.data.enable?.wideFov}
+              fullpath={"widefov/enable"}
+              value={!triggerEndPoint?.data.widefov?.enable}
               event_type="click"
               >
-                Toggle wideFov: {triggerEndPoint?.data.enable?.wideFov ? "Disable" : "Enable"}
+                Toggle widefov: {triggerEndPoint?.data.widefov?.enable ? "Disable" : "Enable"}
             </EndpointButton>
           </Col>
           <Col>
             <EndpointButton
               endpoint={triggerEndPoint}
-              fullpath={"enable/narrowFov"}
-              value={!triggerEndPoint?.data.enable?.narrowFov}
+              fullpath={"narrowfov/enable"}
+              value={!triggerEndPoint?.data.narrowfov?.enable}
               event_type="click"
               >
-                Toggle narrowFov: {triggerEndPoint?.data.enable?.  narrowFov ? "Disable" : "Enable"}
+                Toggle narrowfov: {triggerEndPoint?.data.narrowfov?.enable ? "Disable" : "Enable"}
             </EndpointButton>
           </Col>
         </Row>
@@ -83,8 +86,8 @@ function Trigger() {
               <EndPointFormControl
                 endpoint={triggerEndPoint}
                 type="number"
-                fullpath={"frequency/furnace"}
-                value={triggerEndPoint.data.frequency?.furnace}>
+                fullpath={"furnace/frequency"}
+                value={triggerEndPoint.data.furnace?.frequency}>
               </EndPointFormControl>
             </InputGroup>
           </Col>
@@ -96,8 +99,8 @@ function Trigger() {
               <EndPointFormControl
                 endpoint={triggerEndPoint}
                 type="number"
-                fullpath={"frequency/wideFov"}
-                value={triggerEndPoint.data.frequency?.wideFov}>
+                fullpath={"widefov/frequency"}
+                value={triggerEndPoint.data.narrowfov?.frequency}>
               </EndPointFormControl>
             </InputGroup>
           </Col>
@@ -109,11 +112,67 @@ function Trigger() {
               <EndPointFormControl
                 endpoint={triggerEndPoint}
                 type="number"
-                fullpath={"frequency/narrowFov"}
-                value={triggerEndPoint.data.frequency?.narrowFov}>
+                fullpath={"narrowfov/frequency"}
+                value={triggerEndPoint.data.narrowfov?.frequency}>
               </EndPointFormControl>
             </InputGroup>
           </Col>
+        </Row>
+        <Row>
+          <Col>
+            <InputGroup>
+              <InputGroup.Text>
+                Furnace frame target
+              </InputGroup.Text>
+              <EndPointFormControl
+                endpoint={triggerEndPoint}
+                type="number"
+                fullpath={"furnace/target"}
+                value={triggerEndPoint.data.furnace?.target}>
+              </EndPointFormControl>
+            </InputGroup>
+          </Col>
+          <Col>
+            <InputGroup>
+              <InputGroup.Text>
+                widefov frame target
+              </InputGroup.Text>
+              <EndPointFormControl
+                endpoint={triggerEndPoint}
+                type="number"
+                fullpath={"widefov/target"}
+                value={triggerEndPoint.data.narrowfov?.target}>
+              </EndPointFormControl>
+            </InputGroup>
+          </Col>
+          <Col>
+            <InputGroup>
+              <InputGroup.Text>
+                narrowfov frame target
+              </InputGroup.Text>
+              <EndPointFormControl
+                endpoint={triggerEndPoint}
+                type="number"
+                fullpath={"narrowfov/target"}
+                value={triggerEndPoint.data.narrowfov?.target}>
+              </EndPointFormControl>
+            </InputGroup>
+          </Col>
+        </Row>
+
+        <Row className='mt-3'>
+
+        <Col>
+          <StatusBox as="span" label="reading">
+                {checkNullNoDp(liveXEndPoint.data.tcp?.tcp_reading?.counter)}
+          </StatusBox>
+        </Col>
+        <Col>
+          <StatusBox label="Frame count">
+            {checkNullNoDp(orcaEndPoint?.data[0]?.status.frame_number)}
+          </StatusBox>
+        </Col>
+
         </Row>
 
 

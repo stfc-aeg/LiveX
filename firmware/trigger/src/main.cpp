@@ -36,6 +36,7 @@ hw_timer_t *furnaceTimer = NULL;
 hw_timer_t *wideFovTimer = NULL;
 hw_timer_t *narrowFovTimer = NULL;
 
+// Is furnace running
 bool furnaceEnabled = false;
 bool widefovEnabled = false;
 bool narrowfovEnabled = false;
@@ -55,38 +56,54 @@ volatile bool risingFurnace = true;
 volatile bool risingWide = true;
 volatile bool risingNarrow = true;
 
-bool runningFlag = false;
+// These flags are set only when the frame target is reached.
+// Would be preferable to write false to the relevant enable coil, but that is not ISR-safe.
+volatile bool furnaceShutdown = false;
+volatile bool widefovShutdown = false;
+volatile bool narrowfovShutdown = false;
 
 void IRAM_ATTR furnaceOnTimer()
 {
   // Non-zero target has been met or exceeded, return early
   if (furnaceFrameTarget != 0 && furnaceFrameCount >= furnaceFrameTarget)
   {
+    furnaceShutdown = true;
     return;
   }
   digitalWrite(PIN_FURNACE, risingFurnace);
+  if (risingFurnace)
+  {
+    furnaceFrameCount++;
+  }
   risingFurnace = !risingFurnace;
-  furnaceFrameCount++;
 }
 void IRAM_ATTR wideFovOnTimer()
 {
   if (wideFovFrameTarget != 0 && wideFovFrameCount >= wideFovFrameTarget)
   {
+    widefovShutdown = true;
     return;
   }
   digitalWrite(PIN_WIDEFOV, risingWide);
+  if (risingWide)
+  {
+    wideFovFrameCount++;
+  }
   risingWide = !risingWide;
-  wideFovFrameCount++;
 }
 void IRAM_ATTR narrowFovOnTimer()
 {
   if (narrowFovFrameTarget != 0 && narrowFovFrameCount >= narrowFovFrameTarget)
   {
+    narrowfovShutdown = true;
     return;
   }
   digitalWrite(PIN_NARROWFOV, risingNarrow);
+  if (risingNarrow)
+  {
+    narrowFovFrameCount++;
+  }
   risingNarrow = !risingNarrow;
-  narrowFovFrameCount++;
 }
 
 void Task1Code(void * pvParameters)
@@ -100,25 +117,29 @@ void Task1Code(void * pvParameters)
     bool widefovSetting = modbus_server.coilRead(TRIG_WIDEFOV_ENABLE_COIL);
     bool narrowfovSetting = modbus_server.coilRead(TRIG_NARROWFOV_ENABLE_COIL);
 
-    // For each furnace: if enabled and wanted off, turn it off. If disabled and wanted on,
+    // For each furnace:
+    // if shutdown flag, or if enabled and wanted off, turn it off. If disabled and wanted on,
     // turn it on. Other combinations require no action.
-    if (furnaceEnabled && !furnaceSetting) {
+    if (furnaceShutdown || (furnaceEnabled && !furnaceSetting)) {
       timerAlarmDisable(furnaceTimer); furnaceEnabled = false;
       risingFurnace = false; digitalWrite(PIN_FURNACE, risingFurnace);
     }
-    else if (!furnaceEnabled && furnaceSetting) {timerAlarmEnable(furnaceTimer); furnaceEnabled = true; }
-
-    if (widefovEnabled && !widefovSetting) {
+    else if (!furnaceEnabled && furnaceSetting) {
+      timerAlarmEnable(furnaceTimer); // Start timer
+      furnaceEnabled = true; // Flag enabled
+      furnaceFrameCount = 0; // Set frame count to 0
+    }
+    if (widefovShutdown || (widefovEnabled && !widefovSetting)) {
       timerAlarmDisable(wideFovTimer); widefovEnabled = false;
       risingWide = false; digitalWrite(PIN_WIDEFOV, risingWide);
     }
-    else if (!widefovEnabled && widefovSetting) { timerAlarmEnable(wideFovTimer); widefovEnabled = true; }
+    else if (!widefovEnabled && widefovSetting) { timerAlarmEnable(wideFovTimer); widefovEnabled = true; wideFovFrameCount = 0; }
 
-    if (narrowfovEnabled && !narrowfovSetting) {
+    if (narrowfovShutdown || (narrowfovEnabled && !narrowfovSetting)) {
       timerAlarmDisable(narrowFovTimer); narrowfovEnabled = false;
       risingNarrow = false; digitalWrite(PIN_NARROWFOV, risingNarrow);
     }
-    else if (!narrowfovEnabled && narrowfovSetting) { timerAlarmEnable(narrowFovTimer); narrowfovEnabled = true; }
+    else if (!narrowfovEnabled && narrowfovSetting) { timerAlarmEnable(narrowFovTimer); narrowfovEnabled = true; narrowFovFrameCount = 0; }
 
     // Check if any values have been updated
     bool value_updated = modbus_server.coilRead(TRIG_VAL_UPDATED_COIL);
@@ -129,17 +150,27 @@ void Task1Code(void * pvParameters)
       {
         int new_interval = modbus_server.combineHoldingRegisters(TRIG_FURNACE_INTVL_HOLD);
         timerAlarmWrite(furnaceTimer, new_interval, true);
+
+        int new_target = modbus_server.combineHoldingRegisters(TRIG_FURNACE_TARGET_HOLD);
+        furnaceFrameTarget = new_target;
       }
       if (!widefovEnabled)
       {
         int new_interval = modbus_server.combineHoldingRegisters(TRIG_WIDEFOV_INTVL_HOLD);
         timerAlarmWrite(wideFovTimer, new_interval, true);
+
+        int new_target = modbus_server.combineHoldingRegisters(TRIG_WIDEFOV_TARGET_HOLD);
+        wideFovFrameTarget = new_target;
       }
       if (!narrowfovEnabled)
       {
         int new_interval = modbus_server.combineHoldingRegisters(TRIG_NARROWFOV_INTVL_HOLD);
         timerAlarmWrite(narrowFovTimer, new_interval, true);
+
+        int new_target = modbus_server.combineHoldingRegisters(TRIG_NARROWFOV_TARGET_HOLD);
+        narrowFovFrameTarget = new_target;
       }
+      modbus_server.coilWrite(TRIG_VAL_UPDATED_COIL, false);
     }
     delay(1);
   }
@@ -183,6 +214,11 @@ void setup()
 
   modbus_server.configureInputRegisters(30001, 16);
   modbus_server.configureHoldingRegisters(40001, 16);
+
+  // Write initial values to registers
+  modbus_server.floatToHoldingRegisters(TRIG_FURNACE_INTVL_HOLD, (1000000/FREQUENCY_FURNACE)/2);
+  modbus_server.floatToHoldingRegisters(TRIG_WIDEFOV_INTVL_HOLD, (1000000/FREQUENCY_WIDEFOV)/2);
+  modbus_server.floatToHoldingRegisters(TRIG_NARROWFOV_INTVL_HOLD, (1000000/FREQUENCY_NARROWFOV)/2);
 
   Serial.print("Setup running on core ");
   Serial.println(xPortGetCoreID());

@@ -3,6 +3,8 @@ from pymodbus.client import ModbusTcpClient
 from livex.util import read_decode_input_reg, read_decode_holding_reg, write_modbus_float, write_coil
 from livex.modbusAddresses import modAddr
 
+from tornado.ioloop import PeriodicCallback
+
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 class TriggerError():
@@ -15,37 +17,76 @@ class TriggerController():
     def __init__(self, ip, frequencies):
 
         self.ip = ip
-        self.mod_client = ModbusTcpClient(self.ip)
-        self.mod_client.connect()
 
-        self.freq_furnace = frequencies['furnace']
-        self.freq_wideFov = frequencies['wideFov']
-        self.freq_narrowFov = frequencies['narrowFov']
+        self.furnace_freq = frequencies['furnace']
+        self.widefov_freq = frequencies['wideFov']
+        self.narrowfov_freq = frequencies['narrowFov']
 
         # Intervals in microseconds
-        self.intvl_furnace = 1_000_000 // self.freq_furnace
-        self.intvl_wideFov = 1_000_000 // self.freq_wideFov
-        self.intvl_narrowFov = 1_000_000//self.freq_narrowFov
+        self.intvl_furnace = (1_000_000/self.furnace_freq) // 2
+        self.intvl_wideFov = (1_000_000/self.widefov_freq) // 2
+        self.intvl_narrowFov = (1_000_000/self.narrowfov_freq) // 2
 
         self.all_enabled = False
         self.furnace_enabled = False
         self.widefov_enabled = False
         self.narrowfov_enabled = False
 
-        self.tree = ParameterTree({
-            'enable': {
-                'all': (lambda: self.all_enabled, None),
-                'furnace': (lambda: self.furnace_enabled, self.toggle_furnace_enable),
-                'wideFov': (lambda: self.widefov_enabled, self.toggle_widefov_enable),
-                'narrowFov': (lambda: self.narrowfov_enabled, self.toggle_narrowfov_enable)
-            },
-            'frequency': {
-                'furnace': (lambda: self.freq_furnace, self.update_furnace_interval),
-                'wideFov': (lambda: self.freq_wideFov, self.update_widefov_interval),
-                'narrowFov': (lambda: self.freq_narrowFov, self.update_narrowfov_interval)
-            }
+        self.furnace_target = 0
+        self.widefov_target = 0
+        self.narrowfov_target = 0
 
+        self.initialise_client()
+        self.get_all_registers()
+
+        self.tree = ParameterTree({
+            'furnace': {
+                'enable': (lambda: self.furnace_enabled, self.toggle_furnace_enable),
+                'frequency': (lambda: self.furnace_freq, self.update_furnace_interval),
+                'target': (lambda: self.furnace_target, self.set_furnace_target)
+            },
+            'widefov': {
+                'enable': (lambda: self.widefov_enabled, self.toggle_widefov_enable),
+                'frequency': (lambda: self.widefov_freq, self.update_widefov_interval),
+                'target': (lambda: self.widefov_target, self.set_widefov_target)
+            },
+            'narrowfov': {
+                'enable': (lambda: self.narrowfov_enabled, self.toggle_narrowfov_enable),
+                'frequency': (lambda: self.narrowfov_freq, self.update_narrowfov_interval),
+                'target': (lambda: self.narrowfov_target, self.set_narrowfov_target)
+            }
         })
+
+    def initialise_client(self):
+        """Initialise the modbus client."""
+        self.mod_client = ModbusTcpClient(self.ip)
+        self.mod_client.connect()
+
+    def get_all_registers(self):
+        """Read the value of all registers to update the tree."""
+        ret = self.mod_client.read_coils(modAddr.trig_furnace_enable_coil, 3, slave=1)
+        # See modbusAddresses.py: these coils are sequential
+        self.furnace_freq = ret.bits[0]  # Coil 2
+        self.widefov_freq = ret.bits[1]  # Coil 3
+        self.narrowfov_freq = ret.bits[2]  # Coil 4
+
+        # Frequencies = 1_000_000 / intvl*2
+        # Interval = (1_000_000 / freq) // 2
+        self.furnace_freq = 1_000_000 / (
+            read_decode_holding_reg(self.mod_client, modAddr.trig_furnace_intvl_hold) * 2
+        )
+        self.widefov_freq = 1_000_000 / (
+            read_decode_holding_reg(self.mod_client, modAddr.trig_widefov_intvl_hold) * 2
+        )
+        self.narrowfov_freq = 1_000_000 / (
+            read_decode_holding_reg(self.mod_client, modAddr.trig_narrowfov_intvl_hold) * 2
+        )
+
+        # Frame targets
+        self.furnace_target = read_decode_holding_reg(self.mod_client, modAddr.trig_furnace_target_hold)
+        self.widefov_target = read_decode_holding_reg(self.mod_client, modAddr.trig_widefov_target_hold)
+        self.narrowfov_target = read_decode_holding_reg(self.mod_client, modAddr.trig_widefov_target_hold)
+
 
     def check_all_enabled(self):
         """Check if all timers are enabled."""
@@ -69,6 +110,11 @@ class TriggerController():
         write_coil(self.mod_client, modAddr.trig_furnace_enable_coil, bool(self.furnace_enabled))
         self.check_all_enabled()
 
+    def set_furnace_target(self, value):
+        """Update the target framecount of the furnace timer."""
+        self.furnace_target = int(value)  # Not a problem if target is float, but safer to be int
+        write_modbus_float(self.mod_client, modAddr.trig_furnace_target_hold, self.furnace_target)
+
     def update_widefov_interval(self, value):
         """Update the interval of the WideFov camera timer."""
         self.intvl_wideFov = (1_000_000 / value) // 2
@@ -80,6 +126,11 @@ class TriggerController():
         write_coil(self.mod_client, modAddr.trig_widefov_enable_coil, bool(self.widefov_enabled))
         self.check_all_enabled()
 
+    def set_widefov_target(self, value):
+        """Set the target of the widefov timer."""
+        self.widefov_target = int(value)
+        write_modbus_float(self.mod_client, float(self.widefov_target), modAddr.trig_widefov_target_hold)
+
     def update_narrowfov_interval(self, value):
         """Update the interval of the NarrowFov camera timer."""
         self.intvl_narrowFov = (1_000_000 / value)//2
@@ -90,6 +141,11 @@ class TriggerController():
         self.narrowfov_enabled = not self.narrowfov_enabled
         write_coil(self.mod_client, modAddr.trig_narrowfov_enable_coil, bool(self.narrowfov_enabled))
         self.check_all_enabled()
+
+    def set_narrowfov_target(self, value):
+        """"Set the target value of the narrowfov timer."""
+        self.narrowfov_target = int(value)
+        write_modbus_float(self.mod_client, modAddr.trig_narrowfov_target_hold, self.narrowfov_target)
 
     def get(self, path):
         """Get the parameter tree.

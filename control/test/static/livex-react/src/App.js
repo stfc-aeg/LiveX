@@ -28,7 +28,7 @@ function App(props) {
   const connectedPuttingDisable = (!(liveXEndPoint.data.status?.connected || false)) || (liveXEndPoint.loading == "putting")
 
   return (
-    <OdinApp title="LiveX Controls" navLinks={["furnace control", "metadata", "setup", "sequencing", "camera control", "monitoring"]}>
+    <OdinApp title="LiveX Controls" navLinks={["furnace control", "metadata", "triggers", "sequencing", "camera control", "monitoring"]}>
     <Col>
     <Container>
       <Col>
@@ -56,7 +56,7 @@ function App(props) {
         pid="pid_b">
       </PidControl>
 
-      <TitleCard title="test card">
+      <TitleCard title="'Acquisition card'">
         <Container>
           <Row>
           <EndPointButton
@@ -71,7 +71,7 @@ function App(props) {
           <Col>
           <Row>
             <StatusBox as="span" type="info" label="reading">
-              {liveXEndPoint.data.tcp?.tcp_reading?.counter} {liveXEndPoint.data.tcp?.tcp_reading?.temperature_a}
+              {liveXEndPoint.data.tcp?.tcp_reading?.counter}{liveXEndPoint.data.tcp?.tcp_reading?.temperature_a}
             </StatusBox>
             </Row>
             </Col>
@@ -107,14 +107,12 @@ function App(props) {
       </Metadata>
     </Col>
     <Col>
-      setup
       <Trigger></Trigger>
     </Col>
     <Col>
       sequencer
     </Col>
     <Col>
-      camera control
     <Cameras
       connectedPuttingDisable={connectedPuttingDisable}>
     </Cameras>

@@ -111,6 +111,10 @@ class modAddr():
     trig_widefov_intvl_hold   = 40003
     trig_narrowfov_intvl_hold = 40005
 
+    trig_furnace_target_hold   = 40007
+    trig_widefov_target_hold   = 40009
+    trig_narrowfov_target_hold = 40011
+
     trig_enable_coil = 0
     trig_val_updated_coil = 1
     trig_furnace_enable_coil = 2
