@@ -62,6 +62,10 @@ volatile bool furnaceShutdown = false;
 volatile bool widefovShutdown = false;
 volatile bool narrowfovShutdown = false;
 
+// 'preview mode' boolean which will make timers ignore their frame counter.
+// One global one at first - right now, the system is designed to synchronise separate timers.
+volatile bool inPreview = false;
+
 void IRAM_ATTR furnaceOnTimer()
 {
   // Non-zero target has been met or exceeded, return early
@@ -71,7 +75,7 @@ void IRAM_ATTR furnaceOnTimer()
     return;
   }
   digitalWrite(PIN_FURNACE, risingFurnace);
-  if (risingFurnace)
+  if (risingFurnace && !inPreview)
   {
     furnaceFrameCount++;
   }
@@ -85,7 +89,7 @@ void IRAM_ATTR wideFovOnTimer()
     return;
   }
   digitalWrite(PIN_WIDEFOV, risingWide);
-  if (risingWide)
+  if (risingWide && !inPreview)
   {
     wideFovFrameCount++;
   }
@@ -99,7 +103,7 @@ void IRAM_ATTR narrowFovOnTimer()
     return;
   }
   digitalWrite(PIN_NARROWFOV, risingNarrow);
-  if (risingNarrow)
+  if (risingNarrow && !inPreview)
   {
     narrowFovFrameCount++;
   }
@@ -116,6 +120,9 @@ void Task1Code(void * pvParameters)
     bool furnaceSetting = modbus_server.coilRead(TRIG_FURNACE_ENABLE_COIL);
     bool widefovSetting = modbus_server.coilRead(TRIG_WIDEFOV_ENABLE_COIL);
     bool narrowfovSetting = modbus_server.coilRead(TRIG_NARROWFOV_ENABLE_COIL);
+
+    // preview mode can be toggled on
+    bool inPreview = modbus_server.coilRead(TRIG_PREVIEW_COIL);
 
     // For each furnace:
     // if shutdown flag, or if enabled and wanted off, turn it off. If disabled and wanted on,
