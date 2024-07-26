@@ -5,9 +5,10 @@
 #define FREQUENCY_WIDEFOV 80
 #define FREQUENCY_NARROWFOV 120
 
-#define PIN_FURNACE 3
+#define PIN_FURNACE 33
 #define PIN_WIDEFOV 32
-#define PIN_NARROWFOV 33
+#define PIN_NARROWFOV 16
+#define PIN_HEXITEC 15
 
 // Modbus config options
 #define TRIG_NUM_COIL 8

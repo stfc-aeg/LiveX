@@ -41,6 +41,8 @@ class TriggerController():
         self.initialise_client()
         self.get_all_registers()
 
+        self.previewing = False
+
         if self.status_bg_task_enable:
             self.start_background_tasks()
 
@@ -63,7 +65,9 @@ class TriggerController():
             'background': {
                 'interval': (lambda: self.status_bg_task_interval, self.set_task_interval),
                 'enable': (lambda: self.status_bg_task_enable, self.set_task_enable)
-            }
+            },
+            'preview': (lambda: self.previewing, self.set_preview),
+            'all_timers_enable': (lambda: self.all_enabled, self.set_all_timers)
         })
 
     def initialise_client(self):
@@ -96,10 +100,34 @@ class TriggerController():
         self.widefov_target = read_decode_holding_reg(self.mod_client, modAddr.trig_widefov_target_hold)
         self.narrowfov_target = read_decode_holding_reg(self.mod_client, modAddr.trig_widefov_target_hold)
 
+    def set_all_timers(self, value):
+        """Enable or disable all timers."""
+        self.all_triggers_enable = bool(value)
+        self.furnace_enabled = True
+        self.widefov_enabled = True
+        self.narrowfov_enabled = True
+        toWrite = [value, value, value]
+        self.mod_client.write_coils(modAddr.trig_furnace_enable_coil, toWrite, slave=1)
+        write_coil(self.mod_client, modAddr.trig_val_updated_coil, 1)
+
+    def set_preview(self, value):
+        """Enable or disable the preview mode (timers do not increment frame counters)."""
+        value = bool(value)
+        write_coil(self.mod_client, modAddr.trig_preview_coil, value)
+
+    def check_all_enable(self):
+        """Check if all timers are enabled."""
+        if self.furnace_enabled and self.widefov_enabled and self.narrowfov_enabled:
+            self.all_enabled = True
+        else:
+            self.all_enabled = False
+
     def update_hold_value(self, address, value):
         """Write a value to a given holding register(s) and mark the 'value updated' coil."""
         write_modbus_float(self.mod_client, float(value), address)
         write_coil(self.mod_client, modAddr.trig_val_updated_coil, 1)
+
+        self.check_all_enable()  # Not relevant for the intervals but still best fit here
 
     def set_furnace_interval(self, value):
         """Update the interval of the furnace timer."""

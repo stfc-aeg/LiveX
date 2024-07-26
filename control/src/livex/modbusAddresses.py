@@ -120,3 +120,4 @@ class modAddr():
     trig_furnace_enable_coil = 2
     trig_widefov_enable_coil = 3
     trig_narrowfov_enable_coil = 4
+    trig_preview_coil = 6
