@@ -115,7 +115,7 @@ class FurnaceController():
 
         tcp = ParameterTree({
             'tcp_reading': (lambda: self.tcp_reading, None),
-            'acquire': (lambda: self.start_acquisition, self.toggle_acquisition)
+            'acquire': (lambda: self.start_acquisition, self.set_acquisition)
         })
 
         # Store all information in a parameter tree
@@ -138,7 +138,7 @@ class FurnaceController():
 
     # Data acquiring tasks
 
-    def toggle_acquisition(self, value):
+    def set_acquisition(self, value):
         """Toggle whether the system is acquiring data."""
         value = bool(value)
         logging.debug("Toggled acquisition")

@@ -19,6 +19,8 @@ function Trigger() {
     const orcaEndPoint = useAdapterEndpoint('camera/cameras/0', 'http://192.168.0.22:8888', 1000);
     const liveXEndPoint = useAdapterEndpoint('furnace', 'http://192.168.0.22:8888', 1000);
 
+    const acqEndPoint = useAdapterEndpoint('livex', 'http://192.168.0.22:8888', 1000);
+
     return (
         <TitleCard title="trigger toggles" type="warning">
         <Container>
@@ -173,6 +175,28 @@ function Trigger() {
           </StatusBox>
         </Col>
 
+        </Row>
+
+        <Row>
+          <EndpointButton
+            endpoint={acqEndPoint}
+            fullpath={"acquisition/start"}
+            value={true}
+            event_type="click"
+            >
+              start acquisition: {acqEndPoint?.data?.server_uptime}
+          </EndpointButton>
+        </Row>
+        <Row>
+          <EndpointButton
+            endpoint={acqEndPoint}
+            fullpath={"acquisition/stop"}
+            value={true}
+            event_type="click"
+            variant="danger"
+            >
+              stop acquisition: {acqEndPoint?.data?.server_uptime}
+          </EndpointButton>
         </Row>
 
 
