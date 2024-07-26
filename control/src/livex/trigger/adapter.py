@@ -1,7 +1,6 @@
-from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, response_types
+from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, response_types, request_types
 from odin.adapters.parameter_tree import ParameterTreeError
 from odin.util import decode_request_body
-import logging
 
 from livex.trigger.trigger_controller import TriggerController
 
@@ -43,6 +42,7 @@ class TriggerAdapter(ApiAdapter):
 
         return ApiAdapterResponse(response, content_type=content_type, status_code=status)
 
+    @request_types('application/json',"application/vnd.odin-native")
     @response_types('application/json', default='application/json')
     def put(self, path, request):
         try:
@@ -53,7 +53,7 @@ class TriggerAdapter(ApiAdapter):
             status = 200
 
         except ParameterTreeError as param_error:
-            response = {'response': 'LiveViewAdapter PUT error: {}'.format(param_error)}
+            response = {'response': 'TriggerAdapter PUT error: {}'.format(param_error)}
             content_type = 'application/json'
             status = 400
 
