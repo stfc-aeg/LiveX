@@ -12,7 +12,7 @@ const EndPointFormControl = WithEndpoint(Form.Control);
 const EndPointToggle = WithEndpoint(ToggleSwitch);
 
 function PidControl(props) {
-    const {liveXEndPoint} = props;
+    const {furnaceEndPoint} = props;
     const {connectedPuttingDisable} = props;
     const {title} = props;
     const {pid} = props;
@@ -23,10 +23,10 @@ function PidControl(props) {
         <Row>
             <Col xs={8}>
             <EndPointToggle 
-                endpoint={liveXEndPoint}
+                endpoint={furnaceEndPoint}
                 fullpath={pid+"/enable"}
                 event_type="click"
-                checked={liveXEndPoint.data[pid]?.enable || false}
+                checked={furnaceEndPoint.data[pid]?.enable || false}
                 label="Enable"
                 disabled={connectedPuttingDisable}>
             </EndPointToggle>
@@ -35,7 +35,7 @@ function PidControl(props) {
             <StatusBox
                 type="info"
                 label="PID OUT.">
-                    {checkNull(liveXEndPoint.data[pid]?.output)}
+                    {checkNull(furnaceEndPoint.data[pid]?.output)}
             </StatusBox>
             </Col>
 
@@ -47,7 +47,7 @@ function PidControl(props) {
                     Proportional
                 </InputGroup.Text>
                 <EndPointFormControl
-                    endpoint={liveXEndPoint}
+                    endpoint={furnaceEndPoint}
                     type="number"
                     fullpath={pid+"/proportional"}
                     disabled={connectedPuttingDisable}>
@@ -58,7 +58,7 @@ function PidControl(props) {
                     Integral
                 </InputGroup.Text>
                 <EndPointFormControl
-                    endpoint={liveXEndPoint}
+                    endpoint={furnaceEndPoint}
                     type="number"
                     fullpath={pid+"/integral"}
                     disabled={connectedPuttingDisable}>
@@ -69,7 +69,7 @@ function PidControl(props) {
                     Derivative
                 </InputGroup.Text>
                 <EndPointFormControl
-                    endpoint={liveXEndPoint}
+                    endpoint={furnaceEndPoint}
                     type="number"
                     fullpath={pid+"/derivative"}
                     disabled={connectedPuttingDisable}>
@@ -84,7 +84,7 @@ function PidControl(props) {
                         Set Pt.
                     </InputGroup.Text>
                     <EndPointFormControl
-                        endpoint={liveXEndPoint}
+                        endpoint={furnaceEndPoint}
                         type="number"
                         fullpath={pid+"/setpoint"}
                         disabled={connectedPuttingDisable}>
@@ -92,9 +92,9 @@ function PidControl(props) {
                 </InputGroup>
                 <StatusBox as="span" type="info"
                 label="Setpoint">
-                {(liveXEndPoint.data.gradient?.enable ||false) ?
-                    checkNull(liveXEndPoint.data[pid]?.gradient_setpoint) :
-                    checkNull(liveXEndPoint.data[pid]?.setpoint)
+                {(furnaceEndPoint.data.gradient?.enable ||false) ?
+                    checkNull(furnaceEndPoint.data[pid]?.gradient_setpoint) :
+                    checkNull(furnaceEndPoint.data[pid]?.setpoint)
                 }
                 </StatusBox>
                 </Stack>
@@ -102,7 +102,7 @@ function PidControl(props) {
             </Col>
             <Col>
             <StatusBox type="info" label="TEMP.">
-                {checkNull(liveXEndPoint.data[pid]?.temperature)}
+                {checkNull(furnaceEndPoint.data[pid]?.temperature)}
             </StatusBox>
             </Col>
         </Row>

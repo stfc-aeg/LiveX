@@ -7,7 +7,7 @@ import InputGroup from 'react-bootstrap/InputGroup';
 import Button from 'react-bootstrap/Button';
 import { TitleCard, WithEndpoint, useAdapterEndpoint, StatusBox } from 'odin-react';
 
-import { checkNullNoDp } from '../utils';
+import { checkNullNoDp } from '../../utils';
 
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndpointButton = WithEndpoint(Button);
@@ -15,14 +15,12 @@ const EndpointButton = WithEndpoint(Button);
 function Trigger() {
 
     const triggerEndPoint = useAdapterEndpoint('trigger', 'http://192.168.0.22:8888', 1000);
-
     const orcaEndPoint = useAdapterEndpoint('camera/cameras/0', 'http://192.168.0.22:8888', 1000);
-    const liveXEndPoint = useAdapterEndpoint('furnace', 'http://192.168.0.22:8888', 1000);
-
-    const acqEndPoint = useAdapterEndpoint('livex', 'http://192.168.0.22:8888', 1000);
+    const furnaceEndPoint = useAdapterEndpoint('furnace', 'http://192.168.0.22:8888', 1000);
+    const liveXEndPoint = useAdapterEndpoint('livex', 'http://192.168.0.22:8888', 1000);
 
     return (
-        <TitleCard title="trigger toggles" type="warning">
+      <TitleCard title="Acquisition details" type="warning">
         <Container>
         <Row>
           <Col>
@@ -166,7 +164,7 @@ function Trigger() {
 
         <Col>
           <StatusBox as="span" label="reading">
-                {checkNullNoDp(liveXEndPoint.data.tcp?.tcp_reading?.counter)}
+                {checkNullNoDp(furnaceEndPoint.data.tcp?.tcp_reading?.counter)}
           </StatusBox>
         </Col>
         <Col>
@@ -179,23 +177,23 @@ function Trigger() {
 
         <Row>
           <EndpointButton
-            endpoint={acqEndPoint}
+            endpoint={liveXEndPoint}
             fullpath={"acquisition/start"}
             value={true}
             event_type="click"
             >
-              start acquisition: {acqEndPoint?.data?.server_uptime}
+              start acquisition: {liveXEndPoint?.data?.server_uptime}
           </EndpointButton>
         </Row>
         <Row>
           <EndpointButton
-            endpoint={acqEndPoint}
+            endpoint={liveXEndPoint}
             fullpath={"acquisition/stop"}
             value={true}
             event_type="click"
             variant="danger"
             >
-              stop acquisition: {acqEndPoint?.data?.server_uptime}
+              stop acquisition: {liveXEndPoint?.data?.server_uptime}
           </EndpointButton>
         </Row>
 

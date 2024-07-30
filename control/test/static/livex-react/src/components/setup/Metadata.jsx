@@ -12,7 +12,7 @@ const EndPointFormControl = WithEndpoint(Form.Control);
 const EndpointDropdown = WithEndpoint(DropdownSelector);
 
 function Metadata(props) {
-    const {liveXEndPoint} = props;
+    const {furnaceEndPoint} = props;
     const {connectedPuttingDisable} = props;
 
     return (
@@ -26,7 +26,7 @@ function Metadata(props) {
             <StatusBox
                 type="info"
                 label="date">
-                    {liveXEndPoint.data.metadata?.date}
+                    {furnaceEndPoint.data.metadata?.date}
             </StatusBox>
             </Col>
 
@@ -38,7 +38,7 @@ function Metadata(props) {
                     spinner
                 </InputGroup.Text>
                 <EndPointFormControl
-                    endpoint={liveXEndPoint}
+                    endpoint={furnaceEndPoint}
                     type="number"
                     fullpath={"metadata/spinner"}
                     disabled={connectedPuttingDisable}>
@@ -49,7 +49,7 @@ function Metadata(props) {
                     freetext
                 </InputGroup.Text>
                 <EndPointFormControl
-                    endpoint={liveXEndPoint}
+                    endpoint={furnaceEndPoint}
                     type="text"
                     fullpath={"metadata/freetext"}
                     disabled={connectedPuttingDisable}>
@@ -64,7 +64,7 @@ function Metadata(props) {
                         comment
                     </InputGroup.Text>
                     <EndPointFormControl
-                        endpoint={liveXEndPoint}
+                        endpoint={furnaceEndPoint}
                         type="text"
                         fullpath={"metadata/comment"}
                         disabled={connectedPuttingDisable}>
@@ -73,11 +73,11 @@ function Metadata(props) {
                 </Stack>
 
               <EndpointDropdown
-                endpoint={liveXEndPoint} event_type="select"
+                endpoint={furnaceEndPoint} event_type="select"
                 fullpath="metadata/sample"
                 buttonText={
-                    liveXEndPoint.data.metadata?.dropdowns.samples[liveXEndPoint.data.metadata.dropdowns.samples_index] || "Unknown"} disabled={connectedPuttingDisable}>
-                {liveXEndPoint.data.metadata?.dropdowns.samples ? liveXEndPoint.data.metadata?.dropdowns.samples.map(
+                    furnaceEndPoint.data.metadata?.dropdowns.samples[furnaceEndPoint.data.metadata.dropdowns.samples_index] || "Unknown"} disabled={connectedPuttingDisable}>
+                {furnaceEndPoint.data.metadata?.dropdowns.samples ? furnaceEndPoint.data.metadata?.dropdowns.samples.map(
                 (selection, index) => (
                   <Dropdown.Item
                     eventKey={index}
@@ -89,7 +89,7 @@ function Metadata(props) {
             </Col>
             <Col>
             <StatusBox type="info" label="time">
-                {liveXEndPoint.data.metadata?.time}
+                {furnaceEndPoint.data.metadata?.time}
             </StatusBox>
         </Col>
         </Row>

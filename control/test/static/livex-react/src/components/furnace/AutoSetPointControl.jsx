@@ -14,7 +14,7 @@ const EndPointToggle = WithEndpoint(ToggleSwitch);
 const EndPointFormControl = WithEndpoint(Form.Control);
 
 function AutoSetPointControl(props){
-    const {liveXEndPoint} = props;
+    const {furnaceEndPoint} = props;
     const {connectedPuttingDisable} = props;
 
     return (
@@ -23,10 +23,10 @@ function AutoSetPointControl(props){
           <Row>
             <Col>
               <EndPointToggle
-                endpoint={liveXEndPoint}
+                endpoint={furnaceEndPoint}
                 fullpath="autosp/enable"
                 event_type="click" 
-                checked={liveXEndPoint.data.autosp?.enable || false}
+                checked={furnaceEndPoint.data.autosp?.enable || false}
                 label="Enable"
                 disabled={connectedPuttingDisable}>
               </EndPointToggle>
@@ -37,18 +37,18 @@ function AutoSetPointControl(props){
               <StatusBox
                 type="info"
                 label="Mid Pt. TEMP.">
-                  {checkNull(liveXEndPoint.data.autosp?.midpt_temp)}
+                  {checkNull(furnaceEndPoint.data.autosp?.midpt_temp)}
               </StatusBox>
             </Col>
             <Col>
             <InputGroup>
               <InputGroup.Text>Heating/Cooling:</InputGroup.Text>
               <EndpointDropdown
-                endpoint={liveXEndPoint} event_type="select"
+                endpoint={furnaceEndPoint} event_type="select"
                 fullpath="autosp/heating"
                 variant='outline-secondary'
-                buttonText={liveXEndPoint.data.autosp?.heating_options[liveXEndPoint.data.autosp.heating] || "Unknown"} disabled={connectedPuttingDisable}>
-                {liveXEndPoint.data.autosp?.heating_options ? liveXEndPoint.data.autosp.heating_options.map(
+                buttonText={furnaceEndPoint.data.autosp?.heating_options[furnaceEndPoint.data.autosp.heating] || "Unknown"} disabled={connectedPuttingDisable}>
+                {furnaceEndPoint.data.autosp?.heating_options ? furnaceEndPoint.data.autosp.heating_options.map(
                 (selection, index) => (
                   <Dropdown.Item
                     eventKey={index}
@@ -66,7 +66,7 @@ function AutoSetPointControl(props){
                    Rate (K/s)
                 </InputGroup.Text>
                 <EndPointFormControl
-                  endpoint={liveXEndPoint}
+                  endpoint={furnaceEndPoint}
                   type="number"
                   fullpath="autosp/rate"
                   disabled={connectedPuttingDisable}>
@@ -81,7 +81,7 @@ function AutoSetPointControl(props){
                   Img Aquisition Per Degree (Img/K)
                 </InputGroup.Text>
                 <EndPointFormControl
-                  endpoint={liveXEndPoint}
+                  endpoint={furnaceEndPoint}
                   type="number"
                   fullpath="autosp/img_per_degree"
                   disabled={connectedPuttingDisable}>
