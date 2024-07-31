@@ -9,8 +9,12 @@ import { TitleCard, WithEndpoint, useAdapterEndpoint, StatusBox } from 'odin-rea
 
 import { checkNullNoDp } from '../../utils';
 
+import { useState } from 'react';
+import ButtonGroup from 'react-bootstrap/ButtonGroup';
+import ToggleButton from 'react-bootstrap/ToggleButton';
+
 const EndPointFormControl = WithEndpoint(Form.Control);
-const EndpointButton = WithEndpoint(Button);
+const EndPointButton = WithEndpoint(Button);
 
 function Trigger() {
 
@@ -19,187 +23,197 @@ function Trigger() {
     const furnaceEndPoint = useAdapterEndpoint('furnace', 'http://192.168.0.22:8888', 1000);
     const liveXEndPoint = useAdapterEndpoint('livex', 'http://192.168.0.22:8888', 1000);
 
+    const [timeFrameValue, setTimeFrameValue] = useState('time');
+    const timeFrameRadios = [
+      { name: 'Time', value: 'time' },
+      { name: 'Frames', value: 'frame'}
+    ];
+
     return (
-      <TitleCard title="Acquisition details" type="warning">
+      <Container>
+        <TitleCard title="Acquisition details">
         <Container>
         <Row>
           <Col>
-          <StatusBox
-            type="info"
-            label="furnace enable">
-              {triggerEndPoint?.data.furnace?.enable}
-          </StatusBox>
+            <Row>
+              Measure acq. duration in:
+              <ButtonGroup>
+                {timeFrameRadios.map((radio, idx) => (
+                  <ToggleButton
+                    key={idx}
+                    id={`radio-${idx}`}
+                    type="radio"
+                    variant='outline-primary'
+                    name="timeFrameRadio"
+                    value={radio.value}
+                    checked={timeFrameValue === radio.value}
+                    onChange={(e) => setTimeFrameValue(e.currentTarget.value)}>
+                      {radio.name}
+                    </ToggleButton>
+                ))}
+              </ButtonGroup>
+            </Row>
+            <Row className="mt-3">
+              <InputGroup>
+                <InputGroup.Text>
+                  Duration (s)
+                </InputGroup.Text>
+                {timeFrameValue==='time' ? (
+                  <EndPointFormControl
+                    endpoint={liveXEndPoint}
+                    type="number"
+                    fullpath={"acquisition/time"}
+                    value={liveXEndPoint.data.acquisition?.time}
+                    disabled={timeFrameValue === 'frame'}
+                    style={{border: timeFrameValue==='time' ? '1px solid #00cc00' : undefined}}>
+                  </EndPointFormControl>
+                ) : (
+                  <InputGroup.Text style={{ flex: 1 }}>
+                    {liveXEndPoint.data.acquisition?.time}
+                  </InputGroup.Text>
+                )}
+              </InputGroup>
+            </Row>
           </Col>
           <Col>
-          <StatusBox
-            type="info"
-            label="widefov enable">
-              {triggerEndPoint?.data.widefov?.enable}
-          </StatusBox>
+            <TitleCard title="Furnace">
+              <Row>
+                <InputGroup>
+                  <InputGroup.Text>
+                    Freq. (Hz)
+                  </InputGroup.Text>
+                  <EndPointFormControl
+                    endpoint={liveXEndPoint}
+                    type="number"
+                    fullpath={"acquisition/frequencies/furnace"}
+                    value={triggerEndPoint.data.furnace?.frequency}>
+                  </EndPointFormControl>
+                </InputGroup>
+              </Row>
+              <Row>
+                <InputGroup>
+                  <InputGroup.Text>
+                    Frame #
+                  </InputGroup.Text>
+                  {timeFrameValue==='frame' ? (
+                  <EndPointFormControl
+                    endpoint={liveXEndPoint}
+                    type="number"
+                    fullpath={"acquisition/frame_target"}
+                    value={triggerEndPoint.data.furnace?.target}
+                    disabled={timeFrameValue==='time'}
+                    style={{border: timeFrameValue==='frame' ? '1px solid #00cc00' : undefined}}>
+                  </EndPointFormControl>
+                  ) : (
+                    <InputGroup.Text style={{ flex: 1 }}>
+                      {triggerEndPoint.data.furnace?.target}
+                    </InputGroup.Text>
+                  )}
+                </InputGroup>
+              </Row>
+            </TitleCard>
           </Col>
           <Col>
-          <StatusBox
-            type="info"
-            label="narrowfov enable">
-              {triggerEndPoint?.data.narrowfov?.enable}
-          </StatusBox>
+            <TitleCard title="WideFOV">
+              <Row>
+                <InputGroup style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    width: '100%'
+                  }}>
+                  <InputGroup.Text>
+                    Freq. (Hz)
+                  </InputGroup.Text>
+                  <EndPointFormControl
+                    endpoint={liveXEndPoint}
+                    type="number"
+                    fullpath={"acquisition/frequencies/widefov"}
+                    value={triggerEndPoint.data.widefov?.frequency}>
+                  </EndPointFormControl>
+                </InputGroup>
+              </Row>
+              <Row>
+                <InputGroup>
+                  <InputGroup.Text>
+                    Frame #
+                  </InputGroup.Text>
+                  <InputGroup.Text style={{flex: 1}}>
+                  {triggerEndPoint.data.widefov?.target}
+                  </InputGroup.Text>
+                </InputGroup>
+              </Row>
+            </TitleCard>
+          </Col>
+          <Col>
+            <TitleCard title="NarrowFOV">
+              <Row>
+                <InputGroup
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    width: '100%'
+                  }}>
+                  <InputGroup.Text>
+                    Freq. (Hz)
+                  </InputGroup.Text>
+                  <EndPointFormControl
+                    endpoint={liveXEndPoint}
+                    type="number"
+                    fullpath={"acquisitions/frequencies/narrowfov"}
+                    value={triggerEndPoint.data.narrowfov?.frequency}>
+                  </EndPointFormControl>
+                </InputGroup>
+              </Row>
+              <Row>
+                <InputGroup>
+                  <InputGroup.Text>
+                    Frame #
+                  </InputGroup.Text>
+                  <InputGroup.Text style={{flex: 1}}>
+                  {triggerEndPoint.data.narrowfov?.target}
+                  </InputGroup.Text>
+                </InputGroup>
+              </Row>
+            </TitleCard>
           </Col>
         </Row>
-        <Row>
-          <Col>
-            <EndpointButton
-              endpoint={triggerEndPoint}
-              fullpath={"furnace/enable"}
-              value={!triggerEndPoint?.data.furnace?.enable}
-              event_type="click"
-              >
-                Toggle furnace: {triggerEndPoint?.data.furnace?.enable ? "Disable" : "Enable"}
-            </EndpointButton>
-          </Col>
-          <Col>
-            <EndpointButton
-              endpoint={triggerEndPoint}
-              fullpath={"widefov/enable"}
-              value={!triggerEndPoint?.data.widefov?.enable}
-              event_type="click"
-              >
-                Toggle widefov: {triggerEndPoint?.data.widefov?.enable ? "Disable" : "Enable"}
-            </EndpointButton>
-          </Col>
-          <Col>
-            <EndpointButton
-              endpoint={triggerEndPoint}
-              fullpath={"narrowfov/enable"}
-              value={!triggerEndPoint?.data.narrowfov?.enable}
-              event_type="click"
-              >
-                Toggle narrowfov: {triggerEndPoint?.data.narrowfov?.enable ? "Disable" : "Enable"}
-            </EndpointButton>
-          </Col>
-        </Row>
-        <Row>
-          <Col>
-            <InputGroup>
-              <InputGroup.Text>
-                Furnace frequency
-              </InputGroup.Text>
-              <EndPointFormControl
-                endpoint={triggerEndPoint}
-                type="number"
-                fullpath={"furnace/frequency"}
-                value={triggerEndPoint.data.furnace?.frequency}>
-              </EndPointFormControl>
-            </InputGroup>
-          </Col>
-          <Col>
-            <InputGroup>
-              <InputGroup.Text>
-                widefov frequency
-              </InputGroup.Text>
-              <EndPointFormControl
-                endpoint={triggerEndPoint}
-                type="number"
-                fullpath={"widefov/frequency"}
-                value={triggerEndPoint.data.narrowfov?.frequency}>
-              </EndPointFormControl>
-            </InputGroup>
-          </Col>
-          <Col>
-            <InputGroup>
-              <InputGroup.Text>
-                narrowfov frequency
-              </InputGroup.Text>
-              <EndPointFormControl
-                endpoint={triggerEndPoint}
-                type="number"
-                fullpath={"narrowfov/frequency"}
-                value={triggerEndPoint.data.narrowfov?.frequency}>
-              </EndPointFormControl>
-            </InputGroup>
-          </Col>
-        </Row>
-        <Row>
-          <Col>
-            <InputGroup>
-              <InputGroup.Text>
-                Furnace frame target
-              </InputGroup.Text>
-              <EndPointFormControl
-                endpoint={triggerEndPoint}
-                type="number"
-                fullpath={"furnace/target"}
-                value={triggerEndPoint.data.furnace?.target}>
-              </EndPointFormControl>
-            </InputGroup>
-          </Col>
-          <Col>
-            <InputGroup>
-              <InputGroup.Text>
-                widefov frame target
-              </InputGroup.Text>
-              <EndPointFormControl
-                endpoint={triggerEndPoint}
-                type="number"
-                fullpath={"widefov/target"}
-                value={triggerEndPoint.data.narrowfov?.target}>
-              </EndPointFormControl>
-            </InputGroup>
-          </Col>
-          <Col>
-            <InputGroup>
-              <InputGroup.Text>
-                narrowfov frame target
-              </InputGroup.Text>
-              <EndPointFormControl
-                endpoint={triggerEndPoint}
-                type="number"
-                fullpath={"narrowfov/target"}
-                value={triggerEndPoint.data.narrowfov?.target}>
-              </EndPointFormControl>
-            </InputGroup>
-          </Col>
-        </Row>
-
         <Row className='mt-3'>
+          <Col>
+            <StatusBox as="span" label="reading">
+                  {checkNullNoDp(furnaceEndPoint.data.tcp?.tcp_reading?.counter)}
+            </StatusBox>
+          </Col>
+          <Col>
+            <StatusBox label="Frame count">
+              {checkNullNoDp(orcaEndPoint?.data[0]?.status.frame_number)}
+            </StatusBox>
+          </Col>
+          </Row>
 
-        <Col>
-          <StatusBox as="span" label="reading">
-                {checkNullNoDp(furnaceEndPoint.data.tcp?.tcp_reading?.counter)}
-          </StatusBox>
-        </Col>
-        <Col>
-          <StatusBox label="Frame count">
-            {checkNullNoDp(orcaEndPoint?.data[0]?.status.frame_number)}
-          </StatusBox>
-        </Col>
-
-        </Row>
-
-        <Row>
-          <EndpointButton
-            endpoint={liveXEndPoint}
-            fullpath={"acquisition/start"}
-            value={true}
-            event_type="click"
-            >
-              start acquisition: {liveXEndPoint?.data?.server_uptime}
-          </EndpointButton>
-        </Row>
-        <Row>
-          <EndpointButton
-            endpoint={liveXEndPoint}
-            fullpath={"acquisition/stop"}
-            value={true}
-            event_type="click"
-            variant="danger"
-            >
-              stop acquisition: {liveXEndPoint?.data?.server_uptime}
-          </EndpointButton>
-        </Row>
-
-
+          <Row>
+            <EndPointButton
+              endpoint={liveXEndPoint}
+              fullpath={"acquisition/start"}
+              value={true}
+              event_type="click"
+              >
+                start acquisition
+            </EndPointButton>
+          </Row>
+          <Row>
+            <EndPointButton
+              endpoint={liveXEndPoint}
+              fullpath={"acquisition/stop"}
+              value={true}
+              event_type="click"
+              variant="danger"
+              >
+                stop acquisition
+            </EndPointButton>
+          </Row>
         </Container>
         </TitleCard>
+      </Container>
     )
 }
 

@@ -184,7 +184,7 @@ class FurnaceController():
         self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.tcp_client.connect((self.ip, self.port))
 
-        self.tcp_client.settimeout(1)
+        self.tcp_client.settimeout(0.1)
         activate = '1'
         self.tcp_client.send(activate.encode())
 

@@ -1,9 +1,7 @@
 import logging
 import time
-from concurrent import futures
 
-from tornado.ioloop import PeriodicCallback
-from tornado.concurrent import run_on_executor
+from functools import partial
 
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from odin.adapters.adapter import ApiAdapterRequest, ApiAdapterResponse
@@ -22,9 +20,15 @@ class LiveXController():
         """
         self.acq_frequency = 50
         self.acq_frame_target = 1000
+        self.acq_time = 1  # Time in seconds
+
+        # To be configured in
+        self.furnace_freq = None
+        self.widefov_freq = None
+        self.narrowfov_freq = None
 
         # These can be configured but a sensible default should be determined
-        self.filepath = "/tmp"
+        self.filepath = "/data"
         self.filename = "tmpy"
         self.dataset_name = "tmp"
 
@@ -40,21 +44,24 @@ class LiveXController():
             'acquisition': {
                 'start': (lambda: None, self.start_acquisition),
                 'stop': (lambda: None, self.stop_acquisition),
-                'frequency': (lambda: self.acq_frequency, self.set_acq_frequency)
+                'time': (lambda: self.acq_time, self.set_acq_time),
+                'frame_target': (lambda: self.acq_time, self.set_acq_frame_target),
+                'frequencies': {
+                    'furnace': (lambda: self.furnace_freq, partial(self.set_timer_frequency, timer='furnace')),
+                    'widefov': (lambda: self.widefov_freq, partial(self.set_timer_frequency, timer='widefov')),
+                    'narrowfov': (lambda: self.widefov_freq, partial(self.set_timer_frequency, timer='narrow'))
+                },
             }
         })
 
     def start_acquisition(self, value):
         """Start an acquisition. Disable timers, configure all values, then start timers simultaneously."""
         # End any current timers
-        logging.debug("disable all timers")
         self.iac_set(self.trigger, '', 'all_timers_enable', False)
 
-        logging.debug("disable preview")
         # Disable trigger 'preview' mode
         self.iac_set(self.trigger, '', 'preview', False)
 
-        logging.debug("cams to connected")
         # Move camera(s) to 'connected' state
         for i in range(len(self.orca.camera.cameras)):
             if self.iac_get(self.orca, f'cameras/{i}/status/camera_status', param='camera_status') == 'disconnected':
@@ -62,10 +69,14 @@ class LiveXController():
             elif self.iac_get(self.orca, f'cameras/{i}/status/camera_status', param='camera_status') == 'capturing':
                 self.iac_set(self.orca, f'cameras/{i}', 'command', 'end_capture')
 
-        # Enable furnace acquisition coil
-        self.iac_set(self.furnace, 'tcp', 'acquire', True)
+            # Set cameras explicitly to trigger source 2 (external)
+            self.iac_set(self.orca, f'cameras/{i}/config/', 'trigger_source', 2)
 
-        logging.debug("munir setting")
+            # Set orca frames to prevent HDF error
+            self.iac_set(self.orca, f'cameras/{i}/config/', 'num_frames', self.acq_frame_target)
+            # TODO: camera frame targets still assume one unifying frequency
+            # this will depend on the munir iteration below as well
+
         # Set odin-data config (frame count, filepath, filename, dataset name)
         self.iac_set(self.munir, 'args', 'file_path', self.filepath)
         self.iac_set(self.munir, 'args', 'file_name', self.filename)
@@ -73,22 +84,15 @@ class LiveXController():
 
         self.iac_set(self.munir, '', 'execute', True)
 
-        # Set timers with *one* frequency and frame target
-        #    # (in future, multiple frequencies means that frame count is scaled to other timers. based on camera freq?)
-        logging.debug("trigger setting")
-        self.iac_set(self.trigger, 'furnace', 'frequency', self.acq_frequency)
-        self.iac_set(self.trigger, 'widefov', 'frequency', self.acq_frequency)
-        self.iac_set(self.trigger, 'narrowfov', 'frequency', self.acq_frequency)
-
-        self.iac_set(self.trigger, 'furnace', 'target', self.acq_frame_target)
-        self.iac_set(self.trigger, 'widefov', 'target', self.acq_frame_target)
-        self.iac_set(self.trigger, 'narrowfov', 'target', self.acq_frame_target)
+        # TODO: Munir adapter needs its own iteration, as there should be one per camera?
 
         # Move camera(s) to capture state
         for i in range(len(self.orca.camera.cameras)):
             self.iac_set(self.orca, f'cameras/{i}', 'command', 'capture')
 
-        logging.debug("enable all timer")
+         # Enable furnace acquisition coil
+        self.iac_set(self.furnace, 'tcp', 'acquire', True)
+
         # Enable timer coils simultaneously
         self.iac_set(self.trigger, '', 'all_timers_enable', True)
 
@@ -98,16 +102,20 @@ class LiveXController():
         """Stop the acquisition."""
         # All timers can be explicitly disabled (even though they should turn themselves off).
         self.iac_set(self.trigger, '', 'all_timers_enable', False)
-        
-        self.iac_set(self.munir, '', 'stop_execute', True)
-        # # Set camera(s) to connected
-        # for i in range(len(self.orca.camera.cameras)):
-        #     if self.iac_get(self.orca, f'cameras/{i}/status/camera_status', param='camera_status') == 'disconnected':
-        #         self.iac_set(self.orca, f'cameras/{i}', 'command', 'connect')
-        #     elif self.iac_get(self.orca, f'cameras/{i}/status/camera_status', param='camera_status') == 'capturing':
-        #         self.iac_set(self.orca, f'cameras/{i}', 'command', 'end_capture')
 
-        # Edit camera properties (frametarget 0, explicitly set filewriting to false)
+        # Explicitly stop acquisition
+        self.iac_set(self.munir, '', 'stop_execute', True)
+
+        # cams stop capturing, num-frames to 0, start again
+        # Move camera(s) to capture state
+        for i in range(len(self.orca.camera.cameras)):
+            if self.iac_get(self.orca, f'cameras/{i}/status/camera_status', param='camera_status') == 'capturing':
+                self.iac_set(self.orca, f'cameras/{i}', 'command', 'end_capture')
+
+            self.iac_set(self.orca, f'cameras/{i}/config', 'num_frames', 0)
+
+            self.iac_set(self.orca, f'cameras/{i}', 'command', 'capture')
+
         # set frame num back to 0
         self.iac_set(self.trigger, 'furnace', 'target', 0)
         self.iac_set(self.trigger, 'widefov', 'target', 0)
@@ -119,16 +127,52 @@ class LiveXController():
         # Turn off acquisition coil
         self.iac_set(self.furnace, 'tcp', 'acquire', False)
 
-        # # Move camera(s) to capture state
-        # for i in range(len(self.orca.camera.cameras)):
-        #     self.iac_set(self.orca, f'cameras/{i}', 'command', 'capture')
-
         # Reenable timers
         self.iac_set(self.trigger, '', 'all_timers_enable', True)
 
     def set_acq_frequency(self, value):
-        """Set the acquisition frequency."""
+        """Set the acquisition frequency(ies)."""
         self.acq_frequency = value
+
+    def get_timer_frequencies(self):
+        """Update the timer frequency variables."""
+        self.furnace_freq = int(self.iac_get(self.trigger, 'furnace/frequency', param='frequency'))
+        self.widefov_freq = int(self.iac_get(self.trigger, 'widefov/frequency', param='frequency'))
+        self.narrowfov_freq = int(self.iac_get(self.trigger, 'narrowfov/frequency', param='frequency'))
+
+    def set_timer_frequency(self, value, timer=None):
+        """Set a given timer's frequency to the provided value.
+        :param value: integer represening the new time
+        :param timer: string representing the trigger parameter tree path of the timer to edit
+        """
+        if timer:
+            self.iac_set(self.trigger, timer, 'frequency', int(value))
+
+    def set_acq_time(self, value):
+        """Set the duration of the acquisition. Used to calculate targets from frequencies."""
+        self.acq_time = int(value)
+        self.get_timer_frequencies()
+
+        # Frame target = time (in s) * frequency
+        self.iac_set(self.trigger, 'furnace', 'target', (self.acq_time * self.furnace_freq))
+        self.iac_set(self.trigger, 'widefov', 'target', (self.acq_time * self.widefov_freq))
+        self.iac_set(self.trigger, 'narrowfov', 'target', (self.acq_time * self.narrowfov_freq))
+
+    def set_acq_frame_target(self, value):
+        """Set the frame target(s) of the acquisition."""
+        # Furnace is the 'source of truth' for frame targets. Others are derived from it
+        self.get_timer_frequencies()
+
+        # New furnace target as provided
+        furnace_target = int(value)
+        self.iac_set(self.trigger, 'furnace', 'target', furnace_target)
+
+        # Get new acquisition time
+        self.acq_time = furnace_target // self.furnace_freq
+
+        # Calculate other targets based on that time
+        self.iac_set(self.trigger, 'widefov', 'target', (self.acq_time * self.widefov_freq))
+        self.iac_set(self.trigger, 'narrowfov', 'target', (self.acq_time * self.narrowfov_freq))
 
     def initialise_adapters(self, adapters):
         """Get access to all of the other adapters.
@@ -139,6 +183,14 @@ class LiveXController():
         self.furnace = adapters["furnace"]
         self.trigger = adapters["trigger"]
         self.orca = adapters["camera"]
+
+        # With adapters initialised, IAC can be used to get any more needed info
+        self.get_timer_frequencies()
+        self.timer_frequencies = {
+            "furnace": self.furnace_freq,
+            "widefov": self.widefov_freq,
+            "narrowfov": self.narrowfov_freq
+        }
 
     def get_server_uptime(self):
         """Get the uptime for the ODIN server.

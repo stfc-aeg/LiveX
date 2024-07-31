@@ -68,8 +68,6 @@ class LiveXAdapter(ApiAdapter):
             response = {'error': 'Failed to decode PUT request body: {}'.format(str(e))}
             status_code = 400
 
-        logging.debug(response)
-
         return ApiAdapterResponse(response, content_type=content_type,
                                   status_code=status_code)
 

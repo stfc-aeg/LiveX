@@ -98,7 +98,7 @@ class TriggerController():
         # Frame targets
         self.furnace_target = read_decode_holding_reg(self.mod_client, modAddr.trig_furnace_target_hold)
         self.widefov_target = read_decode_holding_reg(self.mod_client, modAddr.trig_widefov_target_hold)
-        self.narrowfov_target = read_decode_holding_reg(self.mod_client, modAddr.trig_widefov_target_hold)
+        self.narrowfov_target = read_decode_holding_reg(self.mod_client, modAddr.trig_narrowfov_target_hold)
 
     def set_all_timers(self, value):
         """Enable or disable all timers."""
@@ -172,6 +172,7 @@ class TriggerController():
 
     def set_narrowfov_target(self, value):
         """"Set the target value of the narrowfov timer."""
+        logging.debug(f"SETTING NARROWFOV TARGET TO {value}")
         self.narrowfov_target = int(value)
         self.update_hold_value(modAddr.trig_narrowfov_target_hold, self.narrowfov_target)
 
