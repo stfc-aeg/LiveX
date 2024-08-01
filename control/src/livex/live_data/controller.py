@@ -8,20 +8,23 @@ from livex.live_data.processor import LiveDataProcessor
 class LiveDataController():
     """Class to instantiate and manage the ParameterTree for LiveDataProcessor classes."""
 
-    def __init__(self, endpoints):
+    def __init__(self, endpoints, names):
         """Initialise the LiveDataController. Create a LiveDataProcessor for each endpoint
         provided in config, then create a ParameterTree to handle behaviours for those classes.
         :param endpoints: list of endpoints in string format.
         """
         logging.debug("Initialising LiveDataController.")
 
+        self.names = names
+
         self.processors = []
         self.tree = {
-            "liveview": []
+            "liveview": {}
         }
 
         # For each provided endpoint
         for i in range(len(endpoints)):
+            name = names[i]
             self.processors.append(
                 LiveDataProcessor(endpoints[i])
             )
@@ -30,6 +33,7 @@ class LiveDataController():
 
             # Create 'branch' of ParameterTree for each Processor
             tree = {
+                "name": (lambda: name, None),
                 "endpoint": (lambda: self.processors[i].endpoint, None),
                 "image":
                 {  # Partials provide processor as an argument
@@ -56,7 +60,7 @@ class LiveDataController():
                     "histogram": (lambda proc=proc: proc.get_histogram(), None)
                 }
             }
-            self.tree['liveview'].append(tree)
+            self.tree['liveview'][name] = tree
 
         self.param_tree = ParameterTree(self.tree)
 

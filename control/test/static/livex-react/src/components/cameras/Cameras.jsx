@@ -12,22 +12,21 @@ function Cameras(props) {
 
     const cameraEndPoint = useAdapterEndpoint('camera', 'http://192.168.0.22:8888', 5000);
 
-    const [cameras, setCameras] = useState([]);
-
-    useEffect(() => {
-        const cameraArray = cameraEndPoint.data?.cameras;
-        setCameras(cameraArray || []);
-    }, [cameraEndPoint.data?.cameras]);  // Run only once after initial render
+    // Destructuring data and cameras safely
+    const { data } = cameraEndPoint || {}; // Fallback to an empty object if cameraEndPoint is undefined
+    const cameras = data?.cameras || {}; // Fallback to an empty object if data or cameras is undefined
 
     return (
         <Container>
             <Col>
-            {cameras.map((camera, index) => (
+              {Object.keys(cameras).map((key) => (
                 <OrcaCamera
-                    index={index}
+                    key={key}
+                    name={cameraEndPoint.data.cameras[key].camera_name}
                     connectedPuttingDisable={connectedPuttingDisable}>
                 </OrcaCamera>
-            ))}
+              ))
+              }
             </Col>
         </Container>
     )

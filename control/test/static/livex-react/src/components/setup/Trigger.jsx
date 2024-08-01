@@ -19,7 +19,7 @@ const EndPointButton = WithEndpoint(Button);
 function Trigger() {
 
     const triggerEndPoint = useAdapterEndpoint('trigger', 'http://192.168.0.22:8888', 1000);
-    const orcaEndPoint = useAdapterEndpoint('camera/cameras/0', 'http://192.168.0.22:8888', 1000);
+    const orcaEndPoint = useAdapterEndpoint('camera/cameras/widefov', 'http://192.168.0.22:8888', 1000);
     const furnaceEndPoint = useAdapterEndpoint('furnace', 'http://192.168.0.22:8888', 1000);
     const liveXEndPoint = useAdapterEndpoint('livex', 'http://192.168.0.22:8888', 1000);
 
@@ -185,7 +185,7 @@ function Trigger() {
           </Col>
           <Col>
             <StatusBox label="Frame count">
-              {checkNullNoDp(orcaEndPoint?.data[0]?.status.frame_number)}
+              {checkNullNoDp(orcaEndPoint?.data['widefov']?.status.frame_number)}
             </StatusBox>
           </Col>
           </Row>

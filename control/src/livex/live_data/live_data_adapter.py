@@ -21,8 +21,11 @@ class LiveDataAdapter(ApiAdapter):
         endpoints = [
             item.strip() for item in self.options.get('livedata_endpoint', None).split(",")
         ]
+        names = [
+            item.strip() for item in self.options.get('endpoint_name', None).split(",")
+        ]
 
-        self.live_viewer = LiveDataController(endpoints)
+        self.live_viewer = LiveDataController(endpoints, names)
 
     @response_types('application/json', default='application/json')
     def get(self, path, request):

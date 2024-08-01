@@ -20,23 +20,22 @@ const EndPointDoubleSlider = WithEndpoint(OdinDoubleSlider);
 const EndPointSlider = WithEndpoint(Form.Range);
 
 function OrcaCamera(props) {
-    const {index} = props;
+    const {name} = props;
     const {connectedPuttingDisable} = props;
 
-    const indexString = index.toString();
-    let orcaAddress = 'camera/cameras/'+indexString;
+    const nameString = name.toString();
+    let orcaAddress = 'camera/cameras/'+nameString;
     const orcaEndPoint = useAdapterEndpoint(orcaAddress, 'http://192.168.0.22:8888', 1000);
 
-    let liveViewAddress = 'live_data/liveview/'+indexString;
+    let liveViewAddress = 'live_data/liveview/'+nameString;
     const liveViewEndPoint = useAdapterEndpoint(liveViewAddress, 'http://192.168.0.22:8888', 1000);
-    const liveViewData = liveViewEndPoint?.data[index];
-
+    const liveViewData = liveViewEndPoint?.data[name];
 
 
     // Array of camera status names
     const status = ['disconnected', 'connected', 'capturing'];
     // Current status of orcaCamera (for readability)
-    const orcaStatus = orcaEndPoint?.data[index]?.status?.camera_status;
+    const orcaStatus = orcaEndPoint?.data[name]?.status?.camera_status;
 
     // Colours
     const colourEffects = [
@@ -87,7 +86,7 @@ function OrcaCamera(props) {
 
     return (
         <Container>
-          <TitleCard title={orcaEndPoint?.data[index]?.camera_name + " control"}>
+          <TitleCard title={orcaEndPoint?.data[name]?.camera_name + " control"}>
             <Col>
             <Row>
             <Col>
@@ -95,7 +94,7 @@ function OrcaCamera(props) {
                 {(orcaStatus || "Not found" )}
             </StatusBox>
             <StatusBox label="Frame count">
-                {checkNullNoDp(orcaEndPoint?.data[index]?.status.frame_number)}
+                {checkNullNoDp(orcaEndPoint?.data[name]?.status.frame_number)}
             </StatusBox>
             </Col>
             {/* These buttons have variable output, display, and colour, depending on the camera status.
@@ -152,7 +151,7 @@ function OrcaCamera(props) {
                 </InputGroup>
                 </Stack>
 
-                <TitleCard title={`${orcaEndPoint?.data[index]?.camera_name} preview`}>
+                <TitleCard title={`${orcaEndPoint?.data[name]?.camera_name} preview`}>
                     <Row>
 
                     <ClickableImage
