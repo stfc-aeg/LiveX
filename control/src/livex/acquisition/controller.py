@@ -49,7 +49,7 @@ class LiveXController():
                 'frequencies': {
                     'furnace': (lambda: self.furnace_freq, partial(self.set_timer_frequency, timer='furnace')),
                     'widefov': (lambda: self.widefov_freq, partial(self.set_timer_frequency, timer='widefov')),
-                    'narrowfov': (lambda: self.widefov_freq, partial(self.set_timer_frequency, timer='narrow'))
+                    'narrowfov': (lambda: self.widefov_freq, partial(self.set_timer_frequency, timer='narrowfov'))
                 },
             }
         })
@@ -147,6 +147,10 @@ class LiveXController():
         """
         if timer:
             self.iac_set(self.trigger, timer, 'frequency', int(value))
+            # We can recalculate duration and frame targets for the new frequency by calling this
+            # function with the current furnace target, instead of duplicating code.
+            furnace_target = self.iac_get(self.trigger, 'furnace/target', param='target')
+            self.set_acq_frame_target(furnace_target)
 
     def set_acq_time(self, value):
         """Set the duration of the acquisition. Used to calculate targets from frequencies."""
@@ -167,12 +171,15 @@ class LiveXController():
         furnace_target = int(value)
         self.iac_set(self.trigger, 'furnace', 'target', furnace_target)
 
-        # Get new acquisition time
-        self.acq_time = furnace_target // self.furnace_freq
+        # Get new 'real' acquisition time for calculations
+        self.acq_time = furnace_target / self.furnace_freq
+        logging.debug(f"acq time = target//freq: {furnace_target} / {self.furnace_freq} = {self.acq_time}")
 
         # Calculate other targets based on that time
         self.iac_set(self.trigger, 'widefov', 'target', (self.acq_time * self.widefov_freq))
         self.iac_set(self.trigger, 'narrowfov', 'target', (self.acq_time * self.narrowfov_freq))
+
+        self.acq_time = furnace_target // self.furnace_freq  # Avoid showing long floats to users
 
     def initialise_adapters(self, adapters):
         """Get access to all of the other adapters.

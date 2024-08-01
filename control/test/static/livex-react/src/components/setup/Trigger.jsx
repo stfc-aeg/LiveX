@@ -159,7 +159,7 @@ function Trigger() {
                   <EndPointFormControl
                     endpoint={liveXEndPoint}
                     type="number"
-                    fullpath={"acquisitions/frequencies/narrowfov"}
+                    fullpath={"acquisition/frequencies/narrowfov"}
                     value={triggerEndPoint.data.narrowfov?.frequency}>
                   </EndPointFormControl>
                 </InputGroup>
@@ -209,6 +209,29 @@ function Trigger() {
               variant="danger"
               >
                 stop acquisition
+            </EndPointButton>
+          </Row>
+          <Row>
+            <EndPointButton
+            endpoint={triggerEndPoint}
+            fullpath={"furnace/enable"}
+            value={false}
+            event_type="click">
+              turn off the furnace timer
+            </EndPointButton>
+            <EndPointButton
+            endpoint={triggerEndPoint}
+            fullpath={"widefov/enable"}
+            value={false}
+            event_type="click">
+              turn off the widefov timer
+            </EndPointButton>
+            <EndPointButton
+            endpoint={triggerEndPoint}
+            fullpath={"narrowfov/enable"}
+            value={false}
+            event_type="click">
+              turn off the narrowfov timer
             </EndPointButton>
           </Row>
         </Container>

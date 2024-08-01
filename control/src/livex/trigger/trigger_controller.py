@@ -172,7 +172,6 @@ class TriggerController():
 
     def set_narrowfov_target(self, value):
         """"Set the target value of the narrowfov timer."""
-        logging.debug(f"SETTING NARROWFOV TARGET TO {value}")
         self.narrowfov_target = int(value)
         self.update_hold_value(modAddr.trig_narrowfov_target_hold, self.narrowfov_target)
 
