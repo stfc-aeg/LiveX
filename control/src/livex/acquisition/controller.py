@@ -64,18 +64,19 @@ class LiveXController():
 
         # Move camera(s) to 'connected' state
         for i in range(len(self.orca.camera.cameras)):
-            if self.iac_get(self.orca, f'cameras/{i}/status/camera_status', param='camera_status') == 'disconnected':
-                self.iac_set(self.orca, f'cameras/{i}', 'command', 'connect')
-            elif self.iac_get(self.orca, f'cameras/{i}/status/camera_status', param='camera_status') == 'capturing':
-                self.iac_set(self.orca, f'cameras/{i}', 'command', 'end_capture')
+            camera = self.orca.camera.cameras[i].name
+            if self.iac_get(self.orca, f'cameras/{camera}/status/camera_status', param='camera_status') == 'disconnected':
+                self.iac_set(self.orca, f'cameras/{camera}', 'command', 'connect')
+            elif self.iac_get(self.orca, f'cameras/{camera}/status/camera_status', param='camera_status') == 'capturing':
+                self.iac_set(self.orca, f'cameras/{camera}', 'command', 'end_capture')
 
             # Set cameras explicitly to trigger source 2 (external)
-            self.iac_set(self.orca, f'cameras/{i}/config/', 'trigger_source', 2)
+            self.iac_set(self.orca, f'cameras/{camera}/config/', 'trigger_source', 2)
 
             # Set orca frames to prevent HDF error
-            self.iac_set(self.orca, f'cameras/{i}/config/', 'num_frames', self.acq_frame_target)
-            # TODO: camera frame targets still assume one unifying frequency
-            # this will depend on the munir iteration below as well
+            # No. frames is equal to the target set in the trigger by the user
+            target = self.iac_get(self.trigger, f'{camera}/target', param='target')
+            self.iac_set(self.orca, f'cameras/{camera}/config/', 'num_frames', target)
 
         # Set odin-data config (frame count, filepath, filename, dataset name)
         self.iac_set(self.munir, 'args', 'file_path', self.filepath)
@@ -84,11 +85,12 @@ class LiveXController():
 
         self.iac_set(self.munir, '', 'execute', True)
 
-        # TODO: Munir adapter needs its own iteration, as there should be one per camera?
+        # TODO: Munir will reference the camera in its path so this will need adjusting
 
         # Move camera(s) to capture state
         for i in range(len(self.orca.camera.cameras)):
-            self.iac_set(self.orca, f'cameras/{i}', 'command', 'capture')
+            camera = self.orca.camera.cameras[i].name
+            self.iac_set(self.orca, f'cameras/{camera}', 'command', 'capture')
 
          # Enable furnace acquisition coil
         self.iac_set(self.furnace, 'tcp', 'acquire', True)
@@ -109,12 +111,13 @@ class LiveXController():
         # cams stop capturing, num-frames to 0, start again
         # Move camera(s) to capture state
         for i in range(len(self.orca.camera.cameras)):
-            if self.iac_get(self.orca, f'cameras/{i}/status/camera_status', param='camera_status') == 'capturing':
-                self.iac_set(self.orca, f'cameras/{i}', 'command', 'end_capture')
+            camera = self.orca.camera.cameras[i].name
+            if self.iac_get(self.orca, f'cameras/{camera}/status/camera_status', param='camera_status') == 'capturing':
+                self.iac_set(self.orca, f'cameras/{camera}', 'command', 'end_capture')
 
-            self.iac_set(self.orca, f'cameras/{i}/config', 'num_frames', 0)
+            self.iac_set(self.orca, f'cameras/{camera}/config', 'num_frames', 0)
 
-            self.iac_set(self.orca, f'cameras/{i}', 'command', 'capture')
+            self.iac_set(self.orca, f'cameras/{camera}', 'command', 'capture')
 
         # set frame num back to 0
         self.iac_set(self.trigger, 'furnace', 'target', 0)
