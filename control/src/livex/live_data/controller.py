@@ -8,7 +8,7 @@ from livex.live_data.processor import LiveDataProcessor
 class LiveDataController():
     """Class to instantiate and manage the ParameterTree for LiveDataProcessor classes."""
 
-    def __init__(self, endpoints, names):
+    def __init__(self, endpoints, names, resolutions):
         """Initialise the LiveDataController. Create a LiveDataProcessor for each endpoint
         provided in config, then create a ParameterTree to handle behaviours for those classes.
         :param endpoints: list of endpoints in string format.
@@ -25,8 +25,9 @@ class LiveDataController():
         # For each provided endpoint
         for i in range(len(endpoints)):
             name = names[i]
+            resolution = resolutions[i]
             self.processors.append(
-                LiveDataProcessor(endpoints[i])
+                LiveDataProcessor(endpoints[i], resolution)
             )
 
             proc = self.processors[i]
@@ -42,9 +43,9 @@ class LiveDataController():
                                partial(self.set_img_x, processor=proc)),
                     "size_y": (lambda proc=proc: proc.size_y,
                                partial(self.set_img_y, processor=proc)),
-                    "dimensions": (lambda proc=proc: proc.dimensions,
+                    "dimensions": (lambda proc=proc: proc.out_dimensions,
                                    partial(self.set_img_dims, processor=proc)),
-                    "resolution": (lambda proc=proc: proc.resolution,
+                    "resolution": (lambda proc=proc: proc.resolution_percent,
                                    partial(self.set_resolution, processor=proc)),
                     "colour": (lambda proc=proc: proc.colour,
                                partial(self.set_img_colour, processor=proc)),

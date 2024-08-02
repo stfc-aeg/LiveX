@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import blosc
 import base64
 import zmq
 from multiprocessing import Process, Queue, Pipe
@@ -13,23 +14,25 @@ from odin_data.ipc_channel import IpcChannel
 class LiveDataProcessor():
     """Class to process image data received on a multiprocess that it instantiates."""
 
-    def __init__(self, endpoint, size_x=640, size_y=480, colour='bone'):
+    def __init__(self, endpoint, resolution, size_x=640, size_y=480, colour='bone'):
         """Initialise the LiveDataProcessor object.
         This method constructs the Queue, Pipes and Process necessary for multiprocessing.
         :param endpoint: string representation of endpoint for image data.
-        :param size_x: integer width of image in pixels (default 640).
-        :param size_y: integer height of image in pixels (default 480).
+        :param resolution: dict ({'x': x, 'y': y}) of maximum image dimensions
+        :param size_x: integer width of output image in pixels (default 640).
+        :param size_y: integer height of output image in pixels (default 480).
         :param colour: string of opencv colourmap label (default 'bone').
         For colourmap options, see https://docs.opencv.org/3.4/d3/d50/group__imgproc__colormap.html
         """
         self.endpoint = endpoint
-        self.max_size_x = 4096
-        self.max_size_y = 2304
+        self.max_size_x = resolution['x']
+        self.max_size_y = resolution['y']
         self.size_x = size_x
         self.size_y = size_y
-        self.dimensions = [size_x, size_y]
-        self.resolution = 100
+        self.out_dimensions = [size_x, size_y]
         self.colour = colour
+
+        self.resolution_percent = 100
 
         self.image = 0
         self.histogram = None
@@ -106,6 +109,12 @@ class LiveDataProcessor():
 
         dtype = 'float32' if header['dtype'] == "float" else header['dtype']
         data = np.frombuffer(msg[1], dtype=dtype)
+
+        # Check for image compression by checking raw data size. Decompress if needed
+        # Currently assumes bytes-per-pixel of 2
+        if len(msg[1]) != (self.max_size_x*self.max_size_y*2):
+            uncompressed_data = blosc.decompress(data)
+            data = np.fromstring(uncompressed_data, dtype=dtype)
 
         # For histogram, it's easier to clip the data before reshaping it
         clipped_data = np.clip(data, self.clipping['min'], self.clipping['max'])

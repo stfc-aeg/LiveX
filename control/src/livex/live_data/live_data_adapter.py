@@ -24,8 +24,14 @@ class LiveDataAdapter(ApiAdapter):
         names = [
             item.strip() for item in self.options.get('endpoint_name', None).split(",")
         ]
+        # Array of dicts of resolutions
+        resolutions = [
+            {'x': int(width), 'y': int(height)}  # generate x/y dict
+            for resolution in self.options.get('camera_resolution', '2304x4096').split(',') # get resolutions
+            for width, height in [resolution.strip().split("x")] # each resolution split into array
+        ]
 
-        self.live_viewer = LiveDataController(endpoints, names)
+        self.live_viewer = LiveDataController(endpoints, names, resolutions)
 
     @response_types('application/json', default='application/json')
     def get(self, path, request):
