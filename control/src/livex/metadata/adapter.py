@@ -3,7 +3,6 @@ import logging
 from tornado.escape import json_decode
 
 from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
-from odin.adapters.parameter_tree import ParameterTreeError
 
 from livex.metadata.controller import MetadataController, LiveXError
 
@@ -35,8 +34,8 @@ class MetadataAdapter(ApiAdapter):
         try:
             response = self.controller.get(path)
             status_code = 200
-        except ParameterTreeError as e:
-            response = {'error': str(e)}
+        except LiveXError as error:
+            response = {'error': str(error)}
             status_code = 400
 
         content_type = 'application/json'
@@ -63,11 +62,11 @@ class MetadataAdapter(ApiAdapter):
             self.controller.set(path, data)
             response = self.controller.get(path)
             status_code = 200
-        except LiveXError as e:
-            response = {'error': str(e)}
+        except LiveXError as error:
+            response = {'error': str(error)}
             status_code = 400
-        except (TypeError, ValueError) as e:
-            response = {'error': 'Failed to decode PUT request body: {}'.format(str(e))}
+        except (TypeError, ValueError) as error:
+            response = {'error': 'Failed to decode PUT request body: {}'.format(str(error))}
             status_code = 400
 
         return ApiAdapterResponse(response, content_type=content_type,
@@ -87,6 +86,12 @@ class MetadataAdapter(ApiAdapter):
 
         return ApiAdapterResponse(response, status_code=status_code)
 
+    def initialize(self, adapters):
+        """Get list of adapters and call relevant functions for them."""
+        self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
+
+        self.controller.initialise(self.adapters)
+
     def cleanup(self):
         """Clean up adapter state at shutdown.
 
@@ -94,9 +99,3 @@ class MetadataAdapter(ApiAdapter):
         It simplied calls the cleanup function of the LiveX instance.
         """
         self.controller.cleanup()
-
-    def initialize(self, adapters):
-        """Get list of adapters and call relevant functions for them."""
-        self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
-
-        self.controller.initialise(self.adapters)

@@ -58,7 +58,10 @@ class MetadataController:
         This method returns the parameter tree for use by clients via the FurnaceController adapter.
         :param path: path to retrieve from tree
         """
-        return self.param_tree.get(path)
+        try:
+            return self.param_tree.get(path)
+        except ParameterTreeError as error:
+            raise LiveXError(error)
 
     def set(self, path, data):
         """Set parameters in the parameter tree.
