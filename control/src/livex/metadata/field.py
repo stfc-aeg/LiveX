@@ -1,7 +1,7 @@
 import shelve
 from dataclasses import dataclass, field, fields
 from functools import partial
-from typing import Any, ClassVar, List, Optional, Dict
+from typing import Any, ClassVar, Dict, List, Optional
 
 
 @dataclass

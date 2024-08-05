@@ -2,18 +2,20 @@ import json
 import logging
 from functools import partial
 
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
-
 from livex.util import LiveXError
+from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from .field import MetadataField
 from .hdf_writer import HdfMetadataWriter
+from .markdown_writer import MarkdownMetaWriter
 
 
 class MetadataController:
     """MetadataController - class that manages the other adapters for LiveX."""
 
-    def __init__(self, metadata_config, metadata_store=None):
+    def __init__(
+        self, metadata_config, metadata_store=None, markdown_template="markdown.j2"
+    ):
         """Initialise the MetadataController object.
 
         This constructor initialises the MetadataController, building the parameter tree and getting
@@ -27,10 +29,15 @@ class MetadataController:
         self.config_error = ""
         self.metadata = {}
 
-        self.hdf_path = "."
+        self.hdf_path = "/tmp"
         self.hdf_file = "metadata.hdf5"
         self.hdf_group = "metadata"
         self.hdf_write = False
+
+        self.markdown_template = markdown_template
+        self.markdown_path = "/tmp"
+        self.markdown_file = "metadata.md"
+        self.markdown_write = False
 
         self._build_tree()
 
@@ -74,9 +81,12 @@ class MetadataController:
             self.param_tree.set(path, data)
         except ParameterTreeError as e:
             raise LiveXError(e)
-        
+
         if self.hdf_write:
             self._write_hdf()
+
+        if self.markdown_write:
+            self._write_markdown()
 
     def _load_config(self, metadata_config, raise_error=True):
 
@@ -119,8 +129,8 @@ class MetadataController:
 
     def _build_tree(self):
 
-        def _set_param(param, value):
-            setattr(self, param, value)
+        def _attr_accessor(param):
+            return (partial(getattr, self, param), partial(setattr, self, param))
 
         self.param_tree = ParameterTree(
             {
@@ -129,10 +139,15 @@ class MetadataController:
                 "config_error": (lambda: self.config_error, None),
                 "metadata_store": (lambda: self.metadata_store, None),
                 "hdf": {
-                    "path": (lambda: self.hdf_path, partial(_set_param, "hdf_path")),
-                    "file": (lambda: self.hdf_file, partial(_set_param, "hdf_file")),
-                    "group": (lambda: self.hdf_group, partial(_set_param, "hdf_group")),
-                    "write": (lambda: self.hdf_write, partial(_set_param, "hdf_write")),
+                    "path": _attr_accessor("hdf_path"),
+                    "file": _attr_accessor("hdf_file"),
+                    "group": _attr_accessor("hdf_group"),
+                    "write": _attr_accessor("hdf_write"),
+                },
+                "markdown": {
+                    "path": _attr_accessor("markdown_path"),
+                    "file": _attr_accessor("markdown_file"),
+                    "write": _attr_accessor("markdown_write"),
                 },
                 "fields": ParameterTree(
                     {
@@ -148,10 +163,19 @@ class MetadataController:
         self.hdf_write = False
 
         # Build a dict of the current metadata values
-        metadata = {}
-        for key, field in self.metadata.items():
-            metadata[key] = field.value
+        metadata = {key: field.value for key, field in self.metadata.items()}
 
-        print(metadata)
         with HdfMetadataWriter(self.hdf_path, self.hdf_file) as hdf5:
             hdf5.write(self.hdf_group, metadata)
+
+    def _write_markdown(self):
+
+        self.markdown_write = False
+
+        # Build a dict of the current metadata values
+        metadata = {key: field.value for key, field in self.metadata.items()}
+
+        with MarkdownMetaWriter(
+            self.markdown_template, self.markdown_path, self.markdown_file
+        ) as markdown:
+            markdown.write(metadata)

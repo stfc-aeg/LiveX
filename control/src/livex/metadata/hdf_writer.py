@@ -1,12 +1,14 @@
 import logging
 import os
-import h5py
-
 from typing import Dict
 
-class HdfMetadataWriter():
+import h5py
+from livex.util import LiveXError
 
-    def __init__(self, file_path: str, file_name : str, mode : str ="a"):
+
+class HdfMetadataWriter:
+
+    def __init__(self, file_path: str, file_name: str, mode: str = "a"):
 
         self.file_path = file_path
         self.file_name = file_name
@@ -16,15 +18,18 @@ class HdfMetadataWriter():
 
     def __enter__(self):
 
-        os.makedirs(self.file_path, exist_ok=True)
-        self.file = h5py.File(self.full_path, self.mode)
+        try:
+            os.makedirs(self.file_path, exist_ok=True)
+            self.file = h5py.File(self.full_path, self.mode)
+        except (OSError, IOError) as error:
+            raise LiveXError("Failed to write markdown metadata: {}".format(str(error)))
         return self
-    
+
     def __exit__(self, exc_type, exc_value, exc_tb):
 
         if self.file:
             self.file.close()
-    
+
     def write(self, group: str, metadata: Dict):
 
         group = self.file.require_group(group)
@@ -32,4 +37,6 @@ class HdfMetadataWriter():
         for key, value in metadata.items():
             group.attrs[key] = value
 
-        logging.debug("Wrote metadata to group %s in HDF file %s", group.name, self.full_path)
+        logging.debug(
+            "Wrote metadata to group %s in HDF file %s", group.name, self.full_path
+        )
