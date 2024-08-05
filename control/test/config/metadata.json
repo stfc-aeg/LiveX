@@ -40,8 +40,9 @@
     },
     "exp_tags": {
         "label": "Tags",
-        "multi_choice": ["hot_tearing", "nucleation", "recycling", "test"],
-        "default": "",
+        "choices": ["hot_tearing", "nucleation", "recycling", "test"],
+        "multi_choice": true,
+        "default": [""],
         "persist": true,
         "user_input": true 
     },
