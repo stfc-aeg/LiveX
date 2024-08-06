@@ -12,6 +12,7 @@ class MetadataField:
     default: Any
     choices: Optional[List[str]] = None
     multi_choice: Optional[bool] = False
+    multi_line: Optional[bool] = False
     persist: Optional[bool] = False
     user_input: Optional[bool] = False
     type: str = field(init=False)
