@@ -27,6 +27,7 @@ class MetadataField:
         default: default value (if not loaded from persistent store) - required
         choices: list of choices for chooser fields - optional
         multi_choice: flag indicating multiple choices allowed - optional
+        multi_line: flag indicating text field can be multiple lines in UI - optional
         persist: flag indicating field should be added to persistent store - optional
         user_input: flag indicating field should be exposed for user input - optional
         type: field type, internally generated from default or persistent store value
@@ -39,6 +40,7 @@ class MetadataField:
     default: Any
     choices: Optional[List[str]] = None
     multi_choice: Optional[bool] = False
+    multi_line: Optional[bool] = False
     persist: Optional[bool] = False
     user_input: Optional[bool] = False
     type: str = field(init=False)
