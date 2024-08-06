@@ -1,28 +1,49 @@
+"""LiveX metadata controller.
+
+This module implements the LiveX metadata controller class, which manages metadata for the LiveX
+control system. Metadata fields are loaded from a configuration file and presented as parameters
+for use in the system. Metadata can be written into HDF and markdown files for storage.
+
+Tim Nicholls, STFC Detector Systems Software Group
+"""
+
 import json
 import logging
 from functools import partial
+from typing import Any, Callable, Dict, Tuple
 
 from livex.util import LiveXError
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
-from .field import MetadataField
 from .hdf_writer import HdfMetadataWriter
 from .markdown_writer import MarkdownMetaWriter
+from .types import MetadataField, ParamDict
 
 
 class MetadataController:
-    """MetadataController - class that manages the other adapters for LiveX."""
+    """MetadataController - controller class for LiveX metadata.
+
+    This class implements the controller for the LiveX metadata adapter. It manages metadata fields,
+    their state and output of metadata to HDF and markdown files.
+    """
 
     def __init__(
-        self, metadata_config, metadata_store=None, markdown_template="markdown.j2"
+        self,
+        metadata_config: str,
+        metadata_store: str = None,
+        markdown_template: str = "markdown.j2",
     ):
         """Initialise the MetadataController object.
 
-        This constructor initialises the MetadataController, building the parameter tree and getting
-        system info.
+        This constructor initialises the state of the controller, loading metadata fields from a
+        configuration file and building the parameter tree.
+
+        :param metadata_config: configuration file name
+        :param metadata_store: persistent store file name
+        :param markdown_template: markdown template file name
         """
 
-        # Initialise the state of the controller and parameter tree
+        # Initialise the state of the controller
         self.metadata_config = ""
         self.metadata_store = ""
         self.config_loaded = False
@@ -39,72 +60,121 @@ class MetadataController:
         self.markdown_file = "metadata.md"
         self.markdown_write = False
 
+        # Build a default parameter tree
         self._build_tree()
 
         # If a persistent metadata store has been specified, configure the MetadataField dataclass
         # to use it
         if metadata_store:
-            MetadataField.set_store(metadata_store)
-            self.metadata_store = metadata_store
+            try:
+                MetadataField.set_store(metadata_store)
+                self.metadata_store = metadata_store
+            except Exception as error:
+                # shelve.open() exception types are poorly documented, catch all at this point
+                error_msg = "Failed to open persistent store file {}: {}".format(
+                    metadata_store, error
+                )
+                logging.error(error_msg)
 
         # Load the specified metadata configuration file
         self._load_config(metadata_config, raise_error=False)
 
-    def initialise(self, adapters):
-        """Get access to all of the other adapters.
-        :param adapters: dict of adapters from adapter.py.
+    def initialise(self, adapters: ParamDict) -> None:
+        """Initialize the controller.
+
+        This method initializes the controller with information about the adapters loaded into the
+        running application.
+
+        :param adapters: dictionary of adapter instances
         """
         self.adapters = adapters
 
-    def cleanup(self):
+    def cleanup(self) -> None:
+        """Clean up the controller.
+
+        This method cleans up the state of the controller at shutdown, closing the persistent
+        metadata store if open.
+        """
         if self.metadata_store:
             MetadataField.close_store()
 
-    def get(self, path):
-        """Get the parameter tree.
-        This method returns the parameter tree for use by clients via the FurnaceController adapter.
-        :param path: path to retrieve from tree
+    def get(self, path: str, with_metadata: bool = False) -> ParamDict:
+        """Get parameter data from controller.
+
+        This method gets data from the controller parameter tree.
+
+        :param path: path to retrieve from the tree
+        :param with_metadata: flag indicating if parameter metadata should be included
+        :return: dictionary of parameters (and optional metadata) for specified path
         """
         try:
-            return self.param_tree.get(path)
+            return self.param_tree.get(path, with_metadata)
         except ParameterTreeError as error:
+            logging.error(error)
             raise LiveXError(error)
 
-    def set(self, path, data):
-        """Set parameters in the parameter tree.
-        This method simply wraps underlying ParameterTree method so that an exceptions can be
-        re-raised with an appropriate LiveXError.
-        :param path: path of parameter tree to set values for
-        :param data: dictionary of new data values to set in the parameter tree
+    def set(self, path: str, data: ParamDict) -> None:
+        """Set parameters in the controller.
+
+        This method sets parameters in the controller parameter tree. If the parameters to write
+        metadata to HDF and/or markdown have been set during the call, the appropriate write
+        action is executed.
+
+        :param path: path to set parameters at
+        :param data: dictionary of parameters to set
         """
         try:
             self.param_tree.set(path, data)
-        except ParameterTreeError as e:
-            raise LiveXError(e)
+        except ParameterTreeError as error:
+            logging.error(error)
+            raise LiveXError(error)
 
+        # If the HDF write parameter has been set, write metadata to an HDF file
         if self.hdf_write:
             self._write_hdf()
 
+        # If the markdown write parameter has been set, write metadata to a markdown file
         if self.markdown_write:
             self._write_markdown()
 
-    def _load_config(self, metadata_config, raise_error=True):
+    def _load_config(self, metadata_config: str, raise_error: bool = True) -> None:
+        """Load metadata configuration from a file.
 
-        def handle_config_error(error):
+        This method loads the metadata configuration from the specified file. Metadata fields are
+        created from that configuration and the parameter tree rebuilt accordingly. Errors in this
+        process normally raise an exception, but this can be supressed during initial loading to
+        allow the state of the controller to be populated and initialisation.
+
+        :param metadata_config: configuration file name
+        :param raise_error: if an error occurs during configuration loading or parsing, raise it
+        """
+
+        def handle_config_error(error: str) -> None:
+            """Handle configuration error
+
+            This inner helper function handles errors during configuration loading. The error
+            message is stored for access via the parameter tree, logged and, if configured, raised
+            as an exception.
+
+            :param error: error message
+            """
             self.config_error = error
             logging.error(error)
             if raise_error:
                 raise LiveXError(error)
 
         try:
+            # Load the metadata fields from the JSON configuration file
             self.config_loaded = False
             with open(metadata_config, "r") as config_file:
                 fields = json.load(config_file)
 
+            # Build metadata fields from the parsed configuration
             self.metadata = {
                 name: MetadataField(key=name, **field) for name, field in fields.items()
             }
 
+            # Update the configuraiton state and parameter tree with the new fields
             self._build_tree()
             self.metadata_config = metadata_config
             self.config_loaded = True
@@ -112,11 +182,11 @@ class MetadataController:
             logging.info("Loaded metadata config from file %s", self.metadata_config)
 
         except FileNotFoundError as error:
-            handle_config_error(
-                "Unable to load metadata parameter configuration: {}".format(error)
-            )
+            # Handle file errors during loading
+            handle_config_error("Unable to load metadata parameter configuration: {}".format(error))
 
         except json.JSONDecodeError as error:
+            # Handle JSON parsing errors
             handle_config_error(
                 "Unable to parse metadata parameter configuration {}: {}".format(
                     self.metadata_config,
@@ -125,13 +195,27 @@ class MetadataController:
             )
 
         except TypeError as error:
+            # Handle field generation errors
             handle_config_error("Failed to generate metadata fields: {}".format(error))
 
-    def _build_tree(self):
+    def _build_tree(self) -> None:
+        """Build the controller parameter tree.
 
-        def _attr_accessor(param):
-            return (partial(getattr, self, param), partial(setattr, self, param))
+        This method (re)builds the controller parameter tree. This is isolated from the init
+        method to allow the tree to rebuilt if the metadata configuration is reloaded.
+        """
 
+        def _attr_accessor(attr_name: str) -> Tuple[Callable, Callable]:
+            """Generate an attribute attribute accessor.
+
+            This inner helper function generates a parameter accessor getter/setter pair for the
+            specified attribute of the controller object.
+
+            :param attr_name: attribute name
+            """
+            return (partial(getattr, self, attr_name), partial(setattr, self, attr_name))
+
+        # Build the parameter tree
         self.param_tree = ParameterTree(
             {
                 "metadata_config": (lambda: self.metadata_config, self._load_config),
@@ -158,8 +242,12 @@ class MetadataController:
             }
         )
 
-    def _write_hdf(self):
+    def _write_hdf(self) -> None:
+        """Write metadata fields to an HDF file.
 
+        This method writes metadata to an HDF file. The path and name of the file are obtained
+        from the appropriate attributes mapped into the parameter tree of the controller.
+        """
         self.hdf_write = False
 
         # Build a dict of the current metadata values
@@ -168,8 +256,12 @@ class MetadataController:
         with HdfMetadataWriter(self.hdf_path, self.hdf_file) as hdf5:
             hdf5.write(self.hdf_group, metadata)
 
-    def _write_markdown(self):
+    def _write_markdown(self) -> None:
+        """Write metadata fields to a markdownfile.
 
+        This method writes metadata to a markdown file. The path and name of the file are obtained
+        from the appropriate attributes mapped into the parameter tree of the controller.
+        """
         self.markdown_write = False
 
         # Build a dict of the current metadata values
