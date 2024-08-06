@@ -12,8 +12,6 @@ function TagInput(props) {
     const {metadataEndPoint} = props;
     const {field} = props;
 
-    console.log("field:", field)
-
     const selectOptions = options.map(value => ({
       label: value,
       value: value,
