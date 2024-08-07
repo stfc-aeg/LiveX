@@ -71,7 +71,7 @@ class LiveDataController():
         """
         # Could be done programmatically but not enough to warrant this complexity
         params = {
-            "dimensions": processor.dimensions,
+            "dimensions": processor.out_dimensions,
             "size_x": processor.size_x,
             "size_y": processor.size_y,
             "colour": processor.colour,

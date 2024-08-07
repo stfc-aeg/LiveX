@@ -211,29 +211,6 @@ function Trigger() {
                 stop acquisition
             </EndPointButton>
           </Row>
-          <Row>
-            <EndPointButton
-            endpoint={triggerEndPoint}
-            fullpath={"furnace/enable"}
-            value={false}
-            event_type="click">
-              turn off the furnace timer
-            </EndPointButton>
-            <EndPointButton
-            endpoint={triggerEndPoint}
-            fullpath={"widefov/enable"}
-            value={false}
-            event_type="click">
-              turn off the widefov timer
-            </EndPointButton>
-            <EndPointButton
-            endpoint={triggerEndPoint}
-            fullpath={"narrowfov/enable"}
-            value={false}
-            event_type="click">
-              turn off the narrowfov timer
-            </EndPointButton>
-          </Row>
         </Container>
         </TitleCard>
       </Container>

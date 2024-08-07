@@ -27,7 +27,7 @@ class LiveDataAdapter(ApiAdapter):
         # Array of dicts of resolutions
         resolutions = [
             {'x': int(width), 'y': int(height)}  # generate x/y dict
-            for resolution in self.options.get('camera_resolution', '2304x4096').split(',') # get resolutions
+            for resolution in self.options.get('camera_resolution', '4096x2304').split(',') # get resolutions
             for width, height in [resolution.strip().split("x")] # each resolution split into array
         ]
 
@@ -52,7 +52,7 @@ class LiveDataAdapter(ApiAdapter):
             data = decode_request_body(request)
             self.live_viewer.set(path, data)
             response = self.live_viewer.get(path)
-            content_type = "applicaiton/json"
+            content_type = "application/json"
             status = 200
 
         except ParameterTreeError as param_error:
