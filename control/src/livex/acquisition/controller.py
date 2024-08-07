@@ -1,5 +1,6 @@
 import logging
 import time
+import datetime
 
 from functools import partial
 
@@ -28,7 +29,7 @@ class LiveXController():
         self.narrowfov_freq = None
 
         # These can be configured but a sensible default should be determined
-        self.filepath = "/data"
+        self.filepath = "/tmp"
         self.filename = "tmpy"
         self.dataset_name = "tmp"
 
@@ -65,6 +66,9 @@ class LiveXController():
         # Move camera(s) to 'connected' state
         for i in range(len(self.orca.camera.cameras)):
             camera = self.orca.camera.cameras[i].name
+
+            logging.debug(f"camera: {camera}")
+
             if self.iac_get(self.orca, f'cameras/{camera}/status/camera_status', param='camera_status') == 'disconnected':
                 self.iac_set(self.orca, f'cameras/{camera}', 'command', 'connect')
             elif self.iac_get(self.orca, f'cameras/{camera}/status/camera_status', param='camera_status') == 'capturing':
@@ -75,17 +79,19 @@ class LiveXController():
 
             # Set orca frames to prevent HDF error
             # No. frames is equal to the target set in the trigger by the user
-            target = self.iac_get(self.trigger, f'{camera}/target', param='target')
+            target = int(self.iac_get(self.trigger, f'{camera}/target', param='target'))
             self.iac_set(self.orca, f'cameras/{camera}/config/', 'num_frames', target)
 
-        # Set odin-data config (frame count, filepath, filename, dataset name)
-        self.iac_set(self.munir, 'args', 'file_path', self.filepath)
-        self.iac_set(self.munir, 'args', 'file_name', self.filename)
-        self.iac_set(self.munir, 'args', 'num_frames', self.acq_frame_target)
+            current_time = datetime.datetime.now()
+            # Format the time as 'yy:mm:dd:hh:mm'
+            filename = camera + current_time.strftime("%y_%m_%d_%H_%M")
 
-        self.iac_set(self.munir, '', 'execute', True)
+            self.iac_set(self.munir, f'subsystems/{camera}/args', 'file_path', self.filepath)
+            self.iac_set(self.munir, f'subsystems/{camera}/args', 'file_name', filename)
+            self.iac_set(self.munir, f'subsystems/{camera}/args', 'num_frames', target)
 
-        # TODO: Munir will reference the camera in its path so this will need adjusting
+            # logging.debu
+            self.iac_set(self.munir, 'execute', f'{camera}', True)
 
         # Move camera(s) to capture state
         for i in range(len(self.orca.camera.cameras)):
@@ -105,9 +111,6 @@ class LiveXController():
         # All timers can be explicitly disabled (even though they should turn themselves off).
         self.iac_set(self.trigger, '', 'all_timers_enable', False)
 
-        # Explicitly stop acquisition
-        self.iac_set(self.munir, '', 'stop_execute', True)
-
         # cams stop capturing, num-frames to 0, start again
         # Move camera(s) to capture state
         for i in range(len(self.orca.camera.cameras)):
@@ -118,6 +121,9 @@ class LiveXController():
             self.iac_set(self.orca, f'cameras/{camera}/config', 'num_frames', 0)
 
             self.iac_set(self.orca, f'cameras/{camera}', 'command', 'capture')
+
+            # Explicitly stop acquisition
+            self.iac_set(self.munir, f'subsystems/{camera}', 'stop_execute', True)
 
         # set frame num back to 0
         self.iac_set(self.trigger, 'furnace', 'target', 0)
