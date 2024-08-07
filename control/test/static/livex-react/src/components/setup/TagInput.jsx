@@ -49,7 +49,7 @@ function TagInput(props) {
     return (
       <InputGroup>
         <InputGroup.Text style={{width:labelWidth}}>
-          Experiment Tags
+          Experimental Tags:
         </InputGroup.Text>
         <MultiSelect
           options={selectOptions}
