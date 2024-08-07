@@ -15,7 +15,7 @@ const EndPointToggle = WithEndpoint(ToggleSwitch);
 const EndPointFormControl = WithEndpoint(Form.Control);
 
 function ThermalGradient(props){
-    const {liveXEndPoint} = props;
+    const {furnaceEndPoint} = props;
     const {connectedPuttingDisable} = props;
 
     return (
@@ -24,10 +24,10 @@ function ThermalGradient(props){
         <Row>
             <Col>
             <EndPointToggle 
-                endpoint={liveXEndPoint}
+                endpoint={furnaceEndPoint}
                 fullpath="gradient/enable"
                 event_type="click"
-                checked={liveXEndPoint.data.gradient?.enable || false} label="Enable" disabled={connectedPuttingDisable}>
+                checked={furnaceEndPoint.data.gradient?.enable || false} label="Enable" disabled={connectedPuttingDisable}>
             </EndPointToggle>
             </Col>
         </Row>
@@ -36,12 +36,12 @@ function ThermalGradient(props){
             <StatusBox
                 type="info"
                 label="Actual">
-                {checkNull(liveXEndPoint.data.gradient?.actual)}
+                {checkNull(furnaceEndPoint.data.gradient?.actual)}
                 </StatusBox>
             <StatusBox
                 type="info"
                 label="Theoretical">
-                {checkNull(liveXEndPoint.data.gradient?.theoretical)}
+                {checkNull(furnaceEndPoint.data.gradient?.theoretical)}
             </StatusBox>
             </Col>
             <Col>
@@ -50,7 +50,7 @@ function ThermalGradient(props){
                 Wanted (K/mm)
                 </InputGroup.Text>
                 <EndPointFormControl
-                endpoint={liveXEndPoint}
+                endpoint={furnaceEndPoint}
                 type="number"
                 fullpath="gradient/wanted"
                 disabled={connectedPuttingDisable}>
@@ -62,7 +62,7 @@ function ThermalGradient(props){
                 Distance (mm)
                 </InputGroup.Text>
                 <EndPointFormControl
-                endpoint={liveXEndPoint}
+                endpoint={furnaceEndPoint}
                 type="number"
                 fullpath="gradient/distance"
                 disabled={connectedPuttingDisable}></EndPointFormControl>
@@ -70,13 +70,13 @@ function ThermalGradient(props){
             <InputGroup>
                 <InputGroup.Text> Gradient high towards heater: </InputGroup.Text>
                 <EndpointDropdown
-                endpoint={liveXEndPoint}
+                endpoint={furnaceEndPoint}
                 event_type="select"
                 fullpath="gradient/high_heater"
                 variant="outline-secondary"
-                buttonText={liveXEndPoint.data.gradient?.high_heater_options[liveXEndPoint.data.gradient.high_heater] || "Unknown"}
+                buttonText={furnaceEndPoint.data.gradient?.high_heater_options[furnaceEndPoint.data.gradient.high_heater] || "Unknown"}
                 disabled={connectedPuttingDisable}>
-                {liveXEndPoint.data.gradient?.high_heater_options ? liveXEndPoint.data.gradient.high_heater_options.map(
+                {furnaceEndPoint.data.gradient?.high_heater_options ? furnaceEndPoint.data.gradient.high_heater_options.map(
                 (selection, index) => (
                     <Dropdown.Item
                     eventKey={index}

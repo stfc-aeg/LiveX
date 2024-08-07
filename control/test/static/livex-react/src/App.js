@@ -16,61 +16,73 @@ import Motor from './components/furnace/Motor';
 import React from "react";
 import { TitleCard, StatusBox, OdinApp } from 'odin-react';
 import { WithEndpoint, useAdapterEndpoint } from 'odin-react';
-import Metadata from './components/Metadata';
+import Metadata from './components/setup/Metadata';
 import Cameras from './components/cameras/Cameras';
+import Trigger from './components/setup/Trigger';
 
 const EndPointButton = WithEndpoint(Button);
 
 function App(props) {
 
-  const liveXEndPoint = useAdapterEndpoint('furnace', 'http://192.168.0.22:8888', 1000);
-  const connectedPuttingDisable = (!(liveXEndPoint.data.status?.connected || false)) || (liveXEndPoint.loading == "putting")
+  const furnaceEndPoint = useAdapterEndpoint('furnace', 'http://192.168.0.22:8888', 1000);
+  const connectedPuttingDisable = (!(furnaceEndPoint.data.status?.connected || false)) || (furnaceEndPoint.loading == "putting")
 
   return (
-    <OdinApp title="LiveX Controls" navLinks={["furnace control", "metadata", "setup", "sequencing", "camera control", "monitoring"]}>
+    <OdinApp title="LiveX Controls" navLinks={["Metadata and Setup", "Sequencing", "Furnace Control", "Camera Control", "Monitoring"]}>
+    <Col>
+      <Metadata
+        furnaceEndPoint={furnaceEndPoint}
+        connectedPuttingDisable={connectedPuttingDisable}>
+      </Metadata>
+      <Trigger>
+      </Trigger>
+    </Col>
+    <Col>
+      sequencer
+    </Col>
     <Col>
     <Container>
       <Col>
       <EndPointButton
-        endpoint={liveXEndPoint}
+        endpoint={furnaceEndPoint}
         value={true}
         fullpath="status/reconnect"
         event_type="click"
         disabled={!connectedPuttingDisable}
-        variant={liveXEndPoint.data.status?.connected ? "primary" : "danger"}>
-        {liveXEndPoint.data.status?.connected ? 'Connected' : 'Reconnect'}
+        variant={furnaceEndPoint.data.status?.connected ? "primary" : "danger"}>
+        {furnaceEndPoint.data.status?.connected ? 'Connected' : 'Reconnect'}
       </EndPointButton>
 
       <PidControl
-        liveXEndPoint={liveXEndPoint}
+        furnaceEndPoint={furnaceEndPoint}
         connectedPuttingDisable={connectedPuttingDisable}
         title="Upper Heater (A) Controls"
         pid="pid_a">
       </PidControl>
 
       <PidControl
-        liveXEndPoint={liveXEndPoint}
+        furnaceEndPoint={furnaceEndPoint}
         connectedPuttingDisable={connectedPuttingDisable}
         title="Lower Heater (B) Controls"
         pid="pid_b">
       </PidControl>
 
-      <TitleCard title="test card">
+      <TitleCard title="'Acquisition card'">
         <Container>
           <Row>
           <EndPointButton
-            endpoint={liveXEndPoint}
+            endpoint={furnaceEndPoint}
             fullpath={"tcp/acquire"}
-            value={liveXEndPoint.data.tcp?.acquire ? false : true}
+            value={furnaceEndPoint.data.tcp?.acquire ? false : true}
             event_type="click"
             disable={connectedPuttingDisable}
-            variant={liveXEndPoint.data.tcp?.acquire ? "danger" : "success" }>
-              {liveXEndPoint.data.tcp?.acquire ? "Stop acquisition" : "Start acquisition"}
+            variant={furnaceEndPoint.data.tcp?.acquire ? "danger" : "success" }>
+              {furnaceEndPoint.data.tcp?.acquire ? "Stop acquisition" : "Start acquisition"}
           </EndPointButton>
           <Col>
           <Row>
             <StatusBox as="span" type="info" label="reading">
-              {liveXEndPoint.data.tcp?.tcp_reading?.counter} {liveXEndPoint.data.tcp?.tcp_reading?.temperature_a}
+              {furnaceEndPoint.data.tcp?.tcp_reading?.counter}{furnaceEndPoint.data.tcp?.tcp_reading?.temperature_a}
             </StatusBox>
             </Row>
             </Col>
@@ -80,12 +92,12 @@ function App(props) {
       </TitleCard>
 
       <ThermalGradient
-        liveXEndPoint={liveXEndPoint}
+        furnaceEndPoint={furnaceEndPoint}
         connectedPuttingDisable={connectedPuttingDisable}>
       </ThermalGradient>
 
       <AutoSetPointControl
-        liveXEndPoint={liveXEndPoint}
+        furnaceEndPoint={furnaceEndPoint}
         connectedPuttingDisable={connectedPuttingDisable}>
       </AutoSetPointControl>
 
@@ -93,33 +105,20 @@ function App(props) {
 
     </Container>
     <Col>
-    <Motor
-        liveXEndPoint={liveXEndPoint}
+      <Motor
+        furnaceEndPoint={furnaceEndPoint}
         connectedPuttingDisable={connectedPuttingDisable}>
       </Motor>
       </Col>
     </Col>
     <Col>
-      <Metadata
-        liveXEndPoint={liveXEndPoint}
-        connectedPuttingDisable={connectedPuttingDisable}>
-      </Metadata>
-    </Col>
-    <Col>
-      setup
-    </Col>
-    <Col>
-      sequencer
-    </Col>
-    <Col>
-      camera control
     <Cameras
       connectedPuttingDisable={connectedPuttingDisable}>
     </Cameras>
     </Col>
     <Col>
     <TemperatureGraph
-      liveXEndPoint={liveXEndPoint}>
+      furnaceEndPoint={furnaceEndPoint}>
     </TemperatureGraph>
     </Col>
     </OdinApp>

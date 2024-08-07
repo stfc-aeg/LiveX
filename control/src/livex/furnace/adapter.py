@@ -13,6 +13,7 @@ from tornado.escape import json_decode
 
 from odin.adapters.adapter import ApiAdapter, ApiAdapterResponse, request_types, response_types
 from odin.adapters.parameter_tree import ParameterTreeError
+from odin.util import decode_request_body
 
 from livex.furnace.controller import FurnaceController, LiveXError
 
@@ -82,7 +83,7 @@ class FurnaceAdapter(ApiAdapter):
         return ApiAdapterResponse(response, content_type=content_type,
                                   status_code=status_code)
 
-    @request_types('application/json')
+    @request_types('application/json',"application/vnd.odin-native")
     @response_types('application/json', default='application/json')
     def put(self, path, request):
         """Handle an HTTP PUT request.
@@ -93,25 +94,19 @@ class FurnaceAdapter(ApiAdapter):
         :param request: HTTP request object
         :return: an ApiAdapterResponse object containing the appropriate response
         """
-
-        content_type = 'application/json'
-
         try:
-            data = json_decode(request.body)
+            data = decode_request_body(request)
             self.furnace.set(path, data)
             response = self.furnace.get(path)
-            status_code = 200
-        except LiveXError as e:
-            response = {'error': str(e)}
-            status_code = 400
-        except (TypeError, ValueError) as e:
-            response = {'error': 'Failed to decode PUT request body: {}'.format(str(e))}
-            status_code = 400
+            content_type = "applicaiton/json"
+            status = 200
 
-        logging.debug(response)
+        except ParameterTreeError as param_error:
+            response = {'response': 'TriggerAdapter PUT error: {}'.format(param_error)}
+            content_type = 'application/json'
+            status = 400
 
-        return ApiAdapterResponse(response, content_type=content_type,
-                                  status_code=status_code)
+        return ApiAdapterResponse(response, content_type=content_type, status_code=status)
 
     def delete(self, path, request):
         """Handle an HTTP DELETE request.

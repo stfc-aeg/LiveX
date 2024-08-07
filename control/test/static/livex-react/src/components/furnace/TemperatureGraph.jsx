@@ -7,17 +7,17 @@ import { OdinGraph, TitleCard } from 'odin-react';
 
 
 function TemperatureGraph(props) {
-    const {liveXEndPoint} = props;
+    const {furnaceEndPoint} = props;
 
     const [tempData, changeTempData] = useState([{}]);
 
-    const tempDataA = liveXEndPoint.data.temp_monitor?.temperature_a;
-    const tempDataB = liveXEndPoint.data.temp_monitor?.temperature_b;
+    const tempDataA = furnaceEndPoint.data.temp_monitor?.temperature_a;
+    const tempDataB = furnaceEndPoint.data.temp_monitor?.temperature_b;
 
     // Graph re-renders when data changes
     useEffect(() => {
       changeTempData([tempDataA, tempDataB]);
-    }, [liveXEndPoint.data.temp_monitor?.temperature_a, liveXEndPoint.data.temp_monitor?.temperature_b]
+    }, [furnaceEndPoint.data.temp_monitor?.temperature_a, furnaceEndPoint.data.temp_monitor?.temperature_b]
     )
 
     return (

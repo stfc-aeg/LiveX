@@ -8,28 +8,33 @@ from livex.live_data.processor import LiveDataProcessor
 class LiveDataController():
     """Class to instantiate and manage the ParameterTree for LiveDataProcessor classes."""
 
-    def __init__(self, endpoints):
+    def __init__(self, endpoints, names, resolutions):
         """Initialise the LiveDataController. Create a LiveDataProcessor for each endpoint
         provided in config, then create a ParameterTree to handle behaviours for those classes.
         :param endpoints: list of endpoints in string format.
         """
         logging.debug("Initialising LiveDataController.")
 
+        self.names = names
+
         self.processors = []
         self.tree = {
-            "liveview": []
+            "liveview": {}
         }
 
         # For each provided endpoint
         for i in range(len(endpoints)):
+            name = names[i]
+            resolution = resolutions[i]
             self.processors.append(
-                LiveDataProcessor(endpoints[i])
+                LiveDataProcessor(endpoints[i], resolution)
             )
 
             proc = self.processors[i]
 
             # Create 'branch' of ParameterTree for each Processor
             tree = {
+                "name": (lambda: name, None),
                 "endpoint": (lambda: self.processors[i].endpoint, None),
                 "image":
                 {  # Partials provide processor as an argument
@@ -38,8 +43,9 @@ class LiveDataController():
                                partial(self.set_img_x, processor=proc)),
                     "size_y": (lambda proc=proc: proc.size_y,
                                partial(self.set_img_y, processor=proc)),
-                    "dimensions": (lambda proc=proc: proc.dimensions, partial(self.set_img_dims, processor=proc)),
-                    "resolution": (lambda proc=proc: proc.resolution,
+                    "dimensions": (lambda proc=proc: proc.out_dimensions,
+                                   partial(self.set_img_dims, processor=proc)),
+                    "resolution": (lambda proc=proc: proc.resolution_percent,
                                    partial(self.set_resolution, processor=proc)),
                     "colour": (lambda proc=proc: proc.colour,
                                partial(self.set_img_colour, processor=proc)),
@@ -55,7 +61,7 @@ class LiveDataController():
                     "histogram": (lambda proc=proc: proc.get_histogram(), None)
                 }
             }
-            self.tree['liveview'].append(tree)
+            self.tree['liveview'][name] = tree
 
         self.param_tree = ParameterTree(self.tree)
 
@@ -65,7 +71,7 @@ class LiveDataController():
         """
         # Could be done programmatically but not enough to warrant this complexity
         params = {
-            "dimensions": processor.dimensions,
+            "dimensions": processor.out_dimensions,
             "size_x": processor.size_x,
             "size_y": processor.size_y,
             "colour": processor.colour,

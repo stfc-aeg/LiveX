@@ -15,7 +15,7 @@ const EndPointToggle = WithEndpoint(ToggleSwitch);
 const EndPointFormControl = WithEndpoint(Form.Control);
 
 function Motor(props){
-    const {liveXEndPoint} = props;
+    const {furnaceEndPoint} = props;
     const {connectedPuttingDisable} = props;
 
     const motorDirections = ['Down', 'Up'];
@@ -26,10 +26,10 @@ function Motor(props){
           <Row>
             <Col>
               <EndPointToggle
-                endpoint={liveXEndPoint}
+                endpoint={furnaceEndPoint}
                 fullpath="motor/enable"
                 event_type="click"
-                checked={liveXEndPoint.data.motor?.enable || false}
+                checked={furnaceEndPoint.data.motor?.enable || false}
                 label="Enable"
                 disabled={connectedPuttingDisable}>
               </EndPointToggle>
@@ -40,18 +40,18 @@ function Motor(props){
               <StatusBox
               type="info"
               label="LVDT (mm)">
-                {checkNull(liveXEndPoint.data.motor?.lvdt)}
+                {checkNull(furnaceEndPoint.data.motor?.lvdt)}
               </StatusBox>
             </Col>
             <Col>
               <InputGroup>
                 <InputGroup.Text>Motor direction:</InputGroup.Text>
                 <EndpointDropdown
-                  endpoint={liveXEndPoint}
+                  endpoint={furnaceEndPoint}
                   event_type="select"
                   fullpath="motor/direction"
                   variant="outline-secondary"
-                  buttonText={motorDirections[liveXEndPoint.data.motor?.direction] || "Unknown"}
+                  buttonText={motorDirections[furnaceEndPoint.data.motor?.direction] || "Unknown"}
                   disabled={connectedPuttingDisable}>
                     {motorDirections ? motorDirections.map(
                     (selection, index) => (
@@ -70,7 +70,7 @@ function Motor(props){
                    Speed (0-4095)
                 </InputGroup.Text>
                 <EndPointFormControl
-                  endpoint={liveXEndPoint}
+                  endpoint={furnaceEndPoint}
                   type="number"
                   fullpath="motor/speed"
                   disabled={connectedPuttingDisable}>

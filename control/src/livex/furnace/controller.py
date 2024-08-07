@@ -115,7 +115,7 @@ class FurnaceController():
 
         tcp = ParameterTree({
             'tcp_reading': (lambda: self.tcp_reading, None),
-            'acquire': (lambda: self.start_acquisition, self.toggle_acquisition)
+            'acquire': (lambda: self.start_acquisition, self.set_acquisition)
         })
 
         # Store all information in a parameter tree
@@ -138,7 +138,7 @@ class FurnaceController():
 
     # Data acquiring tasks
 
-    def toggle_acquisition(self, value):
+    def set_acquisition(self, value):
         """Toggle whether the system is acquiring data."""
         value = bool(value)
         logging.debug("Toggled acquisition")
@@ -184,7 +184,7 @@ class FurnaceController():
         self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.tcp_client.connect((self.ip, self.port))
 
-        self.tcp_client.settimeout(1)
+        self.tcp_client.settimeout(0.1)
         activate = '1'
         self.tcp_client.send(activate.encode())
 
@@ -216,23 +216,21 @@ class FurnaceController():
         in the parameter tree.
         """
         while self.bg_stream_task_enable:
-
-            try:
-                reading = self.tcp_client.recv(self.packet_decoder.size) # fff: 12
-                logging.debug(self.packet_decoder.counter)
-                reading = self.packet_decoder.unpack(reading)
-
-            except socket.timeout:
-                logging.debug("TCP Socket timeout: read no data")
-            except Exception as e:
-                logging.debug(f"Other TCP error: {str(e)}")
-                logging.debug("Halting background tasks")
-                self.stop_background_tasks()
-                break
-
-            self.tcp_reading = self.packet_decoder.as_dict()
-
             if self.start_acquisition:
+                try:
+                    reading = self.tcp_client.recv(self.packet_decoder.size) # fff: 12
+                    logging.debug(self.packet_decoder.counter)
+                    reading = self.packet_decoder.unpack(reading)
+
+                except socket.timeout:
+                    logging.debug("TCP Socket timeout: read no data")
+                except Exception as e:
+                    logging.debug(f"Other TCP error: {str(e)}")
+                    logging.debug("Halting background tasks")
+                    self.stop_background_tasks()
+                    break
+
+                self.tcp_reading = self.packet_decoder.as_dict()
 
                 self.stream_buffer['counter'].append(self.packet_decoder.counter)
                 self.stream_buffer['temperature_a'].append(self.packet_decoder.temperature_a)
