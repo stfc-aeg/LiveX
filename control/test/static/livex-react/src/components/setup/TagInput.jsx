@@ -1,7 +1,7 @@
 import React from 'react';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Button from 'react-bootstrap/Button';
-import { useState, useMemo } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { MultiSelect } from 'react-multi-select-component';
 import { WithEndpoint } from 'odin-react';
 
@@ -11,6 +11,9 @@ function TagInput(props) {
     const {options} = props;
     const {metadataEndPoint} = props;
     const {field} = props;
+    const {labelWidth} = props;
+
+    const timer = useRef(null);
 
     const selectOptions = options.map(value => ({
       label: value,
@@ -19,34 +22,42 @@ function TagInput(props) {
     }));
 
     const [selected, setSelected] = useState([]);
-    const [values, setValues] = useState([]);
 
-    const handleOnChange = (selectedOptions) => {
-      setSelected(selectedOptions);
 
-      const selectedValues = selectedOptions.map(option => option.value);
-      setValues(selectedValues);
+    // This onchange function essentially duplicates the functionality of the WithEndpoint
+    // sendRequest function. That cannot be used for the MultiSelect normally, as the 'value' it
+    // requires is an object (selectOptions above), but should send an array of the `value`s within.
+    const sendTags = (selectedOptions) => {
+      let fullpath = "fields/"+field+"/value"
+      let value = selectedOptions.map(option => option.value);
+      let result = metadataEndPoint.put(value, fullpath)
+        .then((response) => {
+          metadataEndPoint.mergeData(response, fullpath);
+        })
+        .catch((err) => {});
     }
+
+    const onChangeHandler = useCallback((selectedOptions) => {
+      setSelected(selectedOptions);
+      if(timer.current){
+          clearTimeout(timer.current);
+      }
+      // send data after a delay of a second
+      timer.current = setTimeout(() => {console.log("Timer Elapsed. Sending Data"); sendTags(selectedOptions)}, 1000);
+  }, []);
 
     return (
       <InputGroup>
-        <InputGroup.Text>
+        <InputGroup.Text style={{width:labelWidth}}>
           Experiment Tags
         </InputGroup.Text>
         <MultiSelect
           options={selectOptions}
           value={selected}
-          onChange={handleOnChange}
+          onChange={onChangeHandler}
           labelledBy="Select tags"
           hasSelectAll={false}
         />
-        <EndPointButton
-          endpoint={metadataEndPoint}
-          value={values}
-          fullpath={"fields/"+field+"/value"}
-          event_type="click"
-          variant="outline-primary"
-        >Send values</EndPointButton>
       </InputGroup>
     )
 }

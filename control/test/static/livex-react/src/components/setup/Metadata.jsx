@@ -46,7 +46,7 @@ function Metadata(props) {
     const renderForm = () => {
         return Object.keys(metaJson).map((key) => {
             const field = metaJson[key];
-            const {label, choices, default: defaultValue, multi_choice, user_input, multi_line} = field;
+            const {label, choices, default: defaultValue, multi_choice, user_input, multi_line, enabled} = field;
 
             if (!user_input) {
                 return null; // Skip non-user-input fields
