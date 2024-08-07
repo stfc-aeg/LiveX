@@ -1,100 +1,140 @@
 import React from 'react';
-import Col from 'react-bootstrap/Col';
-import { Container, Stack } from 'react-bootstrap';
 import Form from 'react-bootstrap/Form';
-import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Dropdown from 'react-bootstrap/Dropdown';
-import { TitleCard, WithEndpoint, ToggleSwitch, StatusBox, DropdownSelector } from 'odin-react';
-
+import { useState, useEffect } from 'react';
+import { TitleCard, WithEndpoint, useAdapterEndpoint, DropdownSelector } from 'odin-react';
+import TagInput from "./TagInput";
 
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndpointDropdown = WithEndpoint(DropdownSelector);
 
 function Metadata(props) {
-    const {furnaceEndPoint} = props;
-    const {connectedPuttingDisable} = props;
 
-    return (
-        <TitleCard title="metadata" type="warning">
-        <Container>
-        <Row>
-            <Col xs={8}>
-            dummy words
-            </Col>
-            <Col>
-            <StatusBox
-                type="info"
-                label="date">
-                    {furnaceEndPoint.data.metadata?.date}
-            </StatusBox>
-            </Col>
+    const metadataEndPoint = useAdapterEndpoint('metadata', 'http://192.168.0.22:8888', 5000);
+    // Need some object defined even when metadataEndPoint is resolving to null
+    const metaJson = metadataEndPoint?.data?.fields ? metadataEndPoint.data.fields : {} ;
 
-        </Row>
-        <Row>
-            <Col xs={4}>
-            <InputGroup>
-                <InputGroup.Text>
-                    spinner
-                </InputGroup.Text>
-                <EndPointFormControl
-                    endpoint={furnaceEndPoint}
-                    type="number"
-                    fullpath={"metadata/spinner"}
-                    disabled={connectedPuttingDisable}>
-                </EndPointFormControl>
-            </InputGroup>
-            <InputGroup>
-                <InputGroup.Text>
-                    freetext
-                </InputGroup.Text>
-                <EndPointFormControl
-                    endpoint={furnaceEndPoint}
-                    type="text"
-                    fullpath={"metadata/freetext"}
-                    disabled={connectedPuttingDisable}>
-                </EndPointFormControl>
-            </InputGroup>
-            </Col>
+    const [labelWidth, setLabelWidth] = useState("40px"); // Default value if metaJson is not updated
 
-            <Col>
-                <Stack>
+    // Calculate a 'minimum' label width to make the inputgroup.texts consistent
+    useEffect(() => {
+    // No need to calculate if there's no keys (i.e.: endpoint not found)
+    if (Object.keys(metaJson).length > 0) {
+
+      // Function to calculate width
+      const calculateLabelWidth = (fields) => {
+        let maxLength = 0;
+        Object.keys(fields).forEach((key) => {
+          const labelLength = fields[key].label.length;
+          const valid = fields[key].user_input;
+          console.log("label:", fields[key].label)
+          if (labelLength > maxLength && valid) {
+            maxLength = labelLength;
+          }
+        });
+        const additionalPadding = 24; // Extra room for borders
+        return `${maxLength * 6 + additionalPadding}px`;
+      };
+
+      const calculatedWidth = calculateLabelWidth(metaJson);
+      setLabelWidth(calculatedWidth);
+    }
+  }, [metaJson]); // Only re-run the effect if metaJson changes
+
+
+    const renderForm = () => {
+        return Object.keys(metaJson).map((key) => {
+            const field = metaJson[key];
+            const {label, choices, default: defaultValue, multi_choice, user_input, multi_line, enabled} = field;
+
+            if (!user_input) {
+                return null; // Skip non-user-input fields
+            }
+
+            if (choices && !multi_choice)
+            { // Dropdown
+              return (
                 <InputGroup>
-                    <InputGroup.Text>
-                        comment
-                    </InputGroup.Text>
-                    <EndPointFormControl
-                        endpoint={furnaceEndPoint}
-                        type="text"
-                        fullpath={"metadata/comment"}
-                        disabled={connectedPuttingDisable}>
-                    </EndPointFormControl>
+                  <InputGroup.Text style={{width:labelWidth}}>
+                    {label}:
+                  </InputGroup.Text>
+                  <EndpointDropdown
+                  endpoint={metadataEndPoint}
+                  event_type="select"
+                  fullpath={"fields/"+key+"/value"}
+                  variant="outline-secondary"
+                  buttonText={metadataEndPoint?.data?.fields?.[key]?.value}>
+                    {choices.map(
+                    (selection, index) => (
+                      <Dropdown.Item
+                        eventKey={selection}
+                        key={index}>
+                          {selection}
+                      </Dropdown.Item>
+                    ))}
+                  </EndpointDropdown>
                 </InputGroup>
-                </Stack>
+                )
+            }
+            else if (choices && multi_choice)
+            { // Tags
+              return (
+                <TagInput
+                  options={metadataEndPoint?.data?.fields[key]?.choices}
+                  metadataEndPoint={metadataEndPoint}
+                  field={key}
+                  labelWidth={labelWidth}
+                  key={key}
+                />
+              )
+            }
+            else if (multi_line)
+            {  // not dropdown or tags, so text. but multi_line, not regular
+              return (
+                <InputGroup
+                  style={{
+                    display: 'flex',
+                    width: '100%'
+                    }}>
+                  <InputGroup.Text style={{width:labelWidth}}>
+                    {label}:
+                  </InputGroup.Text>
+                  <EndPointFormControl
+                    endpoint={metadataEndPoint}
+                    type="text"
+                    fullpath={"fields/"+key+"/value"}
+                    value={defaultValue}
+                    as="textarea"
+                    rows="5"
+                    style={{flex: 1}}>
+                </EndPointFormControl>
+                </InputGroup>
+              )
+            }
+            else
+            { // Everything that's not a dropdown, tag, or large box, is a normal text field
+              return (
+              <InputGroup>
+                <InputGroup.Text style={{width:labelWidth}}>
+                  {label}:
+                </InputGroup.Text>
+                <EndPointFormControl
+                  endpoint={metadataEndPoint}
+                  type="text"
+                  fullpath={"fields/"+key+"/value"}
+                  value={defaultValue}>
+                </EndPointFormControl>
+              </InputGroup>
+              )
+            }
+        })
+    }
+return(
 
-              <EndpointDropdown
-                endpoint={furnaceEndPoint} event_type="select"
-                fullpath="metadata/sample"
-                buttonText={
-                    furnaceEndPoint.data.metadata?.dropdowns.samples[furnaceEndPoint.data.metadata.dropdowns.samples_index] || "Unknown"} disabled={connectedPuttingDisable}>
-                {furnaceEndPoint.data.metadata?.dropdowns.samples ? furnaceEndPoint.data.metadata?.dropdowns.samples.map(
-                (selection, index) => (
-                  <Dropdown.Item
-                    eventKey={index}
-                    key={index}>
-                      {selection}
-                  </Dropdown.Item>
-                )) : <></> }
-              </EndpointDropdown>
-            </Col>
-            <Col>
-            <StatusBox type="info" label="time">
-                {furnaceEndPoint.data.metadata?.time}
-            </StatusBox>
-        </Col>
-        </Row>
-        </Container>
-        </TitleCard>
+    <TitleCard title="Experiment Details">
+        {renderForm()}
+    </TitleCard>
     )
 }
 
