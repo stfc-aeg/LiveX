@@ -1,11 +1,7 @@
 import React from 'react';
 import InputGroup from 'react-bootstrap/InputGroup';
-import Button from 'react-bootstrap/Button';
 import { useState, useCallback, useRef } from 'react';
 import { MultiSelect } from 'react-multi-select-component';
-import { WithEndpoint } from 'odin-react';
-
-const EndPointButton = WithEndpoint(Button);
 
 function TagInput(props) {
     const {options} = props;

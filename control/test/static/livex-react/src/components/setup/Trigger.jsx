@@ -16,12 +16,14 @@ import ToggleButton from 'react-bootstrap/ToggleButton';
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndPointButton = WithEndpoint(Button);
 
-function Trigger() {
+function Trigger(props) {
 
-    const triggerEndPoint = useAdapterEndpoint('trigger', 'http://192.168.0.22:8888', 1000);
-    const orcaEndPoint = useAdapterEndpoint('camera/cameras/widefov', 'http://192.168.0.22:8888', 1000);
-    const furnaceEndPoint = useAdapterEndpoint('furnace', 'http://192.168.0.22:8888', 1000);
-    const liveXEndPoint = useAdapterEndpoint('livex', 'http://192.168.0.22:8888', 1000);
+    const endpoint_url = props;
+
+    const triggerEndPoint = useAdapterEndpoint('trigger', endpoint_url, 1000);
+    const orcaEndPoint = useAdapterEndpoint('camera/cameras/widefov', endpoint_url, 1000);
+    const furnaceEndPoint = useAdapterEndpoint('furnace', endpoint_url, 1000);
+    const liveXEndPoint = useAdapterEndpoint('livex', endpoint_url, 1000);
 
     const [timeFrameValue, setTimeFrameValue] = useState('time');
     const timeFrameRadios = [

@@ -24,17 +24,20 @@ const EndPointButton = WithEndpoint(Button);
 
 function App(props) {
 
-  const furnaceEndPoint = useAdapterEndpoint('furnace', 'http://192.168.0.22:8888', 1000);
-  const connectedPuttingDisable = (!(furnaceEndPoint.data.status?.connected || false)) || (furnaceEndPoint.loading == "putting")
+  const endpoint_url = process.env.REACT_APP_ENDPOINT_URL
+
+  const furnaceEndPoint = useAdapterEndpoint('furnace', endpoint_url, 1000);
+  const connectedPuttingDisable = (!(furnaceEndPoint.data.status?.connected || false)) || (furnaceEndPoint.loading === "putting")
 
   return (
     <OdinApp title="LiveX Controls" navLinks={["Metadata and Setup", "Sequencing", "Furnace Control", "Camera Control", "Monitoring"]}>
     <Col>
       <Metadata
-        furnaceEndPoint={furnaceEndPoint}
+        endpoint_url={endpoint_url}
         connectedPuttingDisable={connectedPuttingDisable}>
       </Metadata>
-      <Trigger>
+      <Trigger
+        endpoint_url={endpoint_url}>
       </Trigger>
     </Col>
     <Col>
@@ -113,6 +116,7 @@ function App(props) {
     </Col>
     <Col>
     <Cameras
+      endpoint_url={endpoint_url}
       connectedPuttingDisable={connectedPuttingDisable}>
     </Cameras>
     </Col>

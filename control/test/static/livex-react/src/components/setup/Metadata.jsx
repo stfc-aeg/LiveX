@@ -11,7 +11,9 @@ const EndpointDropdown = WithEndpoint(DropdownSelector);
 
 function Metadata(props) {
 
-    const metadataEndPoint = useAdapterEndpoint('metadata', 'http://192.168.0.22:8888', 5000);
+    const endpoint_url = props;
+
+    const metadataEndPoint = useAdapterEndpoint('metadata', endpoint_url, 5000);
     // Need some object defined even when metadataEndPoint is resolving to null
     const metaJson = metadataEndPoint?.data?.fields ? metadataEndPoint.data.fields : {} ;
 

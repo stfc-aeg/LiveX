@@ -20,17 +20,17 @@ const EndPointDoubleSlider = WithEndpoint(OdinDoubleSlider);
 const EndPointSlider = WithEndpoint(Form.Range);
 
 function OrcaCamera(props) {
+    const endpoint_url = props;
     const {name} = props;
     const {connectedPuttingDisable} = props;
 
     const nameString = name.toString();
     let orcaAddress = 'camera/cameras/'+nameString;
-    const orcaEndPoint = useAdapterEndpoint(orcaAddress, 'http://192.168.0.22:8888', 1000);
+    const orcaEndPoint = useAdapterEndpoint(orcaAddress, endpoint_url, 1000);
 
     let liveViewAddress = 'live_data/liveview/'+nameString;
-    const liveViewEndPoint = useAdapterEndpoint(liveViewAddress, 'http://192.168.0.22:8888', 1000);
+    const liveViewEndPoint = useAdapterEndpoint(liveViewAddress, endpoint_url, 1000);
     const liveViewData = liveViewEndPoint?.data[name];
-
 
     // Array of camera status names
     const status = ['disconnected', 'connected', 'capturing'];
@@ -52,26 +52,6 @@ function OrcaCamera(props) {
     const [width, setWidth] = useState('');
     const [height, setHeight] = useState('');
     const [dimensions, setDimensions] = useState('');
-
-    const [roiX, setRoiX] = useState('');
-    const [roiY, setRoiY] = useState('');
-    const [roiBoundaries, setRoiBoundaries] = useState([[0, 100], [0, 100]]);
-
-    const [histData, changeHistData] = useState([{}]);
-    useEffect(() => {
-        changeHistData(`data:image/jpg;base64,${liveViewData?.image?.histogram}`);
-    }, [liveViewData?.image?.histogram]);
-
-    const roiXChange = (e) => {
-        let newRoiX = e.target.value;
-        setRoiX(newRoiX);
-        setRoiBoundaries([newRoiX, roiY]);
-    }
-    const roiYChange = (e) => {
-        let newRoiY = e.target.value;
-        setRoiY(newRoiY);
-        setRoiBoundaries([roiX, newRoiY]);
-    }
 
     const heightChange = (e) => {
         let newHeight = e.target.value;
