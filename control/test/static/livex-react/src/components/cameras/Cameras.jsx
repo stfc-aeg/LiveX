@@ -7,7 +7,7 @@ import OrcaCamera from './OrcaCamera';
 
 
 function Cameras(props) {
-    const endpoint_url = props;
+    const {endpoint_url} = props;
     const {connectedPuttingDisable} = props;
 
     const cameraEndPoint = useAdapterEndpoint('camera', endpoint_url, 5000);

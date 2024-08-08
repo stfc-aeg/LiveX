@@ -20,7 +20,7 @@ const EndPointDoubleSlider = WithEndpoint(OdinDoubleSlider);
 const EndPointSlider = WithEndpoint(Form.Range);
 
 function OrcaCamera(props) {
-    const endpoint_url = props;
+    const {endpoint_url} = props;
     const {name} = props;
     const {connectedPuttingDisable} = props;
 

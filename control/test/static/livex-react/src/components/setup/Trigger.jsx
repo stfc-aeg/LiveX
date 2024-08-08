@@ -18,7 +18,7 @@ const EndPointButton = WithEndpoint(Button);
 
 function Trigger(props) {
 
-    const endpoint_url = props;
+    const {endpoint_url} = props;
 
     const triggerEndPoint = useAdapterEndpoint('trigger', endpoint_url, 1000);
     const orcaEndPoint = useAdapterEndpoint('camera/cameras/widefov', endpoint_url, 1000);
