@@ -224,6 +224,7 @@ class FurnaceController():
 
                 except socket.timeout:
                     logging.debug("TCP Socket timeout: read no data")
+                    continue  # If no data received, do not use the packet_decoding logic
                 except Exception as e:
                     logging.debug(f"Other TCP error: {str(e)}")
                     logging.debug("Halting background tasks")
