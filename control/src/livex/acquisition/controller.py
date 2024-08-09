@@ -55,19 +55,34 @@ class LiveXController():
             }
         })
 
+    def toggle_previews(self, value):
+        """Starts or stops all timers and puts them in previewing mode."""
+        previewing = self.iac_get(self.trigger, 'preview', param='preview')
+        previewing = not previewing
+
+        self.iac_set(self.trigger, '', 'all_timers_enable', previewing)
+        self.iac_set(self.trigger, '', 'preview', previewing)
+
     def start_acquisition(self, value):
         """Start an acquisition. Disable timers, configure all values, then start timers simultaneously."""
+        # experiment id is the campaign name plus an incrementing suffix (the acquisition_number)
+        campaign_name = self.iac_get(self.metadata, 'fields/campaign_name/value', param='value')
+        acquisition_number = self.iac_get(self.metadata, 'fields/acquisition_num/value', param='value')
+        acquisition_number += 1
+        experiment_id = campaign_name + str(acquisition_number).rjust(4, '0')
+
+        self.iac_set(self.metadata, 'fields/acquisition_num', 'value', acquisition_number)
+        self.iac_set(self.metadata, 'fields/experiment_id', 'value', experiment_id)
+        self.iac_set(self.metadata, 'hdf', 'file', str(experiment_id +".metadata.hdf5"))
+
         # End any current timers
         self.iac_set(self.trigger, '', 'all_timers_enable', False)
-
         # Disable trigger 'preview' mode
         self.iac_set(self.trigger, '', 'preview', False)
 
         # Move camera(s) to 'connected' state
         for i in range(len(self.orca.camera.cameras)):
             camera = self.orca.camera.cameras[i].name
-
-            logging.debug(f"camera: {camera}")
 
             if self.iac_get(self.orca, f'cameras/{camera}/status/camera_status', param='camera_status') == 'disconnected':
                 self.iac_set(self.orca, f'cameras/{camera}', 'command', 'connect')
@@ -76,21 +91,19 @@ class LiveXController():
 
             # Set cameras explicitly to trigger source 2 (external)
             self.iac_set(self.orca, f'cameras/{camera}/config/', 'trigger_source', 2)
-
             # Set orca frames to prevent HDF error
             # No. frames is equal to the target set in the trigger by the user
             target = int(self.iac_get(self.trigger, f'{camera}/target', param='target'))
             self.iac_set(self.orca, f'cameras/{camera}/config/', 'num_frames', target)
 
-            current_time = datetime.datetime.now()
-            # Format the time as 'yy:mm:dd:hh:mm'
-            filename = camera + current_time.strftime("%y_%m_%d_%H_%M")
+            # Format the same filename as metadata, but with the system name instead of 'metadata'
+            filename = experiment_id + camera + ".hdf5"
 
+            # Provide arguments to munir
             self.iac_set(self.munir, f'subsystems/{camera}/args', 'file_path', self.filepath)
             self.iac_set(self.munir, f'subsystems/{camera}/args', 'file_name', filename)
             self.iac_set(self.munir, f'subsystems/{camera}/args', 'num_frames', target)
 
-            # logging.debu
             self.iac_set(self.munir, 'execute', f'{camera}', True)
 
         # Move camera(s) to capture state
@@ -103,8 +116,6 @@ class LiveXController():
 
         # Enable timer coils simultaneously
         self.iac_set(self.trigger, '', 'all_timers_enable', True)
-
-        # Await capture finish
 
     def stop_acquisition(self, value):
         """Stop the acquisition."""
@@ -135,6 +146,10 @@ class LiveXController():
 
         # Turn off acquisition coil
         self.iac_set(self.furnace, 'tcp', 'acquire', False)
+
+        # Write out metadata
+        self.iac_set(self.metadata, 'hdf', 'write', True)
+        self.iac_set(self.metadata, 'markdown', 'write', True)
 
         # Reenable timers
         self.iac_set(self.trigger, '', 'all_timers_enable', True)
@@ -199,6 +214,7 @@ class LiveXController():
         self.furnace = adapters["furnace"]
         self.trigger = adapters["trigger"]
         self.orca = adapters["camera"]
+        self.metadata = adapters["metadata"]
 
         # With adapters initialised, IAC can be used to get any more needed info
         self.get_timer_frequencies()

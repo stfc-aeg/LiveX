@@ -17,7 +17,7 @@ from odin.adapters.adapter import (
     response_types,
     wants_metadata,
 )
-from tornado.escape import json_decode
+from odin.util import decode_request_body
 
 
 class MetadataAdapter(ApiAdapter):
@@ -89,7 +89,7 @@ class MetadataAdapter(ApiAdapter):
 
         return ApiAdapterResponse(response, content_type=content_type, status_code=status_code)
 
-    @request_types("application/json")
+    @request_types('application/json',"application/vnd.odin-native")
     @response_types("application/json", default="application/json")
     def put(self, path, request):
         """Handle an HTTP PUT request.
@@ -104,7 +104,7 @@ class MetadataAdapter(ApiAdapter):
         content_type = "application/json"
 
         try:
-            data = json_decode(request.body)
+            data = decode_request_body(request)
             self.controller.set(path, data)
             response = self.controller.get(path)
             status_code = 200
