@@ -23,7 +23,7 @@
 #define PID_OUTPUT_LIMIT     4095
 
 // Invert output pid analogwrite signal (does not alter output in UI)
-#define INVERT_OUTPUT_SIGNAL true
+#define INVERT_OUTPUT_SIGNAL false
 
 // Modbus setup/addresses
 
