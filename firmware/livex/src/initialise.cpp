@@ -10,8 +10,8 @@ void initialiseInterrupts(hw_timer_t** secondaryFlagTimer)
   timerAlarmEnable(*secondaryFlagTimer);
 
   // Configure interrupt for PID
-  pinMode(I0_5, INPUT);
-  attachInterrupt(digitalPinToInterrupt(I0_5), pidInterrupt, CHANGE);
+  pinMode(I0_6, INPUT);
+  attachInterrupt(digitalPinToInterrupt(I0_6), pidInterrupt, CHANGE);
 }
 
 // Run the MCP9600 default setup code. Find devices and set defaults
