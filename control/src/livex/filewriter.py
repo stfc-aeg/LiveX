@@ -27,10 +27,15 @@ class FileWriter():
 
         self.filepath = filepath
         self.filename = filename
-        self.full_path = os.path.join(filepath, filename)
+        self.set_fullpath()
         os.makedirs(filepath, exist_ok=True)
 
         self.dtypes = dtypes
+        self.file = None
+
+    def set_fullpath(self):
+        """Set the full path of the filewriter."""
+        self.full_path = os.path.join(self.filepath, self.filename)
 
     def open_file(self, mode="a"):
         """Open the file in specified mode.
@@ -49,6 +54,8 @@ class FileWriter():
         :param data: dict of data, with each dataset as key and its data as value
         :param groupname: name of group for file
         """
+        if not self.file:
+            self.open_file()
         # Add group to file
         group = self.file.require_group(groupname)
 

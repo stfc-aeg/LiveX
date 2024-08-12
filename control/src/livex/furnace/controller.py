@@ -84,8 +84,6 @@ class FurnaceController():
         self.aspc = AutoSetPointControl(self.mod_client, modAddr.aspc_addresses)
         self.motor = Motor(self.mod_client, modAddr.motor_addresses)
 
-        self.metadata = Metadata()
-
         # Other display controls
         self.thermocouple_a = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp)
         self.thermocouple_b = read_decode_input_reg(self.mod_client, modAddr.thermocouple_b_inp)
@@ -129,12 +127,27 @@ class FurnaceController():
             'motor': self.motor.tree,
             'tcp': tcp,
             'temp_monitor': (lambda: self.temp_monitor_graph, None),
-            'metadata': self.metadata.tree
+            'filewriter': {
+                'filepath': (lambda: self.file_writer.filepath, self.set_filepath),
+                'filename': (lambda: self.file_writer.filename, self.set_filename)
+            }
         })
 
         # Launch the background task if enabled in options
         if self.bg_read_task_enable:
             self.start_background_tasks()
+
+    def set_filename(self, value):
+        """Set the filewriter's filename and update its path."""
+        if not value.endswith('.hdf5'):
+            value += '.hdf5'
+        self.file_writer.filename = value
+        self.file_writer.set_fullpath()
+
+    def set_filepath(self, value):
+        """Set the filewriter's filename and update its path."""
+        self.file_writer.filepath = value
+        self.file_writer.set_fullpath()
 
     # Data acquiring tasks
 

@@ -67,18 +67,24 @@ class LiveXController():
         """Start an acquisition. Disable timers, configure all values, then start timers simultaneously."""
         # experiment id is the campaign name plus an incrementing suffix (the acquisition_number)
         campaign_name = self.iac_get(self.metadata, 'fields/campaign_name/value', param='value')
+        # Spaces in filenames do not play nice with Linux
+        campaign_name = campaign_name.replace(" ", "_")
+
         acquisition_number = self.iac_get(self.metadata, 'fields/acquisition_num/value', param='value')
         acquisition_number += 1
-        experiment_id = campaign_name + str(acquisition_number).rjust(4, '0')
+        experiment_id = campaign_name + "_" + str(acquisition_number).rjust(4, '0')
 
         self.iac_set(self.metadata, 'fields/acquisition_num', 'value', acquisition_number)
         self.iac_set(self.metadata, 'fields/experiment_id', 'value', experiment_id)
-        self.iac_set(self.metadata, 'hdf', 'file', str(experiment_id +".metadata.hdf5"))
+        self.iac_set(self.metadata, 'hdf', 'file', str(experiment_id +"_metadata.hdf5"))
 
         # End any current timers
         self.iac_set(self.trigger, '', 'all_timers_enable', False)
         # Disable trigger 'preview' mode
         self.iac_set(self.trigger, '', 'preview', False)
+
+        # Set filename for furnace
+        self.iac_set(self.furnace, 'filewriter', 'filename', str(experiment_id+"_furnace.hdf5"))
 
         # Move camera(s) to 'connected' state
         for i in range(len(self.orca.camera.cameras)):
@@ -97,13 +103,14 @@ class LiveXController():
             self.iac_set(self.orca, f'cameras/{camera}/config/', 'num_frames', target)
 
             # Format the same filename as metadata, but with the system name instead of 'metadata'
-            filename = experiment_id + camera + ".hdf5"
+            filename = experiment_id + "_" + camera
 
             # Provide arguments to munir
             self.iac_set(self.munir, f'subsystems/{camera}/args', 'file_path', self.filepath)
             self.iac_set(self.munir, f'subsystems/{camera}/args', 'file_name', filename)
             self.iac_set(self.munir, f'subsystems/{camera}/args', 'num_frames', target)
 
+            # Presently, '/' is required for execute
             self.iac_set(self.munir, 'execute', f'{camera}', True)
 
         # Move camera(s) to capture state
