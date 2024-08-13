@@ -262,7 +262,9 @@ class FurnaceController():
                     secondary_data = {
                         'counter': [self.packet_decoder.counter],
                         'setpoint_a': [self.pid_a.setpoint],
-                        'setpoint_b': [self.pid_b.setpoint]
+                        'setpoint_b': [self.pid_b.setpoint],
+                        'output_a': [self.pid_a.output],
+                        'output_b': [self.pid_b.output]
                     }
                     self.file_writer.write_hdf5(
                         data=secondary_data,
