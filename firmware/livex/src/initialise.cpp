@@ -1,17 +1,28 @@
 #include "initialise.h"
 
 // Initialise timers for pid, for secondary devices, and setting camera to low (enabled by pid)
-void initialiseInterrupts(hw_timer_t** secondaryFlagTimer)
+void initialiseInterrupts(hw_timer_t** pidFlagTimer, hw_timer_t** secondaryFlagTimer)
 {
+  if (USE_EXTERNAL_INTERRUPT)
+  {
+    // Configure interrupt for PID
+    pinMode(PIN_TRIGGER_INTERRUPT, INPUT);
+    attachInterrupt(digitalPinToInterrupt(PIN_TRIGGER_INTERRUPT), pidInterrupt, CHANGE);
+  }
+  else
+  {
+    // Timer for secondary mechanisms
+    *pidFlagTimer = timerBegin(0, 80, true);
+    timerAttachInterrupt(*pidFlagTimer, &pidFlagOnTimer, true);
+    timerAlarmWrite(*pidFlagTimer, TIMER_PID, true);
+    timerAlarmEnable(*pidFlagTimer);
+  }
+
   // Timer for secondary mechanisms
   *secondaryFlagTimer = timerBegin(1, 80, true);
   timerAttachInterrupt(*secondaryFlagTimer, &secondaryFlagOnTimer, true);
   timerAlarmWrite(*secondaryFlagTimer, TIMER_SECONDARY, true);
   timerAlarmEnable(*secondaryFlagTimer);
-
-  // Configure interrupt for PID
-  pinMode(I0_6, INPUT);
-  attachInterrupt(digitalPinToInterrupt(I0_6), pidInterrupt, CHANGE);
 }
 
 // Run the MCP9600 default setup code. Find devices and set defaults

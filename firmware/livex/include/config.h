@@ -3,6 +3,15 @@
 
 #define DEBUG false
 
+// Invert output pid analogwrite signal (does not alter output in UI)
+#define INVERT_OUTPUT_SIGNAL false
+
+// true: use external interrupt instead of internal timer
+#define USE_EXTERNAL_INTERRUPT false
+// true: output total of external interrupts at given range (e.g.: every 100 interrupts. 100, 200, etc.)
+#define LOG_INTERRUPTS true
+#define LOG_INTERRUPTS_INTERVAL 100
+
 // Intervals
 // Speed at which specified function runs in ms
 #define INTERVAL_PID 20  // PID iteration
@@ -21,9 +30,6 @@
 #define PID_KI_DEFAULT       5.0
 #define PID_KD_DEFAULT       0.1
 #define PID_OUTPUT_LIMIT     4095
-
-// Invert output pid analogwrite signal (does not alter output in UI)
-#define INVERT_OUTPUT_SIGNAL false
 
 // Modbus setup/addresses
 
@@ -83,9 +89,11 @@
 
 #define PIN_PWM_A A0_5
 #define PIN_PWM_B A0_6
+
+#define PIN_TRIGGER_INTERRUPT I0_6
+
 #define PIN_MOTOR_DIRECTION Q1_6
 #define PIN_MOTOR_PWM Q1_7
-
 #define PIN_MOTOR_LVDT_IN I0_7
 
 #endif

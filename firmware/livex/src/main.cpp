@@ -54,12 +54,18 @@ const unsigned int num_mcp = sizeof(mcp) / sizeof(mcp[0]);
 const uint8_t mcp_addr[] = {0x60, 0x67};
 
 // Timers and flags - main, taskPid
+hw_timer_t *pidFlagTimer = NULL;
 hw_timer_t *secondaryFlagTimer = NULL;
 volatile bool pidFlag = false;
 volatile bool secondaryFlag = false;
-// Pin interrupt flag 
+// Pin interrupt flag
 volatile bool rising = true;
 volatile int interruptCounter = 0;
+
+void IRAM_ATTR pidFlagOnTimer()
+{
+  pidFlag = true;
+}
 
 // may be rolled into toggledInterrupt
 void IRAM_ATTR pidInterrupt()
@@ -90,21 +96,20 @@ void setup()
   modbus_server.initialiseModbus();
   // initialise.cpp
   initialiseEthernet(modbusEthServer, mac, ip, PIN_SPI_SS_ETHERNET_LIB);
-  initialiseInterrupts(&secondaryFlagTimer);
+  initialiseInterrupts(&pidFlagTimer, &secondaryFlagTimer);
   initialiseThermocouples(mcp, num_mcp, mcp_addr);
   writePIDDefaults(modbus_server, PID_A);
   writePIDDefaults(modbus_server, PID_B);
 
   gpio.init();
   // PID
-  gpio.pinMode(A0_5, OUTPUT);
+  gpio.pinMode(PIN_PWM_A, OUTPUT);
+  gpio.pinMode(PIN_PWM_B, OUTPUT);
   // Motor direction/speed outputs
-  gpio.pinMode(Q1_6, OUTPUT);
-  gpio.pinMode(Q1_7, OUTPUT);
+  gpio.pinMode(PIN_MOTOR_DIRECTION, OUTPUT);
+  gpio.pinMode(PIN_MOTOR_PWM, OUTPUT);
   // Motor LVDT
-  gpio.pinMode(I0_7, INPUT);
-  // External trigger pin
-  gpio.pinMode(Q1_0, OUTPUT);
+  gpio.pinMode(PIN_MOTOR_LVDT_IN, INPUT);
 
   xTaskCreatePinnedToCore(
     Core0PIDTask,  /* Task function */

@@ -18,9 +18,11 @@ void Core0PIDTask(void * pvParameters)
   {
     if (pidFlag)
     {
-      if (interruptCounter % 50 == 0)
-      {
-      Serial.println(interruptCounter);
+      if (LOG_INTERRUPTS) {
+        if (interruptCounter % LOG_INTERRUPTS_INTERVAL == 0)
+        {
+          Serial.println(interruptCounter);
+        }
       }
       // Get thermocouple readings for input
       PID_A.input = mcp[0].readThermocouple(); // First thermocouple for A
@@ -95,7 +97,7 @@ void Core0PIDTask(void * pvParameters)
       }
 
       // Always read LVDT regardless of motor enable
-      float lvdt = gpio.analogRead(I0_7);
+      float lvdt = gpio.analogRead(PIN_MOTOR_LVDT_IN);
 
       // No obvious conversion formula, but readings of values at positions are known.
       // Max height is at ~1700, minimum at ~200, total range of 9.5mm.
