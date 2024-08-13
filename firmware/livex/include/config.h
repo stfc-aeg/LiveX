@@ -7,21 +7,16 @@
 #define INVERT_OUTPUT_SIGNAL false
 
 // true: use external interrupt instead of internal timer
-#define USE_EXTERNAL_INTERRUPT true
+#define USE_EXTERNAL_INTERRUPT false
 // true: output total of external interrupts at given range (e.g.: every 100 interrupts. 100, 200, etc.)
 #define LOG_INTERRUPTS false
 #define LOG_INTERRUPTS_INTERVAL 100
 
-// Intervals
-// Speed at which specified function runs in ms
-#define INTERVAL_PID 20  // PID iteration
-#define INTERVAL_MODIFIERS 500  // Gradient and auto set point control interval
-#define INTERVAL_THERMOCOUPLES 1000  // Read extra thermcouples
-#define INTERVAL_MOTOR 500
+// Timeout (no modbus connection) in ms
 #define INTERVAL_TIMEOUT 30000
 
+// For the internal timer. Set to 50Hz here, other rates should be managed via external trigger.
 #define TIMER_PID 20000
-#define TIMER_CAM_PIN 10000
 #define TIMER_SECONDARY 200000 // motor and modifiers
 
 // Default terms for PID controllers

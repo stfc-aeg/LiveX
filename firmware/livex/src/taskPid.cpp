@@ -183,7 +183,7 @@ void autoSetPointControl()
   }
 
   // Rate is average K/s, but value depends on PID interval
-  rate = rate * (static_cast<float>(INTERVAL_PID)/1000); // e.g.: 0.5 * 20/1000 = 0.01 = 50 times per second
+  rate = rate * (static_cast<float>(TIMER_PID)/1000000); // e.g.: 0.5 * 20x10^3/1000x10^3 = 0.01 = 50 times per second
   PID_A.autospRate = rate;
   PID_B.autospRate = rate;
 
@@ -199,7 +199,7 @@ void autoSetPointControl()
     Serial.print("Autosp rate: ");
     Serial.print(rate);
     Serial.print(" | interval: ");
-    Serial.print(INTERVAL_PID/1000);
+    Serial.print(TIMER_PID/1000000);
   }
 }
 
@@ -263,6 +263,7 @@ void runPID(String pid)
       if (modbus_server.readBool(MOD_AUTOSP_ENABLE_COIL))
       {
         modbus_server.floatToHoldingRegisters(addr.modSetPointHold, (PID->setPoint + PID->autospRate));
+        PID->gradientSetPoint = PID->gradientSetPoint + PID->autospRate;
       }
     }
   }
