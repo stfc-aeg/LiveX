@@ -18,7 +18,7 @@ void Core0PIDTask(void * pvParameters)
   {
     if (pidFlag)
     {
-      if (LOG_INTERRUPTS) {
+      if (LOG_INTERRUPTS && USE_EXTERNAL_INTERRUPT) {
         if (interruptCounter % LOG_INTERRUPTS_INTERVAL == 0)
         {
           Serial.println(interruptCounter);

@@ -7,9 +7,9 @@
 #define INVERT_OUTPUT_SIGNAL false
 
 // true: use external interrupt instead of internal timer
-#define USE_EXTERNAL_INTERRUPT false
+#define USE_EXTERNAL_INTERRUPT true
 // true: output total of external interrupts at given range (e.g.: every 100 interrupts. 100, 200, etc.)
-#define LOG_INTERRUPTS true
+#define LOG_INTERRUPTS false
 #define LOG_INTERRUPTS_INTERVAL 100
 
 // Intervals
