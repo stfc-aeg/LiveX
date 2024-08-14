@@ -46,15 +46,29 @@ function App(props) {
     <Col>
     <Container>
       <Col>
-      <EndPointButton
-        endpoint={furnaceEndPoint}
-        value={true}
-        fullpath="status/reconnect"
-        event_type="click"
-        disabled={!connectedPuttingDisable}
-        variant={furnaceEndPoint.data.status?.connected ? "primary" : "danger"}>
-        {furnaceEndPoint.data.status?.connected ? 'Connected' : 'Reconnect'}
-      </EndPointButton>
+        <Row className="d-flex justify-content-between">
+          <Col xs="auto">
+            <EndPointButton
+              endpoint={furnaceEndPoint}
+              value={true}
+              fullpath="status/reconnect"
+              event_type="click"
+              disabled={!connectedPuttingDisable}
+              variant={furnaceEndPoint.data.status?.connected ? "primary" : "danger"}>
+              {furnaceEndPoint.data.status?.connected ? 'Connected' : 'Reconnect'}
+            </EndPointButton>
+          </Col>
+          <Col xs="auto">
+            <EndPointButton
+              endpoint={furnaceEndPoint}
+              value={true}
+              fullpath="status/full_stop"
+              event_type="click"
+              disabled={connectedPuttingDisable}
+              variant='danger'>Disable all outputs
+            </EndPointButton>
+          </Col>
+        </Row>
 
       <PidControl
         furnaceEndPoint={furnaceEndPoint}

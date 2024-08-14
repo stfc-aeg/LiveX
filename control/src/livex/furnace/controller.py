@@ -108,7 +108,8 @@ class FurnaceController():
 
         status = ParameterTree({
             'connected': (lambda: self.connected, None),
-            'reconnect': (lambda: self.reconnect, self.initialise_clients)
+            'reconnect': (lambda: self.reconnect, self.initialise_clients),
+            'full_stop': (lambda: None, self.stop_all_pid)
         })
 
         tcp = ParameterTree({
@@ -148,6 +149,11 @@ class FurnaceController():
         """Set the filewriter's filename and update its path."""
         self.file_writer.filepath = value
         self.file_writer.set_fullpath()
+
+    def stop_all_pid(self, value):
+        """Disable all/both PIDs, setting their gpio output to 0. Acts as an 'emergency stop'."""
+        self.pid_a.set_enable(False)
+        self.pid_b.set_enable(False)
 
     # Data acquiring tasks
 

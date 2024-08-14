@@ -226,7 +226,8 @@ void runPID(String pid)
   if (PID != nullptr)
   {
     // Check PID enabled
-    if (modbus_server.readBool(addr.modPidEnableCoil)){
+    if (modbus_server.readBool(addr.modPidEnableCoil))
+    {
       // Check PID tunings
       double newKp = double(modbus_server.combineHoldingRegisters(addr.modKpHold));
       double newKi = double(modbus_server.combineHoldingRegisters(addr.modKiHold));
@@ -265,6 +266,10 @@ void runPID(String pid)
         modbus_server.floatToHoldingRegisters(addr.modSetPointHold, (PID->setPoint + PID->autospRate));
         PID->gradientSetPoint = PID->gradientSetPoint + PID->autospRate;
       }
+    }
+    else
+    { // Write 0 if PID is not enabled.
+      gpio.analogWrite(addr.outputPin, 0);
     }
   }
   else
