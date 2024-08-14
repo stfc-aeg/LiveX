@@ -67,38 +67,52 @@ class TriggerController():
                 'enable': (lambda: self.status_bg_task_enable, self.set_task_enable)
             },
             'preview': (lambda: self.previewing, self.set_preview),
-            'all_timers_enable': (lambda: self.all_enabled, self.set_all_timers)
+            'all_timers_enable': (lambda: self.all_enabled, self.set_all_timers),
+            'status': {
+                'connected': (lambda: self.connected, None),
+                'reconnect': (lambda: None, self.initialise_client)
+            }
         })
 
     def initialise_client(self):
         """Initialise the modbus client."""
-        self.mod_client = ModbusTcpClient(self.ip)
-        self.mod_client.connect()
+        try:
+            self.mod_client = ModbusTcpClient(self.ip)
+            self.mod_client.connect()
+            # With connection established, update any registers
+            self.get_all_registers()
+            self.connected = True
+        except:
+            logging.debug("Connection to trigger modbus client did not succeed.")
+            self.connected = False
 
     def get_all_registers(self):
         """Read the value of all registers to update the tree."""
-        ret = self.mod_client.read_coils(modAddr.trig_furnace_enable_coil, 3, slave=1)
-        # See modbusAddresses.py: these coils are sequential
-        self.furnace_enabled = ret.bits[0]  # Coil 2
-        self.widefov_enabled = ret.bits[1]  # Coil 3
-        self.narrowfov_enabled = ret.bits[2]  # Coil 4
+        try:
+            ret = self.mod_client.read_coils(modAddr.trig_furnace_enable_coil, 3, slave=1)
+            # See modbusAddresses.py: these coils are sequential
+            self.furnace_enabled = ret.bits[0]  # Coil 2
+            self.widefov_enabled = ret.bits[1]  # Coil 3
+            self.narrowfov_enabled = ret.bits[2]  # Coil 4
 
-        # Frequencies = 1_000_000 / intvl*2
-        # Interval = (1_000_000 / freq) // 2
-        self.furnace_freq = 1_000_000 / (
-            read_decode_holding_reg(self.mod_client, modAddr.trig_furnace_intvl_hold) * 2
-        )
-        self.widefov_freq = 1_000_000 / (
-            read_decode_holding_reg(self.mod_client, modAddr.trig_widefov_intvl_hold) * 2
-        )
-        self.narrowfov_freq = 1_000_000 / (
-            read_decode_holding_reg(self.mod_client, modAddr.trig_narrowfov_intvl_hold) * 2
-        )
+            # Frequencies = 1_000_000 / intvl*2
+            # Interval = (1_000_000 / freq) // 2
+            self.furnace_freq = 1_000_000 / (
+                read_decode_holding_reg(self.mod_client, modAddr.trig_furnace_intvl_hold) * 2
+            )
+            self.widefov_freq = 1_000_000 / (
+                read_decode_holding_reg(self.mod_client, modAddr.trig_widefov_intvl_hold) * 2
+            )
+            self.narrowfov_freq = 1_000_000 / (
+                read_decode_holding_reg(self.mod_client, modAddr.trig_narrowfov_intvl_hold) * 2
+            )
 
-        # Frame targets
-        self.furnace_target = read_decode_holding_reg(self.mod_client, modAddr.trig_furnace_target_hold)
-        self.widefov_target = read_decode_holding_reg(self.mod_client, modAddr.trig_widefov_target_hold)
-        self.narrowfov_target = read_decode_holding_reg(self.mod_client, modAddr.trig_narrowfov_target_hold)
+            # Frame targets
+            self.furnace_target = read_decode_holding_reg(self.mod_client, modAddr.trig_furnace_target_hold)
+            self.widefov_target = read_decode_holding_reg(self.mod_client, modAddr.trig_widefov_target_hold)
+            self.narrowfov_target = read_decode_holding_reg(self.mod_client, modAddr.trig_narrowfov_target_hold)
+        except:
+            logging.debug("Error when fetching parameters for Trigger adapter.")
 
     def set_all_timers(self, value):
         """Enable or disable all timers."""
@@ -179,8 +193,6 @@ class TriggerController():
 
     def start_background_tasks(self):
         """Start the background tasks and reset the continuous error counter."""
-        self.error_consecutive = 0
-
         logging.debug(f"Launching trigger status update task with interval {self.status_bg_task_interval}.")
         self.status_ioloop_task = PeriodicCallback(
             self.get_all_registers, (self.status_bg_task_interval * 1000)

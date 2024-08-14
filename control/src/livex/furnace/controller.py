@@ -186,7 +186,6 @@ class FurnaceController():
     def initialise_clients(self, value):
         """Instantiate a ModbusTcpClient and provide it to the PID controllers."""
         logging.debug("Attempting to establish modbus connection")
-        self.connected = True
 
         try:
             self.mod_client = ModbusTcpClient(self.ip)
@@ -201,6 +200,7 @@ class FurnaceController():
             self.connected = True
         except:
             logging.debug("Connection to modbus client did not succeed.")
+            self.connected = False
 
         self.initialise_tcp_client()
 
