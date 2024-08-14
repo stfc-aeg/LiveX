@@ -61,8 +61,8 @@ class FurnaceController():
         logging.debug("Initial modbus connection")
         self.ip = ip
         self.port = port
-        self.mod_client = ModbusTcpClient(self.ip)
-        self.initialise_tcp_client()
+        # self.mod_client = ModbusTcpClient(self.ip)
+        # self.initialise_tcp_client()
 
         self.packet_decoder = LiveXPacketDecoder()
         self.file_writer = FileWriter(self.log_directory, self.log_filename, {'timestamps': 'S'})
@@ -77,18 +77,19 @@ class FurnaceController():
         }
         self.start_acquisition = False
 
-        self.pid_a = PID(self.mod_client, modAddr.addresses_pid_a)
-        self.pid_b = PID(self.mod_client, modAddr.addresses_pid_b)
-        self.gradient = Gradient(self.mod_client, modAddr.gradient_addresses)
-        self.aspc = AutoSetPointControl(self.mod_client, modAddr.aspc_addresses)
-        self.motor = Motor(self.mod_client, modAddr.motor_addresses)
+        self.pid_a = PID(modAddr.addresses_pid_a)
+        self.pid_b = PID(modAddr.addresses_pid_b)
+        self.gradient = Gradient(modAddr.gradient_addresses)
+        self.aspc = AutoSetPointControl(modAddr.aspc_addresses)
+        self.motor = Motor(modAddr.motor_addresses)
+
+        self.initialise_clients(value=None)
 
         # Other display controls
         self.thermocouple_a = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp)
         self.thermocouple_b = read_decode_input_reg(self.mod_client, modAddr.thermocouple_b_inp)
 
         self.lifetime_counter = 0
-        self.connected = True
         self.reconnect = False
 
         # For the temperature monitor
@@ -187,14 +188,21 @@ class FurnaceController():
         logging.debug("Attempting to establish modbus connection")
         self.connected = True
 
-        self.mod_client = ModbusTcpClient(self.ip)
-        self.mod_client.connect()
+        try:
+            self.mod_client = ModbusTcpClient(self.ip)
+            self.mod_client.connect()
+            # With connection established, populate trees and provide correct connection
+            self.pid_a.register_modbus_client(self.mod_client)
+            self.pid_b.register_modbus_client(self.mod_client)
+            self.gradient.register_modbus_client(self.mod_client)
+            self.aspc.register_modbus_client(self.mod_client)
+            self.motor.register_modbus_client(self.mod_client)
 
-        self.pid_a.register_modbus_client(self.mod_client)
-        self.pid_b.register_modbus_client(self.mod_client)
-        self.gradient.register_modbus_client(self.mod_client)
-        self.aspc.register_modbus_client(self.mod_client)
-        self.motor.register_modbus_client(self.mod_client)
+            self.connected = True
+        except:
+            logging.debug("Connection to modbus client did not succeed.")
+
+        self.initialise_tcp_client()
 
     def initialise_tcp_client(self):
         """Initialise the tcp client."""

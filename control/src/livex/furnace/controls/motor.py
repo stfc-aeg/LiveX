@@ -7,14 +7,13 @@ class Motor():
     """This class provides the ParameterTree for the motor controls for LiveX.
     It stores relevant values and provides functions to write to the modbus server on the PLC."""
 
-    def __init__(self, client, addresses):
-        self.register_modbus_client(client)
+    def __init__(self, addresses):
         self.addresses = addresses
 
-        self.enable = read_coil(self.client, self.addresses['enable'])
-        self.direction = read_coil(self.client, self.addresses['direction'], asInt=True)
-        self.speed = read_decode_holding_reg(self.client, self.addresses['speed'])
-        self.lvdt = read_decode_input_reg(self.client, self.addresses['lvdt'])
+        self.enable = None
+        self.direction = None
+        self.speed = None
+        self.lvdt = None
 
         self.tree = ParameterTree({
             'enable': (lambda: self.enable, self.set_enable),
@@ -24,8 +23,19 @@ class Motor():
         })
 
     def register_modbus_client(self, client):
-        """Keep internal reference to the modbus client."""
+        """Keep internal reference to the Modbus client and attempt to use it to get parameters."""
         self.client = client
+        try:
+            self._get_parameters()
+        except:
+            logging.debug("Error when attempting to get motor parameters after client connection.")
+
+    def _get_parameters(self):
+        """Get parameters for the parameter tree using a modbus connection."""
+        self.enable = read_coil(self.client, self.addresses['enable'])
+        self.direction = read_coil(self.client, self.addresses['direction'], asInt=True)
+        self.speed = read_decode_holding_reg(self.client, self.addresses['speed'])
+        self.lvdt = read_decode_input_reg(self.client, self.addresses['lvdt'])
 
     def set_enable(self, value):
         """Set motor enable boolean."""

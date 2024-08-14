@@ -1,21 +1,22 @@
 from odin.adapters.parameter_tree import ParameterTree
 from livex.util import read_coil, read_decode_input_reg, read_decode_holding_reg, write_modbus_float, write_coil
 
+import logging
+
 class Gradient():
     """This class provides the ParameterTree for the gradient controls for LiveX.
     It stores relevant values and provides functions to write to the modbus server on the PLC.
     """
 
-    def __init__(self, client, addresses):
-        self.register_modbus_client(client)
+    def __init__(self, addresses):
         self.addresses = addresses
 
-        self.enable       = bool(read_coil(self.client, self.addresses['enable']))
-        self.wanted       = read_decode_holding_reg(self.client, self.addresses['wanted'])
-        self.distance     = read_decode_holding_reg(self.client, self.addresses['distance'])
-        self.actual       = read_decode_input_reg(self.client, self.addresses['actual'])
-        self.theoretical  = read_decode_input_reg(self.client, self.addresses['theoretical'])
-        self.high         = read_coil(self.client, self.addresses['high'], asInt=True) # used as index for high-heater selection
+        self.enable       = None
+        self.wanted       = None
+        self.distance     = None
+        self.actual       = None
+        self.theoretical  = None
+        self.high         = None
         self.high_options = self.addresses['high_options']
 
         self.tree = ParameterTree({
@@ -29,8 +30,21 @@ class Gradient():
         })
 
     def register_modbus_client(self, client):
-        """Keep internal reference to modbus client."""
+        """Keep internal reference to the Modbus client and attempt to use it to get parameters."""
         self.client = client
+        try:
+            self._get_parameters()
+        except:
+            logging.debug("Error when attempting to get gradient parameters after client connection.")
+
+    def _get_parameters(self):
+        """Get parameters for the parameter tree using a modbus connection."""
+        self.enable       = bool(read_coil(self.client, self.addresses['enable']))
+        self.wanted       = read_decode_holding_reg(self.client, self.addresses['wanted'])
+        self.distance     = read_decode_holding_reg(self.client, self.addresses['distance'])
+        self.actual       = read_decode_input_reg(self.client, self.addresses['actual'])
+        self.theoretical  = read_decode_input_reg(self.client, self.addresses['theoretical'])
+        self.high         = read_coil(self.client, self.addresses['high'], asInt=True) # used as index for high-heater selection
 
     def set_enable(self, value):
         """Set the enable boolean for the thermal gradient."""
