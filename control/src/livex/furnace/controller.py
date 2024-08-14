@@ -15,7 +15,6 @@ from livex.furnace.controls.pid import PID
 from livex.furnace.controls.gradient import Gradient
 from livex.furnace.controls.autoSetPointControl import AutoSetPointControl
 from livex.furnace.controls.motor import Motor
-from livex.furnace.controls.metadata import Metadata
 
 from livex.modbusAddresses import modAddr
 from livex.filewriter import FileWriter
@@ -315,7 +314,7 @@ class FurnaceController():
 
                 except:
                     self.mod_client.close()
-                    self.packet_decoder.close_tcp_client()
+                    self.tcp_client.close()
                     # Close both for safety and consistency
                     logging.debug("Modbus communication error, pausing reads")
                     self.connected = False
