@@ -3,6 +3,8 @@ from pymodbus.client import ModbusTcpClient
 from livex.util import read_decode_input_reg, read_decode_holding_reg, write_modbus_float, write_coil
 from livex.modbusAddresses import modAddr
 
+from livex.trigger.trigger import Trigger
+
 from tornado.ioloop import PeriodicCallback
 
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
@@ -14,31 +16,21 @@ class TriggerError():
 class TriggerController():
     """Class to instantiate and manage a modbus connection to control the triggering device."""
 
-    def __init__(self, ip, frequencies, status_bg_task_enable, status_bg_task_interval):
+    def __init__(self, ip, triggers, status_bg_task_enable, status_bg_task_interval):
+
+        self.triggers = {}
+        for name in triggers:
+            # Name scheme for trigger addresses is trigger_<name>
+            addr = "trigger_" + name
+            addresses = getattr(modAddr, addr)
+
+            self.triggers[name] = Trigger(name, addresses)
 
         self.ip = ip
         self.status_bg_task_enable = status_bg_task_enable
         self.status_bg_task_interval = status_bg_task_interval
 
-        self.furnace_freq = frequencies['furnace']
-        self.widefov_freq = frequencies['wideFov']
-        self.narrowfov_freq = frequencies['narrowFov']
-
-        # Intervals in microseconds
-        self.intvl_furnace = (1_000_000/self.furnace_freq) // 2
-        self.intvl_wideFov = (1_000_000/self.widefov_freq) // 2
-        self.intvl_narrowFov = (1_000_000/self.narrowfov_freq) // 2
-
-        self.all_enabled = False
-        self.furnace_enabled = False
-        self.widefov_enabled = False
-        self.narrowfov_enabled = False
-
-        self.furnace_target = 0
-        self.widefov_target = 0
-        self.narrowfov_target = 0
-
-        self.initialise_client()
+        self.initialise_client(value=None)
         self.get_all_registers()
 
         self.previewing = False
@@ -46,28 +38,18 @@ class TriggerController():
         if self.status_bg_task_enable:
             self.start_background_tasks()
 
+        subtrees = {}
+        for trig_name, trigger in self.triggers.items():
+            subtrees[trig_name] = trigger.tree
+
         self.tree = ParameterTree({
-            'furnace': {
-                'enable': (lambda: self.furnace_enabled, self.toggle_furnace_enable),
-                'frequency': (lambda: self.furnace_freq, self.set_furnace_interval),
-                'target': (lambda: self.furnace_target, self.set_furnace_target)
-            },
-            'widefov': {
-                'enable': (lambda: self.widefov_enabled, self.toggle_widefov_enable),
-                'frequency': (lambda: self.widefov_freq, self.set_widefov_interval),
-                'target': (lambda: self.widefov_target, self.set_widefov_target)
-            },
-            'narrowfov': {
-                'enable': (lambda: self.narrowfov_enabled, self.toggle_narrowfov_enable),
-                'frequency': (lambda: self.narrowfov_freq, self.set_narrowfov_interval),
-                'target': (lambda: self.narrowfov_target, self.set_narrowfov_target)
-            },
-            'background': {
+           'triggers': subtrees,
+           'background': {
                 'interval': (lambda: self.status_bg_task_interval, self.set_task_interval),
                 'enable': (lambda: self.status_bg_task_enable, self.set_task_enable)
             },
             'preview': (lambda: self.previewing, self.set_preview),
-            'all_timers_enable': (lambda: self.all_enabled, self.set_all_timers),
+            'all_timers_enable': (lambda: None, self.set_all_timers),
             'modbus': {
                 'ip': (lambda: self.ip, self.set_ip),
                 'connected': (lambda: self.connected, None),
@@ -79,13 +61,15 @@ class TriggerController():
         """Set the ModbusTCPClient IP to the provided value."""
         self.ip = value
 
-    def initialise_client(self):
+    def initialise_client(self, value):
         """Initialise the modbus client."""
         try:
             self.mod_client = ModbusTcpClient(self.ip)
             self.mod_client.connect()
             self.connected = True
             # With connection established, update any registers
+            for name, trigger in self.triggers.items():
+                trigger.register_modbus_client(self.mod_client)
             self.get_all_registers()
         except:
             logging.debug("Connection to trigger modbus client did not succeed.")
@@ -94,103 +78,20 @@ class TriggerController():
     def get_all_registers(self):
         """Read the value of all registers to update the tree."""
         if self.connected:
-            ret = self.mod_client.read_coils(modAddr.trig_furnace_enable_coil, 3, slave=1)
-            # See modbusAddresses.py: these coils are sequential
-            self.furnace_enabled = ret.bits[0]  # Coil 2
-            self.widefov_enabled = ret.bits[1]  # Coil 3
-            self.narrowfov_enabled = ret.bits[2]  # Coil 4
-
-            # Frequencies = 1_000_000 / intvl*2
-            # Interval = (1_000_000 / freq) // 2
-            self.furnace_freq = 1_000_000 / (
-                read_decode_holding_reg(self.mod_client, modAddr.trig_furnace_intvl_hold) * 2
-            )
-            self.widefov_freq = 1_000_000 / (
-                read_decode_holding_reg(self.mod_client, modAddr.trig_widefov_intvl_hold) * 2
-            )
-            self.narrowfov_freq = 1_000_000 / (
-                read_decode_holding_reg(self.mod_client, modAddr.trig_narrowfov_intvl_hold) * 2
-            )
-
-            # Frame targets
-            self.furnace_target = read_decode_holding_reg(self.mod_client, modAddr.trig_furnace_target_hold)
-            self.widefov_target = read_decode_holding_reg(self.mod_client, modAddr.trig_widefov_target_hold)
-            self.narrowfov_target = read_decode_holding_reg(self.mod_client, modAddr.trig_narrowfov_target_hold)
+            for name, trigger in self.triggers.items():
+                trigger._get_parameters()
 
     def set_all_timers(self, value):
         """Enable or disable all timers."""
         self.all_triggers_enable = bool(value)
-        self.furnace_enabled = True
-        self.widefov_enabled = True
-        self.narrowfov_enabled = True
-        toWrite = [value, value, value]
-        self.mod_client.write_coils(modAddr.trig_furnace_enable_coil, toWrite, slave=1)
+        for trigger in self.triggers:
+            trigger.set_enable(self.all_triggers_enable)
         write_coil(self.mod_client, modAddr.trig_val_updated_coil, 1)
 
     def set_preview(self, value):
         """Enable or disable the preview mode (timers do not increment frame counters)."""
         value = bool(value)
         write_coil(self.mod_client, modAddr.trig_preview_coil, value)
-
-    def check_all_enable(self):
-        """Check if all timers are enabled."""
-        if self.furnace_enabled and self.widefov_enabled and self.narrowfov_enabled:
-            self.all_enabled = True
-        else:
-            self.all_enabled = False
-
-    def update_hold_value(self, address, value):
-        """Write a value to a given holding register(s) and mark the 'value updated' coil."""
-        write_modbus_float(self.mod_client, float(value), address)
-        write_coil(self.mod_client, modAddr.trig_val_updated_coil, 1)
-
-        self.check_all_enable()  # Not relevant for the intervals but still best fit here
-
-    def set_furnace_interval(self, value):
-        """Update the interval of the furnace timer."""
-        self.intvl_furnace = (1_000_000 / value) //2
-        self.update_hold_value(modAddr.trig_furnace_intvl_hold, self.intvl_furnace)
-
-    def toggle_furnace_enable(self, value):
-        """Toggle the furnace timer."""
-        self.furnace_enabled = not self.furnace_enabled
-        write_coil(self.mod_client, modAddr.trig_furnace_enable_coil, bool(self.furnace_enabled))
-
-    def set_furnace_target(self, value):
-        """Update the target framecount of the furnace timer."""
-        self.furnace_target = int(value)  # Target could be int or float. Int is safer
-        self.update_hold_value(modAddr.trig_furnace_target_hold, self.furnace_target)
-
-    def set_widefov_interval(self, value):
-        """Update the interval of the WideFov camera timer."""
-        self.intvl_wideFov = (1_000_000 / value) // 2
-        self.update_hold_value(modAddr.trig_widefov_intvl_hold, self.intvl_wideFov)
-
-    def toggle_widefov_enable(self, value):
-        """Toggle the widefov timer."""
-        self.widefov_enabled = not self.widefov_enabled
-        write_coil(self.mod_client, modAddr.trig_widefov_enable_coil, bool(self.widefov_enabled))
-
-    def set_widefov_target(self, value):
-        """Set the target of the widefov timer."""
-        self.widefov_target = int(value)
-        self.update_hold_value(modAddr.trig_widefov_target_hold, self.widefov_target)
-        # write_modbus_float(self.mod_client, float(self.widefov_target), modAddr.trig_widefov_target_hold)
-
-    def set_narrowfov_interval(self, value):
-        """Update the interval of the NarrowFov camera timer."""
-        self.intvl_narrowFov = (1_000_000 / value)//2
-        self.update_hold_value(modAddr.trig_narrowfov_intvl_hold, self.intvl_narrowFov)
-
-    def toggle_narrowfov_enable(self, value):
-        """Toggle the narrowfov timer."""
-        self.narrowfov_enabled = not self.narrowfov_enabled
-        write_coil(self.mod_client, modAddr.trig_narrowfov_enable_coil, bool(self.narrowfov_enabled))
-
-    def set_narrowfov_target(self, value):
-        """"Set the target value of the narrowfov timer."""
-        self.narrowfov_target = int(value)
-        self.update_hold_value(modAddr.trig_narrowfov_target_hold, self.narrowfov_target)
 
     # Background task functions
 
