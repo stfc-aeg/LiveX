@@ -84,16 +84,16 @@ class TriggerController():
         try:
             self.mod_client = ModbusTcpClient(self.ip)
             self.mod_client.connect()
+            self.connected = True
             # With connection established, update any registers
             self.get_all_registers()
-            self.connected = True
         except:
             logging.debug("Connection to trigger modbus client did not succeed.")
             self.connected = False
 
     def get_all_registers(self):
         """Read the value of all registers to update the tree."""
-        try:
+        if self.connected:
             ret = self.mod_client.read_coils(modAddr.trig_furnace_enable_coil, 3, slave=1)
             # See modbusAddresses.py: these coils are sequential
             self.furnace_enabled = ret.bits[0]  # Coil 2
@@ -116,8 +116,6 @@ class TriggerController():
             self.furnace_target = read_decode_holding_reg(self.mod_client, modAddr.trig_furnace_target_hold)
             self.widefov_target = read_decode_holding_reg(self.mod_client, modAddr.trig_widefov_target_hold)
             self.narrowfov_target = read_decode_holding_reg(self.mod_client, modAddr.trig_narrowfov_target_hold)
-        except:
-            logging.debug("Error when fetching parameters for Trigger adapter.")
 
     def set_all_timers(self, value):
         """Enable or disable all timers."""
