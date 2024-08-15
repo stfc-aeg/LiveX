@@ -18,21 +18,22 @@ class TriggerAdapter(ApiAdapter):
 
         ip = self.options.get('ip', None)
 
-        frequencies = {
-            'furnace': int(self.options.get('furnace_frequency', 50)),
-            'wideFov': int(self.options.get('wideFov_frequency', 80)),
-            'narrowFov': int(self.options.get('narrowFov_frequency', 120))
-        }
+        triggers = [
+            item.strip() for item in self.options.get('triggers', None).split(",")
+        ]
+        frequencies = [
+            item.strip() for item in self.options.get('frequencies', None).split(",")
+        ]
 
         status_bg_task_enable = int(self.options.get('status_bg_task_enable', 1))
         status_bg_task_interval = int(self.options.get('status_bg_task_interval', 10))
 
-        self.trigger = TriggerController(ip, frequencies, status_bg_task_enable, status_bg_task_interval)
+        self.controller = TriggerController(ip, triggers, status_bg_task_enable, status_bg_task_interval)
 
     @response_types('application/json', default='application/json')
     def get(self, path, request):
         try:
-            response = self.trigger.get(path)
+            response = self.controller.get(path)
             content_type = "application/json"
             status = 200
         except ParameterTreeError as param_error:
@@ -47,8 +48,8 @@ class TriggerAdapter(ApiAdapter):
     def put(self, path, request):
         try:
             data = decode_request_body(request)
-            self.trigger.set(path, data)
-            response = self.trigger.get(path)
+            self.controller.set(path, data)
+            response = self.controller.get(path)
             content_type = "applicaiton/json"
             status = 200
 
@@ -60,4 +61,4 @@ class TriggerAdapter(ApiAdapter):
         return ApiAdapterResponse(response, content_type=content_type, status_code=status)
 
     def cleanup(self):
-        self.trigger.cleanup()
+        self.controller.cleanup()

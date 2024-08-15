@@ -13,17 +13,20 @@ from livex.util import LiveXError
 class LiveXController():
     """LiveXController - class that manages the other adapters for LiveX."""
 
-    def __init__(self):
+    def __init__(self, ref_trigger):
         """Initialise the LiveXController object.
 
         This constructor initialises the LiveXController, building the parameter tree and getting
         system info.
         """
-        self.acq_frequency = 50
         self.acq_frame_target = 1000
         self.acq_time = 1  # Time in seconds
 
-        # To be configured in
+        # Requires trigger adapter, so is to be built later
+        self.frequency_subtree = {}
+        self.frequencies = {}
+        self.ref_trigger = ref_trigger
+
         self.furnace_freq = None
         self.widefov_freq = None
         self.narrowfov_freq = None
@@ -37,21 +40,21 @@ class LiveXController():
         self.init_time = time.time()
 
         # Get package version information
-        version_info = get_versions()
+        self.version_info = get_versions()
 
+        self._build_tree()
+
+    def _build_tree(self):
+        """Construct the parameter tree once adapters have been initialised."""
         self.param_tree = ParameterTree({
-            'odin_version': version_info['version'],
+            'odin_version': self.version_info['version'],
             'server_uptime': (lambda: self.get_server_uptime(), None),
             'acquisition': {
                 'start': (lambda: None, self.start_acquisition),
                 'stop': (lambda: None, self.stop_acquisition),
                 'time': (lambda: self.acq_time, self.set_acq_time),
-                'frame_target': (lambda: self.acq_time, self.set_acq_frame_target),
-                'frequencies': {
-                    'furnace': (lambda: self.furnace_freq, partial(self.set_timer_frequency, timer='furnace')),
-                    'widefov': (lambda: self.widefov_freq, partial(self.set_timer_frequency, timer='widefov')),
-                    'narrowfov': (lambda: self.widefov_freq, partial(self.set_timer_frequency, timer='narrowfov'))
-                },
+                'frame_target': (lambda: self.acq_frame_target, self.set_acq_frame_target),
+                'frequencies': self.frequency_subtree
             }
         })
 
@@ -99,8 +102,8 @@ class LiveXController():
             self.iac_set(self.orca, f'cameras/{camera}/config/', 'trigger_source', 2)
             # Set orca frames to prevent HDF error
             # No. frames is equal to the target set in the trigger by the user
-            target = int(self.iac_get(self.trigger, f'{camera}/target', param='target'))
-            self.iac_set(self.orca, f'cameras/{camera}/config/', 'num_frames', target)
+            target = int(self.iac_get(self.trigger, f'triggers/{camera}/target', param='target'))
+            self.iac_set(self.orca, f'triggers/cameras/{camera}/config/', 'num_frames', target)
 
             # Format the same filename as metadata, but with the system name instead of 'metadata'
             filename = experiment_id + "_" + camera
@@ -144,9 +147,9 @@ class LiveXController():
             self.iac_set(self.munir, f'subsystems/{camera}', 'stop_execute', True)
 
         # set frame num back to 0
-        self.iac_set(self.trigger, 'furnace', 'target', 0)
-        self.iac_set(self.trigger, 'widefov', 'target', 0)
-        self.iac_set(self.trigger, 'narrowfov', 'target', 0)
+        self.iac_set(self.trigger, 'triggers/furnace', 'target', 0)
+        self.iac_set(self.trigger, 'triggers/widefov', 'target', 0)
+        self.iac_set(self.trigger, 'triggers/narrowfov', 'target', 0)
 
         # Set trigger mode back to 'preview'
         self.iac_set(self.trigger, '', 'preview', True)
@@ -161,15 +164,15 @@ class LiveXController():
         # Reenable timers
         self.iac_set(self.trigger, '', 'all_timers_enable', True)
 
-    def set_acq_frequency(self, value):
-        """Set the acquisition frequency(ies)."""
-        self.acq_frequency = value
-
     def get_timer_frequencies(self):
         """Update the timer frequency variables."""
-        self.furnace_freq = int(self.iac_get(self.trigger, 'furnace/frequency', param='frequency'))
-        self.widefov_freq = int(self.iac_get(self.trigger, 'widefov/frequency', param='frequency'))
-        self.narrowfov_freq = int(self.iac_get(self.trigger, 'narrowfov/frequency', param='frequency'))
+        for name, trigger in self.trigger.triggers.items():
+            self.frequencies[name] = trigger.frequency
+
+            self.frequency_subtree[name] = (
+                lambda: trigger.frequency,
+                partial(self.set_timer_frequency, timer=name)
+            )
 
     def set_timer_frequency(self, value, timer=None):
         """Set a given timer's frequency to the provided value.
@@ -177,11 +180,14 @@ class LiveXController():
         :param timer: string representing the trigger parameter tree path of the timer to edit
         """
         if timer:
-            self.iac_set(self.trigger, timer, 'frequency', int(value))
+            self.trigger.triggers[timer].set_frequency(int(value))
+            self.frequencies[timer] = int(value)
+            logging.debug(f"self.frequencies: {self.frequencies}")
+
             # We can recalculate duration and frame targets for the new frequency by calling this
-            # function with the current furnace target, instead of duplicating code.
-            furnace_target = self.iac_get(self.trigger, 'furnace/target', param='target')
-            self.set_acq_frame_target(furnace_target)
+            # function with the current ref target, instead of duplicating code.
+            ref_target = self.trigger.triggers[self.ref_trigger].target
+            self.set_acq_frame_target(ref_target)
 
     def set_acq_time(self, value):
         """Set the duration of the acquisition. Used to calculate targets from frequencies."""
@@ -189,9 +195,10 @@ class LiveXController():
         self.get_timer_frequencies()
 
         # Frame target = time (in s) * frequency
-        self.iac_set(self.trigger, 'furnace', 'target', (self.acq_time * self.furnace_freq))
-        self.iac_set(self.trigger, 'widefov', 'target', (self.acq_time * self.widefov_freq))
-        self.iac_set(self.trigger, 'narrowfov', 'target', (self.acq_time * self.narrowfov_freq))
+        for name, trigger in self.trigger.triggers.items():
+            trigger.set_target(
+                self.acq_time * self.frequencies[name]
+            )
 
     def set_acq_frame_target(self, value):
         """Set the frame target(s) of the acquisition."""
@@ -199,18 +206,21 @@ class LiveXController():
         self.get_timer_frequencies()
 
         # New furnace target as provided
-        furnace_target = int(value)
-        self.iac_set(self.trigger, 'furnace', 'target', furnace_target)
+        ref_target = int(value)
+
+        self.trigger.triggers[self.ref_trigger].set_target(ref_target)
 
         # Get new 'real' acquisition time for calculations
-        self.acq_time = furnace_target / self.furnace_freq
-        logging.debug(f"acq time = target//freq: {furnace_target} / {self.furnace_freq} = {self.acq_time}")
+        self.acq_time = ref_target / self.frequencies[self.ref_trigger]
+        logging.debug(f"acq time = target//freq: {ref_target} / {self.frequencies[self.ref_trigger]} = {self.acq_time}")
 
-        # Calculate other targets based on that time
-        self.iac_set(self.trigger, 'widefov', 'target', (self.acq_time * self.widefov_freq))
-        self.iac_set(self.trigger, 'narrowfov', 'target', (self.acq_time * self.narrowfov_freq))
+        # Calculate targets based on that time
+        for name, trigger in self.trigger.triggers.items():
+            trigger.set_target(
+                (self.acq_time * trigger.frequency)
+            )
 
-        self.acq_time = furnace_target // self.furnace_freq  # Avoid showing long floats to users
+        self.acq_time = ref_target // self.frequencies[self.ref_trigger]  # Avoid showing long floats to users
 
     def initialise_adapters(self, adapters):
         """Get access to all of the other adapters.
@@ -219,17 +229,15 @@ class LiveXController():
         self.adapters = adapters
         self.munir = adapters["munir"]
         self.furnace = adapters["furnace"]
-        self.trigger = adapters["trigger"]
+        self.trigger = adapters["trigger"].controller
         self.orca = adapters["camera"]
         self.metadata = adapters["metadata"]
 
         # With adapters initialised, IAC can be used to get any more needed info
         self.get_timer_frequencies()
-        self.timer_frequencies = {
-            "furnace": self.furnace_freq,
-            "widefov": self.widefov_freq,
-            "narrowfov": self.narrowfov_freq
-        }
+
+        # Reconstruct tree with relevant adapter references
+        self._build_tree()
 
     def get_server_uptime(self):
         """Get the uptime for the ODIN server.

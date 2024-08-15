@@ -98,7 +98,7 @@ function Trigger(props) {
                     endpoint={liveXEndPoint}
                     type="number"
                     fullpath={"acquisition/frequencies/furnace"}
-                    value={triggerEndPoint.data.furnace?.frequency}>
+                    value={triggerEndPoint.data.triggers?.furnace?.frequency}>
                   </EndPointFormControl>
                 </InputGroup>
               </Row>
@@ -112,13 +112,13 @@ function Trigger(props) {
                     endpoint={liveXEndPoint}
                     type="number"
                     fullpath={"acquisition/frame_target"}
-                    value={triggerEndPoint.data.furnace?.target}
+                    value={triggerEndPoint.data.triggers?.furnace?.target}
                     disabled={timeFrameValue==='time'}
                     style={{border: timeFrameValue==='frame' ? '1px solid #00cc00' : undefined}}>
                   </EndPointFormControl>
                   ) : (
                     <InputGroup.Text style={{ flex: 1 }}>
-                      {triggerEndPoint.data.furnace?.target}
+                      {triggerEndPoint.data.triggers?.furnace?.target}
                     </InputGroup.Text>
                   )}
                 </InputGroup>
@@ -140,7 +140,7 @@ function Trigger(props) {
                     endpoint={liveXEndPoint}
                     type="number"
                     fullpath={"acquisition/frequencies/widefov"}
-                    value={triggerEndPoint.data.widefov?.frequency}>
+                    value={triggerEndPoint.data.triggers?.widefov?.frequency}>
                   </EndPointFormControl>
                 </InputGroup>
               </Row>
@@ -150,7 +150,7 @@ function Trigger(props) {
                     Frame #
                   </InputGroup.Text>
                   <InputGroup.Text style={{flex: 1}}>
-                  {triggerEndPoint.data.widefov?.target}
+                  {triggerEndPoint.data.triggers?.widefov?.target}
                   </InputGroup.Text>
                 </InputGroup>
               </Row>
@@ -172,7 +172,7 @@ function Trigger(props) {
                     endpoint={liveXEndPoint}
                     type="number"
                     fullpath={"acquisition/frequencies/narrowfov"}
-                    value={triggerEndPoint.data.narrowfov?.frequency}>
+                    value={triggerEndPoint.data.triggers?.narrowfov?.frequency}>
                   </EndPointFormControl>
                 </InputGroup>
               </Row>
@@ -182,7 +182,7 @@ function Trigger(props) {
                     Frame #
                   </InputGroup.Text>
                   <InputGroup.Text style={{flex: 1}}>
-                  {triggerEndPoint.data.narrowfov?.target}
+                  {triggerEndPoint.data.triggers?.narrowfov?.target}
                   </InputGroup.Text>
                 </InputGroup>
               </Row>
