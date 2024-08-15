@@ -68,11 +68,16 @@ class TriggerController():
             },
             'preview': (lambda: self.previewing, self.set_preview),
             'all_timers_enable': (lambda: self.all_enabled, self.set_all_timers),
-            'status': {
+            'modbus': {
+                'ip': (lambda: self.ip, self.set_ip),
                 'connected': (lambda: self.connected, None),
                 'reconnect': (lambda: None, self.initialise_client)
             }
         })
+
+    def set_ip(self, value):
+        """Set the ModbusTCPClient IP to the provided value."""
+        self.ip = value
 
     def initialise_client(self):
         """Initialise the modbus client."""

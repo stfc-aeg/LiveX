@@ -33,6 +33,16 @@ function Trigger(props) {
 
     return (
       <Container>
+        <EndPointButton
+          endpoint={triggerEndPoint}
+          fullpath={"modbus/reconnect"}
+          value={true}
+          disabled={triggerEndPoint?.data?.modbus?.connected}
+          event_type="click"
+          variant={triggerEndPoint.data.modbus?.connected ? "primary": "danger"}
+        >
+          {triggerEndPoint.data.modbus?.connected ? "Trigger Connected": "Reconnect Trigger"}
+        </EndPointButton>
         <TitleCard title="Acquisition details">
         <Container>
         <Row>
