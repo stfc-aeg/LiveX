@@ -60,11 +60,11 @@ class LiveXController():
 
     def toggle_previews(self, value):
         """Starts or stops all timers and puts them in previewing mode."""
-        previewing = self.iac_get(self.trigger, 'preview', param='preview')
+        previewing = self.trigger.previewing
         previewing = not previewing
 
-        self.iac_set(self.trigger, '', 'all_timers_enable', previewing)
-        self.iac_set(self.trigger, '', 'preview', previewing)
+        self.trigger.set_preview(previewing)
+        self.trigger.set_all_timers(previewing)
 
     def start_acquisition(self, value):
         """Start an acquisition. Disable timers, configure all values, then start timers simultaneously."""
@@ -82,9 +82,9 @@ class LiveXController():
         self.iac_set(self.metadata, 'hdf', 'file', str(experiment_id +"_metadata.hdf5"))
 
         # End any current timers
-        self.iac_set(self.trigger, '', 'all_timers_enable', False)
+        self.trigger.set_all_timers(False)
         # Disable trigger 'preview' mode
-        self.iac_set(self.trigger, '', 'preview', False)
+        self.trigger.set_preview(False)
 
         # Set filename for furnace
         self.iac_set(self.furnace, 'filewriter', 'filename', str(experiment_id+"_furnace.hdf5"))
@@ -102,8 +102,8 @@ class LiveXController():
             self.iac_set(self.orca, f'cameras/{camera}/config/', 'trigger_source', 2)
             # Set orca frames to prevent HDF error
             # No. frames is equal to the target set in the trigger by the user
-            target = int(self.iac_get(self.trigger, f'triggers/{camera}/target', param='target'))
-            self.iac_set(self.orca, f'triggers/cameras/{camera}/config/', 'num_frames', target)
+            target = int(self.trigger.triggers[camera].target)
+            self.iac_set(self.orca, f'cameras/{camera}/config/', 'num_frames', target)
 
             # Format the same filename as metadata, but with the system name instead of 'metadata'
             filename = experiment_id + "_" + camera
@@ -125,12 +125,12 @@ class LiveXController():
         self.iac_set(self.furnace, 'tcp', 'acquire', True)
 
         # Enable timer coils simultaneously
-        self.iac_set(self.trigger, '', 'all_timers_enable', True)
+        self.trigger.set_all_timers(True)
 
     def stop_acquisition(self, value):
         """Stop the acquisition."""
         # All timers can be explicitly disabled (even though they should turn themselves off).
-        self.iac_set(self.trigger, '', 'all_timers_enable', False)
+        self.trigger.set_all_timers(False)
 
         # cams stop capturing, num-frames to 0, start again
         # Move camera(s) to capture state
@@ -147,12 +147,11 @@ class LiveXController():
             self.iac_set(self.munir, f'subsystems/{camera}', 'stop_execute', True)
 
         # set frame num back to 0
-        self.iac_set(self.trigger, 'triggers/furnace', 'target', 0)
-        self.iac_set(self.trigger, 'triggers/widefov', 'target', 0)
-        self.iac_set(self.trigger, 'triggers/narrowfov', 'target', 0)
+        for name, trigger in self.trigger.triggers.items():
+            trigger.target = 0
 
         # Set trigger mode back to 'preview'
-        self.iac_set(self.trigger, '', 'preview', True)
+        self.trigger.set_preview(True)
 
         # Turn off acquisition coil
         self.iac_set(self.furnace, 'tcp', 'acquire', False)
@@ -162,7 +161,7 @@ class LiveXController():
         self.iac_set(self.metadata, 'markdown', 'write', True)
 
         # Reenable timers
-        self.iac_set(self.trigger, '', 'all_timers_enable', True)
+        self.trigger.set_all_timers(True)
 
     def get_timer_frequencies(self):
         """Update the timer frequency variables."""

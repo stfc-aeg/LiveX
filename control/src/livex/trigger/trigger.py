@@ -38,11 +38,11 @@ class Trigger():
 
         # Frequencies = 1_000_000 / intvl*2
         # Interval = (1_000_000 / freq) // 2
-        self.frequency = 1_000_000 / (
+        self.frequency = int(1_000_000 / (
             read_decode_holding_reg(self.client, self.addr['interval_hold']) * 2
-        )
+        ))
 
-        self.target = read_decode_holding_reg(self.client, self.addr['target_hold'])
+        self.target = int(read_decode_holding_reg(self.client, self.addr['target_hold']))
 
     def update_hold_value(self, address, value):
         """Write a value to a given holding register(s) and mark the 'value updated' coil."""

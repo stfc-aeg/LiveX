@@ -84,7 +84,7 @@ class TriggerController():
     def set_all_timers(self, value):
         """Enable or disable all timers."""
         self.all_triggers_enable = bool(value)
-        for trigger in self.triggers:
+        for name, trigger in self.triggers.items():
             trigger.set_enable(self.all_triggers_enable)
         write_coil(self.mod_client, modAddr.trig_val_updated_coil, 1)
 
