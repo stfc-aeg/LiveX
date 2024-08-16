@@ -49,14 +49,14 @@ class FurnaceAdapter(ApiAdapter):
         # subsequent uses would overwrite. generation method TBD. metadata, date/time, etc.
         log_filename = self.options.get('log_filename', 'default.hdf5')
 
-        temp_monitor_retention = int(self.options.get('temp_monitor_retention', 60))
+        monitor_retention = int(self.options.get('monitor_retention', 60))
 
         self.furnace = FurnaceController(
             bg_read_task_enable, bg_read_task_interval,
             bg_stream_task_enable, pid_frequency,
             ip, port,
             log_directory, log_filename,
-            temp_monitor_retention
+            monitor_retention
         )
 
         logging.debug('FurnaceAdapter loaded')

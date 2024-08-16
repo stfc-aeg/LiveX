@@ -8,7 +8,6 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import Button from 'react-bootstrap/Button';
 
-import TemperatureGraph from './components/furnace/TemperatureGraph';
 import PidControl from './components/furnace/PidControl';
 import ThermalGradient from './components/furnace/ThermalGradient';
 import AutoSetPointControl from './components/furnace/AutoSetPointControl';
@@ -19,6 +18,7 @@ import { WithEndpoint, useAdapterEndpoint } from 'odin-react';
 import Metadata from './components/setup/Metadata';
 import Cameras from './components/cameras/Cameras';
 import Trigger from './components/setup/Trigger';
+import MonitorGraph from './components/furnace/DualMonitorGraph';
 
 const EndPointButton = WithEndpoint(Button);
 
@@ -135,9 +135,23 @@ function App(props) {
     </Cameras>
     </Col>
     <Col>
-    <TemperatureGraph
-      furnaceEndPoint={furnaceEndPoint}>
-    </TemperatureGraph>
+    <MonitorGraph
+      endpoint={furnaceEndPoint}
+      seriesData={[
+        {dataPath: 'temperature', param_a: 'temperature_a', param_b: 'temperature_b'},
+        {dataPath: 'setpoint', param_a: 'setpoint_a', param_b: 'setpoint_b'}
+      ]}
+      title={"Temperature and Setpoint Graph"}
+      seriesNames={["TC1", "TC2", "SP1", "SP2"]}
+    ></MonitorGraph>
+    <MonitorGraph
+      endpoint={furnaceEndPoint}
+      seriesData={[
+        {dataPath: 'output', param_a: 'output_a', param_b: 'output_b'}
+      ]}
+      title={"PID Output Graph"}
+      seriesNames={["PO1", "PO2"]}
+    ></MonitorGraph>
     </Col>
     </OdinApp>
   );
