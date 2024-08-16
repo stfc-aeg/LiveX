@@ -13,7 +13,7 @@ from livex.util import LiveXError
 class LiveXController():
     """LiveXController - class that manages the other adapters for LiveX."""
 
-    def __init__(self, ref_trigger):
+    def __init__(self, ref_trigger, filepath):
         """Initialise the LiveXController object.
 
         This constructor initialises the LiveXController, building the parameter tree and getting
@@ -32,7 +32,7 @@ class LiveXController():
         self.narrowfov_freq = None
 
         # These can be configured but a sensible default should be determined
-        self.filepath = "/tmp"
+        self.filepath = filepath
         self.filename = "tmpy"
         self.dataset_name = "tmp"
 
@@ -77,17 +77,22 @@ class LiveXController():
         acquisition_number += 1
         experiment_id = campaign_name + "_" + str(acquisition_number).rjust(4, '0')
 
+        furnace_file = experiment_id + "_furnace.hdf5"
+
         self.iac_set(self.metadata, 'fields/acquisition_num', 'value', acquisition_number)
         self.iac_set(self.metadata, 'fields/experiment_id', 'value', experiment_id)
-        self.iac_set(self.metadata, 'hdf', 'file', str(experiment_id +"_metadata.hdf5"))
+        self.iac_set(self.metadata, 'hdf', 'file', furnace_file)
+        self.iac_set(self.metadata, 'hdf', 'path', self.filepath)
+        self.iac_set(self.metadata, 'markdown', 'path', self.filepath)
+
+        # Set file name and path for furnace
+        self.iac_set(self.furnace, 'filewriter', 'filepath', self.filepath)
+        self.iac_set(self.furnace, 'filewriter', 'filename', furnace_file)
 
         # End any current timers
         self.trigger.set_all_timers(False)
         # Disable trigger 'preview' mode
         self.trigger.set_preview(False)
-
-        # Set filename for furnace
-        self.iac_set(self.furnace, 'filewriter', 'filename', str(experiment_id+"_furnace.hdf5"))
 
         # Move camera(s) to 'connected' state
         for i in range(len(self.orca.camera.cameras)):

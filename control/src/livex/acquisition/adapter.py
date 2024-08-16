@@ -17,9 +17,10 @@ class LiveXAdapter(ApiAdapter):
 
         # Parse options
         ref_trigger = self.options.get('reference_trigger', 'furnace')
+        filepath = self.options.get('filepath', '/tmp')
 
         # Create acquisition controller
-        self.livex = LiveXController(ref_trigger)
+        self.livex = LiveXController(ref_trigger, filepath)
 
     @response_types('application/json', default='application/json')
     def get(self, path, request):
