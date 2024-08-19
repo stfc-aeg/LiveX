@@ -12,6 +12,7 @@ import logging
 from functools import partial
 from typing import Any, Callable, Dict, Tuple
 
+from livex.base_controller import BaseController
 from livex.util import LiveXError
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
@@ -20,28 +21,26 @@ from .markdown_writer import MarkdownMetaWriter
 from .types import MetadataField, ParamDict
 
 
-class MetadataController:
+class MetadataController(BaseController):
     """MetadataController - controller class for LiveX metadata.
 
     This class implements the controller for the LiveX metadata adapter. It manages metadata fields,
     their state and output of metadata to HDF and markdown files.
     """
 
-    def __init__(
-        self,
-        metadata_config: str,
-        metadata_store: str = None,
-        markdown_template: str = "markdown.j2",
-    ):
+    def __init__(self, options):
         """Initialise the MetadataController object.
 
         This constructor initialises the state of the controller, loading metadata fields from a
         configuration file and building the parameter tree.
 
-        :param metadata_config: configuration file name
-        :param metadata_store: persistent store file name
-        :param markdown_template: markdown template file name
+        :param option: dict of controller options
         """
+
+        # Parse configuration options
+        metadata_config = options.get("metadata_config", "metadata_config.json")
+        metadata_store = options.get("metadata_store", None)
+        self.markdown_template = options.get("markdown_template", "markdown.j2")
 
         # Initialise the state of the controller
         self.metadata_config = ""
@@ -55,7 +54,6 @@ class MetadataController:
         self.hdf_group = "metadata"
         self.hdf_write = False
 
-        self.markdown_template = markdown_template
         self.markdown_path = "/tmp"
         self.markdown_file = "metadata.md"
         self.markdown_write = False
@@ -79,7 +77,7 @@ class MetadataController:
         # Load the specified metadata configuration file
         self._load_config(metadata_config, raise_error=False)
 
-    def initialise(self, adapters: ParamDict) -> None:
+    def initialize(self, adapters: ParamDict) -> None:
         """Initialize the controller.
 
         This method initializes the controller with information about the adapters loaded into the
