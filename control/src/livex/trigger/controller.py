@@ -1,35 +1,44 @@
 import logging
-from pymodbus.client import ModbusTcpClient
-from livex.util import read_decode_input_reg, read_decode_holding_reg, write_modbus_float, write_coil
-from livex.modbusAddresses import modAddr
-
-from livex.trigger.trigger import Trigger
-
-from tornado.ioloop import PeriodicCallback
 
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from pymodbus.client import ModbusTcpClient
+from tornado.ioloop import PeriodicCallback
 
-class TriggerError():
-    """Simple exception class to wrap lower-level exceptions."""
-    pass
+from livex.base_controller import BaseController
+from livex.modbusAddresses import modAddr
+from livex.util import (
+    LiveXError,
+    read_decode_holding_reg,
+    read_decode_input_reg,
+    write_coil,
+    write_modbus_float,
+)
+
+from .trigger import Trigger
+
 
 class TriggerController():
     """Class to instantiate and manage a modbus connection to control the triggering device."""
 
-    def __init__(self, ip, triggers, status_bg_task_enable, status_bg_task_interval):
+    def __init__(self, options):
+
+        # Parse options and build trigger objects
+        self.ip = self.options.get('ip', None)
+        self.status_bg_task_enable = int(self.options.get('status_bg_task_enable', 1))
+        self.status_bg_task_interval = int(self.options.get('status_bg_task_interval', 10))
 
         self.triggers = {}
-        for name in triggers:
+        for name in self.options.get('triggers', None).split(","):
             # Name scheme for trigger addresses is trigger_<name>
-            addr = "trigger_" + name
+            addr = "trigger_" + name.strip()
             addresses = getattr(modAddr, addr)
-
             self.triggers[name] = Trigger(name, addresses)
 
-        self.ip = ip
-        self.status_bg_task_enable = status_bg_task_enable
-        self.status_bg_task_interval = status_bg_task_interval
+        self.frequencies = [
+            item.strip() for item in self.options.get('frequencies', None).split(",")
+        ]
 
+        # Initialise the modbus client and get all register values
         self.initialise_client(value=None)
         self.get_all_registers()
 
@@ -56,6 +65,48 @@ class TriggerController():
                 'reconnect': (lambda: None, self.initialise_client)
             }
         })
+
+    def initialize(self, adapters) -> None:
+        """Initialize the controller.
+
+        This method initializes the controller with information about the adapters loaded into the
+        running application.
+
+        :param adapters: dictionary of adapter instances
+        """
+        self.adapters = adapters
+
+    def cleanup(self):
+        """Clean up the TriggerController instance.
+
+        This method closes the modbus client, allowing the adapter state to be cleaned up
+        correctly.
+        """
+        self.mod_client.close()
+
+    def get(self, path):
+        """Get the parameter tree.
+        This method returns the parameter tree for use by clients via the FurnaceController adapter.
+        :param path: path to retrieve from tree
+        """
+        try:
+            return self.tree.get(path)
+        except ParameterTreeError as error:
+            logging.error(error)
+            raise LiveXError(error)
+
+    def set(self, path, data):
+        """Set parameters in the parameter tree.
+        This method simply wraps underlying ParameterTree method so that an exceptions can be
+        re-raised with an appropriate LiveXError.
+        :param path: path of parameter tree to set values for
+        :param data: dictionary of new data values to set in the parameter tree
+        """
+        try:
+            self.tree.set(path, data)
+        except ParameterTreeError as error:
+            logging.error(error)
+            raise LiveXError(error)
 
     def set_ip(self, value):
         """Set the ModbusTCPClient IP to the provided value."""
@@ -123,29 +174,3 @@ class TriggerController():
         logging.debug("Setting background task interval to %f", interval)
         self.status_bg_task_interval = float(interval)
 
-    def get(self, path):
-        """Get the parameter tree.
-        This method returns the parameter tree for use by clients via the FurnaceController adapter.
-        :param path: path to retrieve from tree
-        """
-        return self.tree.get(path)
-
-    def set(self, path, data):
-        """Set parameters in the parameter tree.
-        This method simply wraps underlying ParameterTree method so that an exceptions can be
-        re-raised with an appropriate LiveXError.
-        :param path: path of parameter tree to set values for
-        :param data: dictionary of new data values to set in the parameter tree
-        """
-        try:
-            self.tree.set(path, data)
-        except ParameterTreeError as e:
-            raise TriggerError(e)
-
-    def cleanup(self):
-        """Clean up the FurnaceController instance.
-
-        This method stops the background tasks, allowing the adapter state to be cleaned up
-        correctly.
-        """
-        self.mod_client.close()
