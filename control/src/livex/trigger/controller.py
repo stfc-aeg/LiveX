@@ -76,6 +76,9 @@ class TriggerController(BaseController):
         :param adapters: dictionary of adapter instances
         """
         self.adapters = adapters
+        if 'sequencer' in self.adapters:
+            logging.debug("Trigger controller registering context with sequencer")
+            self.adapters['sequencer'].add_context('trigger', self)
 
     def cleanup(self):
         """Clean up the TriggerController instance.

@@ -86,6 +86,9 @@ class MetadataController(BaseController):
         :param adapters: dictionary of adapter instances
         """
         self.adapters = adapters
+        if 'sequencer' in self.adapters:
+            logging.debug("Metadata controller registering context with sequencer")
+            self.adapters['sequencer'].add_context('metadata', self)
 
     def cleanup(self) -> None:
         """Clean up the controller.
