@@ -8,47 +8,108 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from odin.adapters.adapter import ApiAdapterRequest, ApiAdapterResponse
 from odin._version import get_versions
 
+from livex.base_controller import BaseController
 from livex.util import LiveXError
 
-class LiveXController():
+class LiveXController(BaseController):
     """LiveXController - class that manages the other adapters for LiveX."""
 
-    def __init__(self, ref_trigger, filepath):
+    def __init__(self,  options):
         """Initialise the LiveXController object.
 
         This constructor initialises the LiveXController, building the parameter tree and getting
         system info.
         """
+
+        # Parse options
+        self.ref_trigger = options.get('reference_trigger', 'furnace')
+        self.filepath = options.get('filepath', '/tmp')
+
         self.acq_frame_target = 1000
         self.acq_time = 1  # Time in seconds
 
         # Requires trigger adapter, so is to be built later
         self.frequency_subtree = {}
         self.frequencies = {}
-        self.ref_trigger = ref_trigger
 
         self.furnace_freq = None
         self.widefov_freq = None
         self.narrowfov_freq = None
 
         # These can be configured but a sensible default should be determined
-        self.filepath = filepath
         self.filename = "tmpy"
         self.dataset_name = "tmp"
 
-        # Store initialisation time
-        self.init_time = time.time()
-
-        # Get package version information
-        self.version_info = get_versions()
-
         self._build_tree()
 
+    def initialize(self, adapters):
+        """Initialize the controller.
+
+        This method initializes the controller with information about the adapters loaded into the
+        running application.
+
+        :param adapters: dictionary of adapter instances
+        """
+        self.adapters = adapters
+
+        self.munir = adapters["munir"]
+        self.furnace = adapters["furnace"]
+        self.trigger = adapters["trigger"].controller
+        self.orca = adapters["camera"]
+        self.metadata = adapters["metadata"]
+
+        if 'sequencer' in self.adapters:
+            logging.debug("Livex controller registering context with sequencer")
+            self.adapters['sequencer'].add_context('livex', self)
+
+        # With adapters initialised, IAC can be used to get any more needed info
+        self.get_timer_frequencies()
+
+        # Reconstruct tree with relevant adapter references
+        self._build_tree()
+
+    def cleanup(self):
+        """Clean up the controller.
+
+        This method cleans up the state of the controller at shutdown, closing the persistent
+        metadata store if open.
+        """
+        pass
+
+    def get(self, path, with_metadata=False):
+        """Get parameter data from controller.
+
+        This method gets data from the controller parameter tree.
+
+        :param path: path to retrieve from the tree
+        :param with_metadata: flag indicating if parameter metadata should be included
+        :return: dictionary of parameters (and optional metadata) for specified path
+        """
+        try:
+            return self.param_tree.get(path, with_metadata)
+        except ParameterTreeError as error:
+            logging.error(error)
+            raise LiveXError(error)
+
+    def set(self, path, data):
+        """Set parameters in the controller.
+
+        This method sets parameters in the controller parameter tree. If the parameters to write
+        metadata to HDF and/or markdown have been set during the call, the appropriate write
+        action is executed.
+
+        :param path: path to set parameters at
+        :param data: dictionary of parameters to set
+        """
+        try:
+            self.param_tree.set(path, data)
+        except ParameterTreeError as error:
+            logging.error(error)
+            raise LiveXError(error)
+        
     def _build_tree(self):
         """Construct the parameter tree once adapters have been initialised."""
         self.param_tree = ParameterTree({
-            'odin_version': self.version_info['version'],
-            'server_uptime': (lambda: self.get_server_uptime(), None),
             'acquisition': {
                 'start': (lambda: None, self.start_acquisition),
                 'stop': (lambda: None, self.stop_acquisition),
@@ -225,49 +286,6 @@ class LiveXController():
             )
 
         self.acq_time = ref_target // self.frequencies[self.ref_trigger]  # Avoid showing long floats to users
-
-    def initialise_adapters(self, adapters):
-        """Get access to all of the other adapters.
-        :param adapters: dict of adapters from adapter.py.
-        """
-        self.adapters = adapters
-        self.munir = adapters["munir"]
-        self.furnace = adapters["furnace"]
-        self.trigger = adapters["trigger"].controller
-        self.orca = adapters["camera"]
-        self.metadata = adapters["metadata"]
-
-        # With adapters initialised, IAC can be used to get any more needed info
-        self.get_timer_frequencies()
-
-        # Reconstruct tree with relevant adapter references
-        self._build_tree()
-
-    def get_server_uptime(self):
-        """Get the uptime for the ODIN server.
-
-        This method returns the current uptime for the ODIN server.
-        """
-        return time.time() - self.init_time
-
-    def get(self, path):
-        """Get the parameter tree.
-        This method returns the parameter tree for use by clients via the FurnaceController adapter.
-        :param path: path to retrieve from tree
-        """
-        return self.param_tree.get(path)
-
-    def set(self, path, data):
-        """Set parameters in the parameter tree.
-        This method simply wraps underlying ParameterTree method so that an exceptions can be
-        re-raised with an appropriate LiveXError.
-        :param path: path of parameter tree to set values for
-        :param data: dictionary of new data values to set in the parameter tree
-        """
-        try:
-            self.param_tree.set(path, data)
-        except ParameterTreeError as e:
-            raise LiveXError(e)
 
     def iac_get(self, adapter, path, **kwargs):
         """Generic IAC get method for synchronous adapters."""
