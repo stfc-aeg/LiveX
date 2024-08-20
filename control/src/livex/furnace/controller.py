@@ -28,44 +28,46 @@ class FurnaceController():
     # Thread executor used for background tasks
     executor = futures.ThreadPoolExecutor(max_workers=2)
 
-    def __init__(self,
-                 bg_read_task_enable, bg_read_task_interval, bg_stream_task_enable, pid_frequency,
-                 ip, port,
-                 log_directory, log_filename,
-                 monitor_retention
-        ):
+    def __init__(self, options):
         """Initialise the FurnaceController object.
 
         This constructor initialises the FurnaceController object, building parameter trees and
         launching the background task to make modbus requests to the PLC.
         """
-        logging.getLogger("pymodbus").setLevel(logging.WARNING)  # Stop modbus from filling console
 
-        # Save arguments
-        self.bg_read_task_enable = bg_read_task_enable
-        self.bg_read_task_interval = bg_read_task_interval
-        self.bg_stream_task_enable = bg_stream_task_enable
+        # Parse options
+        self.bg_read_task_enable = bool(options.get('background_read_task_enable', False))
+        self.bg_read_task_interval = float(options.get('background_read_task_interval', 1.0))
+
+        self.bg_stream_task_enable = bool(options.get('background_stream_task_enable', False))
+        self.pid_frequency = int(options.get('pid_frequency', 50))
+
+        self.ip = options.get('ip', '192.168.0.159')
+        self.port = int(options.get('port', '4444'))
+
+        self.log_directory = options.get('log_directory', 'logs')
+        # Filename may instead be generated? Cannot have just one configurable one,
+        # subsequent uses would overwrite. generation method TBD. metadata, date/time, etc.
+        self.log_filename = options.get('log_filename', 'default.hdf5')
+
+        self.monitor_retention = int(options.get('monitor_retention', 60))
+
+        # Stop modbus from generating excessive logging
+        logging.getLogger("pymodbus").setLevel(logging.WARNING)  
 
         # Buffer will be cleared once per second
-        self.buffer_size = pid_frequency
-        # Interval is smaller than period so that tcp stream can be cleared and not maintained
-        self.bg_stream_task_interval = (1/pid_frequency)/2
+        self.buffer_size = self.pid_frequency
 
-        self.log_directory = log_directory
-        self.log_filename = log_filename
+        # Interval is smaller than period so that tcp stream can be cleared and not maintained
+        self.bg_stream_task_interval = (1/self.pid_frequency)/2
 
         # Set the background task counters to zero
         self.background_thread_counter = 0
 
-        # Modbus and tree setup
-        logging.debug("Initial modbus connection")
-        self.ip = ip
-        self.port = port
-        # self.mod_client = ModbusTcpClient(self.ip)
-        # self.initialise_tcp_client()
-
         self.packet_decoder = LiveXPacketDecoder()
+
         self.file_writer = FileWriter(self.log_directory, self.log_filename, {'timestamps': 'S'})
+        
         # File is not open by default in case of multiple acquisitions per software run
         self.file_open_flag = False
 
@@ -108,7 +110,6 @@ class FurnaceController():
                 'setpoint_b': []
             }
         }
-        self.monitor_retention = monitor_retention
 
         bg_task = ParameterTree({
             'thread_count': (lambda: self.background_thread_counter, None),
@@ -147,6 +148,59 @@ class FurnaceController():
         # Launch the background task if enabled in options
         if self.bg_read_task_enable:
             self.start_background_tasks()
+
+    def initialize(self, adapters) -> None:
+        """Initialize the controller.
+
+        This method initializes the controller with information about the adapters loaded into the
+        running application.
+
+        :param adapters: dictionary of adapter instances
+        """
+        self.adapters = adapters
+        if 'sequencer' in self.adapters:
+            logging.debug("Furnace controller registering context with sequencer")
+            self.adapters['sequencer'].add_context('furnace', self)
+
+    def cleanup(self):
+        """Clean up the FurnaceController instance.
+
+        This method stops the background tasks, allowing the adapter state to be cleaned up
+        correctly.
+        """
+        self.mod_client.close()
+        self.tcp_client.close()
+        self.stop_background_tasks()
+
+    def get(self, path, with_metadata=False):
+        """Get parameter data from controller.
+
+        This method gets data from the controller parameter tree.
+
+        :param path: path to retrieve from the tree
+        :param with_metadata: flag indicating if parameter metadata should be included
+        :return: dictionary of parameters (and optional metadata) for specified path
+        """
+        try:
+            return self.param_tree.get(path, with_metadata)
+        except ParameterTreeError as error:
+            logging.error(error)
+            raise LiveXError(error)
+
+    def set(self, path, data):
+        """Set parameters in the controller.
+
+        This method sets parameters in the controller parameter tree. If the parameters to write
+        metadata to HDF and/or markdown have been set during the call, the appropriate write
+        action is executed.
+
+        :param path: path to set parameters at
+        :param data: dictionary of parameters to set
+        """
+        try:
+            self.param_tree.set(path, data)
+        except ParameterTreeError as error:
+            logging.error(error)
 
     def set_filename(self, value):
         """Set the filewriter's filename and update its path."""
@@ -404,34 +458,3 @@ class FurnaceController():
         self.bg_read_task_enable = False
         self.bg_stream_task_enable = False
         self.background_ioloop_task.stop()
-
-    # Adapter processes
-
-    def get(self, path):
-        """Get the parameter tree.
-        This method returns the parameter tree for use by clients via the FurnaceController adapter.
-        :param path: path to retrieve from tree
-        """
-        return self.param_tree.get(path)
-
-    def set(self, path, data):
-        """Set parameters in the parameter tree.
-        This method simply wraps underlying ParameterTree method so that an exceptions can be
-        re-raised with an appropriate LiveXError.
-        :param path: path of parameter tree to set values for
-        :param data: dictionary of new data values to set in the parameter tree
-        """
-        try:
-            self.param_tree.set(path, data)
-        except ParameterTreeError as e:
-            raise LiveXError(e)
-
-    def cleanup(self):
-        """Clean up the FurnaceController instance.
-
-        This method stops the background tasks, allowing the adapter state to be cleaned up
-        correctly.
-        """
-        self.mod_client.close()
-        self.tcp_client.close()
-        self.stop_background_tasks()
