@@ -29,8 +29,10 @@ function App(props) {
   const furnaceEndPoint = useAdapterEndpoint('furnace', endpoint_url, 1000);
   const connectedPuttingDisable = (!(furnaceEndPoint.data.status?.connected || false)) || (furnaceEndPoint.loading === "putting")
 
+  const sequencer_url = endpoint_url + "/sequencer.html";
+
   return (
-    <OdinApp title="LiveX Controls" navLinks={["Metadata and Setup", "Sequencing", "Furnace Control", "Camera Control", "Monitoring"]}>
+    <OdinApp title="LiveX Controls" navLinks={["Metadata and Setup", "Sequencer", "Furnace Control", "Camera Control", "Monitoring"]}>
     <Col>
       <Metadata
         endpoint_url={endpoint_url}
@@ -41,7 +43,11 @@ function App(props) {
       </Trigger>
     </Col>
     <Col>
-      sequencer
+    <Container>
+      <Row>
+        <h4><a href={sequencer_url} target="_blank">Click here</a> to open sequencer (in new tab)</h4>
+      </Row>
+    </Container>
     </Col>
     <Col>
     <Container>
