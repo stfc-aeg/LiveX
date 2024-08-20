@@ -9,7 +9,7 @@ import logging
 import matplotlib.pyplot as plt
 
 from tornado.escape import json_decode
-from odin_data.ipc_channel import IpcChannel
+from odin_data.control.ipc_channel import IpcChannel
 
 class LiveDataProcessor():
     """Class to process image data received on a multiprocess that it instantiates."""

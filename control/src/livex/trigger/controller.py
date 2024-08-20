@@ -17,25 +17,26 @@ from livex.util import (
 from .trigger import Trigger
 
 
-class TriggerController():
+class TriggerController(BaseController):
     """Class to instantiate and manage a modbus connection to control the triggering device."""
 
     def __init__(self, options):
 
         # Parse options and build trigger objects
-        self.ip = self.options.get('ip', None)
-        self.status_bg_task_enable = int(self.options.get('status_bg_task_enable', 1))
-        self.status_bg_task_interval = int(self.options.get('status_bg_task_interval', 10))
+        self.ip = options.get('ip', None)
+        self.status_bg_task_enable = int(options.get('status_bg_task_enable', 1))
+        self.status_bg_task_interval = int(options.get('status_bg_task_interval', 10))
 
         self.triggers = {}
-        for name in self.options.get('triggers', None).split(","):
+        for name in options.get('triggers', None).split(","):
+            name = name.strip()
             # Name scheme for trigger addresses is trigger_<name>
-            addr = "trigger_" + name.strip()
+            addr = "trigger_" + name
             addresses = getattr(modAddr, addr)
             self.triggers[name] = Trigger(name, addresses)
 
         self.frequencies = [
-            item.strip() for item in self.options.get('frequencies', None).split(",")
+            item.strip() for item in options.get('frequencies', None).split(",")
         ]
 
         # Initialise the modbus client and get all register values
@@ -84,13 +85,13 @@ class TriggerController():
         """
         self.mod_client.close()
 
-    def get(self, path):
+    def get(self, path: str, with_metadata: bool = False):
         """Get the parameter tree.
         This method returns the parameter tree for use by clients via the FurnaceController adapter.
         :param path: path to retrieve from tree
         """
         try:
-            return self.tree.get(path)
+            return self.tree.get(path, with_metadata)
         except ParameterTreeError as error:
             logging.error(error)
             raise LiveXError(error)
@@ -115,6 +116,8 @@ class TriggerController():
     def initialise_client(self, value):
         """Initialise the modbus client."""
         try:
+            log = logging.getLogger('pymodbus')
+            log.setLevel(logging.ERROR)
             self.mod_client = ModbusTcpClient(self.ip)
             self.mod_client.connect()
             self.connected = True
