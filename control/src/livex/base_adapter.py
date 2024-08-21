@@ -7,6 +7,7 @@ from odin.adapters.adapter import (
     response_types,
     wants_metadata,
 )
+from odin.util import decode_request_body
 from tornado.escape import json_decode
 
 from .base_controller import BaseController, BaseError
@@ -72,7 +73,7 @@ class BaseAdapter(ApiAdapter):
         content_type = "application/json"
 
         try:
-            data = json_decode(request.body)
+            data = decode_request_body(request)
             self.controller.set(path, data)
             response = self.controller.get(path)
             status_code = 200
