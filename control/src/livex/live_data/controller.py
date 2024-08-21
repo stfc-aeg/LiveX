@@ -1,26 +1,41 @@
 import logging
 from functools import partial
 
-from odin.adapters.parameter_tree import ParameterTree
+from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
+from livex.base_controller import BaseController
+from livex.util import LiveXError
 from livex.live_data.processor import LiveDataProcessor
 
-class LiveDataController():
+class LiveDataController(BaseController):
     """Class to instantiate and manage the ParameterTree for LiveDataProcessor classes."""
 
-    def __init__(self, endpoints, names, resolutions):
+    def __init__(self, options): # endpoints, names, resolutions):
         """Initialise the LiveDataController. Create a LiveDataProcessor for each endpoint
         provided in config, then create a ParameterTree to handle behaviours for those classes.
         :param endpoints: list of endpoints in string format.
         """
         logging.debug("Initialising LiveDataController.")
 
-        self.names = names
+        # Split on comma, remove whitespace if it exists
+        endpoints = [
+            item.strip() for item in options.get('livedata_endpoint', None).split(",")
+        ]
+        names = [
+            item.strip() for item in options.get('endpoint_name', None).split(",")
+        ]
+        # Array of dicts of resolutions
+        resolutions = [
+            {'x': int(width), 'y': int(height)}  # generate x/y dict
+            for resolution in options.get('camera_resolution', '4096x2304').split(',') # get resolutions
+            for width, height in [resolution.strip().split("x")] # each resolution split into array
+        ]        
 
-        self.processors = []
         self.tree = {
             "liveview": {}
         }
+
+        self.processors = []
 
         # For each provided endpoint
         for i in range(len(endpoints)):
@@ -35,7 +50,7 @@ class LiveDataController():
             # Create 'branch' of ParameterTree for each Processor
             tree = {
                 "name": (lambda: name, None),
-                "endpoint": (lambda: self.processors[i].endpoint, None),
+                "endpoint": (lambda proc=proc: proc.endpoint, None),
                 "image":
                 {  # Partials provide processor as an argument
                     # Unclear if `proc=proc` is definitely required but it is not intrusive
@@ -64,6 +79,60 @@ class LiveDataController():
             self.tree['liveview'][name] = tree
 
         self.param_tree = ParameterTree(self.tree)
+
+    def initialize(self, adapters):
+        """Initialize the controller.
+
+        This method initializes the controller with information about the adapters loaded into the
+        running application.
+
+        :param adapters: dictionary of adapter instances
+        """
+        self.adapters = adapters
+        if 'sequencer' in self.adapters:
+            logging.debug("Live data controller registering context with sequencer")
+            self.adapters['sequencer'].add_context('livedata', self)
+
+    def cleanup(self):
+        """Clean up the LiveDataController instance.
+
+        This method terminates processors, allowing shutdown.
+        """
+        logging.debug(f"Terminating {len(self.processors)} processes.")
+        for processer in self.processors:
+            processer.process.terminate()
+
+
+    def get(self, path, with_metadata=False):
+        """Get parameter data from controller.
+
+        This method gets data from the controller parameter tree.
+
+        :param path: path to retrieve from the tree
+        :param with_metadata: flag indicating if parameter metadata should be included
+        :return: dictionary of parameters (and optional metadata) for specified path
+        """
+        try:
+            return self.param_tree.get(path, with_metadata)
+        except ParameterTreeError as error:
+            logging.error(error)
+            raise LiveXError(error)
+
+    def set(self, path, data):
+        """Set parameters in the controller.
+
+        This method sets parameters in the controller parameter tree. If the parameters to write
+        metadata to HDF and/or markdown have been set during the call, the appropriate write
+        action is executed.
+
+        :param path: path to set parameters at
+        :param data: dictionary of parameters to set
+        """
+        try:
+            self.param_tree.set(path, data)
+        except ParameterTreeError as error:
+            logging.error(error)
+            raise LiveXError(error)
 
     def update_render_info(self, processor):
         """Pipe updated parameters to processor thread.
@@ -248,20 +317,3 @@ class LiveDataController():
         processor.roi['percent']['y_upper'] = new_y_high
 
         self.update_render_info(processor)
-
-    def get(self, path):
-        """Get attribute from parameter tree."""
-        # logging.debug(self.param_tree)
-        return self.param_tree.get(path)
-
-    def set(self, path, data):
-        """Set attribute in parameter tree."""
-        self.param_tree.set(path, data)
-
-    def cleanup(self):
-        """Clean up the LiveDataController instance.
-        This method terminates thread processes, allowing shutdown.
-        """
-        logging.debug(f"Terminating {len(self.processors)} processes.")
-        for processer in self.processors:
-            processer.process.terminate()
