@@ -43,6 +43,11 @@ function ThermalGradient(props){
                 label="Theoretical">
                 {checkNull(furnaceEndPoint.data.gradient?.theoretical)}
             </StatusBox>
+            <StatusBox
+                type="info"
+                label="Centre Thermocouple">
+                {checkNull(furnaceEndPoint.data.thermocouples?.centre)}
+            </StatusBox>
             </Col>
             <Col>
             <InputGroup>

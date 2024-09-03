@@ -28,6 +28,10 @@ void Core0PIDTask(void * pvParameters)
       PID_A.input = mcp[0].readThermocouple(); // First thermocouple for A
       PID_B.input = mcp[1].readThermocouple(); // Second thermocouple for B
 
+      // Get third thermocouple reading
+      int reading_c = mcp[2].readThermocouple();
+      modbus_server.floatToInputRegisters(MOD_THERMOCOUPLE_C_INP, reading_c);
+
       // Write thermocouple output to modbus registers
       modbus_server.floatToInputRegisters(MOD_THERMOCOUPLE_A_INP, PID_A.input);
       modbus_server.floatToInputRegisters(MOD_THERMOCOUPLE_B_INP, PID_B.input);
@@ -106,7 +110,7 @@ void Core0PIDTask(void * pvParameters)
 
       modbus_server.floatToInputRegisters(MOD_MOTOR_LVDT_INP, position);
 
-      secondaryFlag = false;
+      secondaryFlag = false;    
     }
   }
 }

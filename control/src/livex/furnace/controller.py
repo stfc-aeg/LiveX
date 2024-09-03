@@ -87,9 +87,8 @@ class FurnaceController():
 
         self.initialise_clients(value=None)
 
-        # Other display controls
-        self.thermocouple_a = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp)
-        self.thermocouple_b = read_decode_input_reg(self.mod_client, modAddr.thermocouple_b_inp)
+        # Third thermocouple will get its value from the background task
+        self.thermocouple_c = None
 
         self.lifetime_counter = 0
         self.reconnect = False
@@ -134,6 +133,9 @@ class FurnaceController():
             'background_task': bg_task,
             'pid_a': self.pid_a.tree,
             'pid_b': self.pid_b.tree,
+            'thermocouples': {
+                'centre': (lambda: self.thermocouple_c, None)
+            },
             'autosp': self.aspc.tree,
             'gradient': self.gradient.tree,
             'motor': self.motor.tree,
@@ -380,6 +382,8 @@ class FurnaceController():
                 try:
                     self.pid_a.thermocouple = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp)
                     self.pid_b.thermocouple = read_decode_input_reg(self.mod_client, modAddr.thermocouple_b_inp)
+
+                    self.thermocouple_c = read_decode_input_reg(self.mod_client, modAddr.thermocouple_c_inp)
 
                     self.lifetime_counter = read_decode_input_reg(self.mod_client, modAddr.counter_inp)
 

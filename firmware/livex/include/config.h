@@ -10,7 +10,7 @@
 #define USE_EXTERNAL_INTERRUPT true
 // true: output total of external interrupts at given range (e.g.: every 100 interrupts. 100, 200, etc.)
 #define LOG_INTERRUPTS false
-#define LOG_INTERRUPTS_INTERVAL 100
+#define LOG_INTERRUPTS_INTERVAL 50
 
 // Timeout (no modbus connection) in ms
 #define INTERVAL_TIMEOUT 30000

@@ -49,9 +49,9 @@ float counter = 1;
 bool acquiringFlag = false;
 
 // Thermocouples - main, taskPid
-Adafruit_MCP9600 mcp[] = {Adafruit_MCP9600(), Adafruit_MCP9600()};
+Adafruit_MCP9600 mcp[] = {Adafruit_MCP9600(), Adafruit_MCP9600(), Adafruit_MCP9600()};
 const unsigned int num_mcp = sizeof(mcp) / sizeof(mcp[0]);
-const uint8_t mcp_addr[] = {0x60, 0x67};
+const uint8_t mcp_addr[] = {0x60, 0x67, 0x65};
 
 // Timers and flags - main, taskPid
 hw_timer_t *pidFlagTimer = NULL;
