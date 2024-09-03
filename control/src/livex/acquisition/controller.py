@@ -65,6 +65,10 @@ class LiveXController(BaseController):
         # With adapters initialised, IAC can be used to get any more needed info
         self.get_timer_frequencies()
 
+        # Write furnace timer to go for readings
+        self.trigger.triggers['furnace'].set_frequency(10)
+        self.trigger.triggers['furnace'].set_enable(True)
+
         # Reconstruct tree with relevant adapter references
         self._build_tree()
 
@@ -119,15 +123,7 @@ class LiveXController(BaseController):
             }
         })
 
-    def toggle_previews(self, value):
-        """Starts or stops all timers and puts them in previewing mode."""
-        previewing = self.trigger.previewing
-        previewing = not previewing
-
-        self.trigger.set_preview(previewing)
-        self.trigger.set_all_timers(previewing)
-
-    def start_acquisition(self, value):
+    def start_acquisition(self, freerun=False):
         """Start an acquisition. Disable timers, configure all values, then start timers simultaneously."""
         # experiment id is the campaign name plus an incrementing suffix (the acquisition_number)
         campaign_name = self.iac_get(self.metadata, 'fields/campaign_name/value', param='value')
@@ -139,11 +135,13 @@ class LiveXController(BaseController):
         experiment_id = campaign_name + "_" + str(acquisition_number).rjust(4, '0')
 
         furnace_file = experiment_id + "_furnace.hdf5"
+        markdown_file = experiment_id + "_furnace.md"
 
         self.iac_set(self.metadata, 'fields/acquisition_num', 'value', acquisition_number)
         self.iac_set(self.metadata, 'fields/experiment_id', 'value', experiment_id)
         self.iac_set(self.metadata, 'hdf', 'file', furnace_file)
         self.iac_set(self.metadata, 'hdf', 'path', self.filepath)
+        self.iac_set(self.metadata, 'markdown', 'file', markdown_file)
         self.iac_set(self.metadata, 'markdown', 'path', self.filepath)
 
         # Set file name and path for furnace
@@ -152,8 +150,11 @@ class LiveXController(BaseController):
 
         # End any current timers
         self.trigger.set_all_timers(False)
-        # Disable trigger 'preview' mode
-        self.trigger.set_preview(False)
+
+        # Set targets to 0 for freerun TODO: UI start_acq button needs variable depending on 'freerun' toggle
+        if freerun:
+            for name in self.trigger.triggers.keys():
+                self.trigger.triggers[name].set_target(0)
 
         # Move camera(s) to 'connected' state
         for i in range(len(self.orca.camera.cameras)):
@@ -167,7 +168,7 @@ class LiveXController(BaseController):
             # Set cameras explicitly to trigger source 2 (external)
             self.iac_set(self.orca, f'cameras/{camera}/config/', 'trigger_source', 2)
             # Set orca frames to prevent HDF error
-            # No. frames is equal to the target set in the trigger by the user
+            # No. frames is equal to the target set in the trigger by the user - freerun, this is 0
             target = int(self.trigger.triggers[camera].target)
             self.iac_set(self.orca, f'cameras/{camera}/config/', 'num_frames', target)
 
@@ -212,12 +213,11 @@ class LiveXController(BaseController):
             # Explicitly stop acquisition
             self.iac_set(self.munir, f'subsystems/{camera}', 'stop_execute', True)
 
-        # set frame num back to 0
+        # Set targets to 0 so timers keep running after acquisition, for monitoring
+        targets = {}
         for name, trigger in self.trigger.triggers.items():
-            trigger.target = 0
-
-        # Set trigger mode back to 'preview'
-        self.trigger.set_preview(True)
+            targets[name] = trigger.target
+            trigger.set_target(0)
 
         # Turn off acquisition coil
         self.iac_set(self.furnace, 'tcp', 'acquire', False)
@@ -229,13 +229,17 @@ class LiveXController(BaseController):
         # Reenable timers
         self.trigger.set_all_timers(True)
 
+        # Put targets back to how they were to preserve previous settings and their display
+        for name, trigger in self.trigger.triggers.items():
+            trigger.set_target(targets[name])
+
     def get_timer_frequencies(self):
         """Update the timer frequency variables."""
         for name, trigger in self.trigger.triggers.items():
             self.frequencies[name] = trigger.frequency
 
             self.frequency_subtree[name] = (
-                lambda: trigger.frequency,
+                lambda trigger=trigger: trigger.frequency,
                 partial(self.set_timer_frequency, timer=name)
             )
 

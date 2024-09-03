@@ -108,27 +108,6 @@ class modAddr():
 
     # Trigger adapter addresses
 
-    trigger_furnace = {
-        'val_updated_coil': 1,
-        'enable_coil':   2,
-        'interval_hold': 40001,
-        'target_hold':   40007
-    }
-
-    trigger_widefov = {
-        'val_updated_coil': 1,
-        'enable_coil':   3,
-        'interval_hold': 40003,
-        'target_hold':   40009
-    }
-
-    trigger_narrowfov = {
-        'val_updated_coil': 1,
-        'enable_coil':   4,
-        'interval_hold': 40005,
-        'target_hold':   40011
-    }
-
     trig_furnace_intvl_hold   = 40001
     trig_widefov_intvl_hold   = 40003
     trig_narrowfov_intvl_hold = 40005
@@ -138,8 +117,25 @@ class modAddr():
     trig_narrowfov_target_hold = 40011
 
     trig_enable_coil = 0
-    trig_val_updated_coil = 1
+    trig_disable_coil = 1
     trig_furnace_enable_coil = 2
     trig_widefov_enable_coil = 3
     trig_narrowfov_enable_coil = 4
-    trig_preview_coil = 6
+
+    trigger_furnace = {
+        'enable_coil':   trig_furnace_enable_coil,
+        'freq_hold': trig_furnace_intvl_hold,
+        'target_hold':   trig_furnace_target_hold
+    }
+
+    trigger_widefov = {
+        'enable_coil':   trig_widefov_enable_coil,
+        'freq_hold': trig_widefov_intvl_hold,
+        'target_hold':   trig_widefov_target_hold
+    }
+
+    trigger_narrowfov = {
+        'enable_coil':   trig_narrowfov_enable_coil,
+        'freq_hold': trig_narrowfov_intvl_hold,
+        'target_hold':   trig_narrowfov_target_hold
+    }
