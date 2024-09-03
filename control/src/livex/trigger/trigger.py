@@ -38,16 +38,12 @@ class Trigger():
 
         # Frequencies = 1_000_000 / intvl*2
         # Interval = (1_000_000 / freq) // 2
-        self.frequency = int(1_000_000 / (
-            read_decode_holding_reg(self.client, self.addr['interval_hold']) * 2
-        ))
-
+        self.frequency = read_decode_holding_reg(self.client, self.addr['freq_hold'])
         self.target = int(read_decode_holding_reg(self.client, self.addr['target_hold']))
 
     def update_hold_value(self, address, value):
         """Write a value to a given holding register(s) and mark the 'value updated' coil."""
         write_modbus_float(self.client, float(value), address)
-        write_coil(self.client, self.addr['val_updated_coil'])
 
     def set_enable(self, value):
         """Toggle the enable for the timer."""
@@ -58,8 +54,8 @@ class Trigger():
         """Set the frequency of the timer, then calculate the interval and send that value."""
         self.frequency = value
         logging.debug(f"trigger {self.name} with frequency {self.frequency}")
-        interval = (1_000_000 / self.frequency) // 2
-        self.update_hold_value(self.addr['interval_hold'], interval)
+        # interval = (1_000_000 / self.frequency) // 2
+        self.update_hold_value(self.addr['freq_hold'], self.frequency)
         logging.debug("updated hold value")
 
     def set_target(self, value):

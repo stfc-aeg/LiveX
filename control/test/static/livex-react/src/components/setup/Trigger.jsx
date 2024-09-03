@@ -28,7 +28,8 @@ function Trigger(props) {
     const [timeFrameValue, setTimeFrameValue] = useState('time');
     const timeFrameRadios = [
       { name: 'Time', value: 'time' },
-      { name: 'Frames', value: 'frame'}
+      { name: 'Frames', value: 'frame'},
+      { name: 'Freerun', value: 'free'}
     ];
 
     return (
@@ -76,7 +77,7 @@ function Trigger(props) {
                     type="number"
                     fullpath={"acquisition/time"}
                     value={liveXEndPoint.data.acquisition?.time}
-                    disabled={timeFrameValue === 'frame'}
+                    disabled={timeFrameValue==='frame' || timeFrameValue==='free'}
                     style={{border: timeFrameValue==='time' ? '1px solid #00cc00' : undefined}}>
                   </EndPointFormControl>
                 ) : (
@@ -84,6 +85,28 @@ function Trigger(props) {
                     {liveXEndPoint.data.acquisition?.time}
                   </InputGroup.Text>
                 )}
+              </InputGroup>
+            </Row>
+            <Row>
+              <InputGroup className="mt-3">
+                Timer toggles (no acquisition)
+                <EndPointButton
+                    endpoint={triggerEndPoint}
+                    fullpath={"all_timers_enable"}
+                    value={true}
+                    event_type="click"
+                  >
+                    Start all
+                  </EndPointButton>
+                  <EndPointButton
+                    endpoint={triggerEndPoint}
+                    fullpath={"all_timers_enable"}
+                    value={false}
+                    event_type="click"
+                    variant='danger'
+                  >
+                    Stop all
+                  </EndPointButton>
               </InputGroup>
             </Row>
           </Col>
@@ -113,7 +136,7 @@ function Trigger(props) {
                     type="number"
                     fullpath={"acquisition/frame_target"}
                     value={triggerEndPoint.data.triggers?.furnace?.target}
-                    disabled={timeFrameValue==='time'}
+                    disabled={timeFrameValue==='time' || timeFrameValue==='free'}
                     style={{border: timeFrameValue==='frame' ? '1px solid #00cc00' : undefined}}>
                   </EndPointFormControl>
                   ) : (
@@ -206,9 +229,8 @@ function Trigger(props) {
             <EndPointButton
               endpoint={liveXEndPoint}
               fullpath={"acquisition/start"}
-              value={true}
-              event_type="click"
-              >
+              value={timeFrameValue==='free' ? true : false}
+              event_type="click">
                 start acquisition
             </EndPointButton>
           </Row>

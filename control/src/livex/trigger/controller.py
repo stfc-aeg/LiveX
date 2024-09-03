@@ -43,8 +43,6 @@ class TriggerController(BaseController):
         self.initialise_client(value=None)
         self.get_all_registers()
 
-        self.previewing = False
-
         if self.status_bg_task_enable:
             self.start_background_tasks()
 
@@ -58,7 +56,6 @@ class TriggerController(BaseController):
                 'interval': (lambda: self.status_bg_task_interval, self.set_task_interval),
                 'enable': (lambda: self.status_bg_task_enable, self.set_task_enable)
             },
-            'preview': (lambda: self.previewing, self.set_preview),
             'all_timers_enable': (lambda: None, self.set_all_timers),
             'modbus': {
                 'ip': (lambda: self.ip, self.set_ip),
@@ -141,14 +138,12 @@ class TriggerController(BaseController):
     def set_all_timers(self, value):
         """Enable or disable all timers."""
         self.all_triggers_enable = bool(value)
-        for name, trigger in self.triggers.items():
-            trigger.set_enable(self.all_triggers_enable)
-        write_coil(self.mod_client, modAddr.trig_val_updated_coil, 1)
-
-    def set_preview(self, value):
-        """Enable or disable the preview mode (timers do not increment frame counters)."""
-        value = bool(value)
-        write_coil(self.mod_client, modAddr.trig_preview_coil, value)
+        if self.all_triggers_enable:
+            logging.debug("Enabling all timers.")
+            write_coil(self.mod_client, modAddr.trig_enable_coil, True)
+        else:
+            logging.debug("Disabling all timers.")
+            write_coil(self.mod_client, modAddr.trig_disable_coil, True)  # Coil needs True val
 
     # Background task functions
 
