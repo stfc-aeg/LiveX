@@ -6,6 +6,8 @@ import zmq
 from multiprocessing import Process, Queue, Pipe
 
 import logging
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from tornado.escape import json_decode
@@ -108,13 +110,14 @@ class LiveDataProcessor():
         header = json_decode(msg[0])
 
         dtype = 'float32' if header['dtype'] == "float" else header['dtype']
-        data = np.frombuffer(msg[1], dtype=dtype)
 
         # Check for image compression by checking raw data size. Decompress if needed
         # Currently assumes bytes-per-pixel of 2
         if len(msg[1]) != (self.max_size_x*self.max_size_y*2):
-            uncompressed_data = blosc.decompress(data)
+            uncompressed_data = blosc.decompress(msg[1])
             data = np.fromstring(uncompressed_data, dtype=dtype)
+        else:
+            data = np.frombuffer(msg[1], dtype=dtype)  # Otherwise, grab the data as-is
 
         # For histogram, it's easier to clip the data before reshaping it
         clipped_data = np.clip(data, self.clipping['min'], self.clipping['max'])
