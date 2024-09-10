@@ -16,7 +16,7 @@ from odin_data.control.ipc_channel import IpcChannel
 class LiveDataProcessor():
     """Class to process image data received on a multiprocess that it instantiates."""
 
-    def __init__(self, endpoint, resolution, size_x=640, size_y=480, colour='bone'):
+    def __init__(self, endpoint, resolution, size_x=2048, size_y=1152, colour='bone'):
         """Initialise the LiveDataProcessor object.
         This method constructs the Queue, Pipes and Process necessary for multiprocessing.
         :param endpoint: string representation of endpoint for image data.
