@@ -224,25 +224,14 @@ function Trigger(props) {
             </StatusBox>
           </Col>
           </Row>
-
           <Row>
-            <EndPointButton
+            <EndPointButton style={{}}
               endpoint={liveXEndPoint}
-              fullpath={"acquisition/start"}
-              value={timeFrameValue==='free' ? true : false}
-              event_type="click">
-                start acquisition
-            </EndPointButton>
-          </Row>
-          <Row>
-            <EndPointButton
-              endpoint={liveXEndPoint}
-              fullpath={"acquisition/stop"}
-              value={true}
+              fullpath={"acquisition/acquiring"}
+              value={liveXEndPoint.data.acquisition?.acquiring ? false : true}
               event_type="click"
-              variant="danger"
-              >
-                stop acquisition
+              variant={liveXEndPoint.data.acquisition?.acquiring ? "danger" : "success" }>
+                {liveXEndPoint.data.acquisition?.acquiring ? "Stop acquisition" : "Start acquisition"}
             </EndPointButton>
           </Row>
         </Container>

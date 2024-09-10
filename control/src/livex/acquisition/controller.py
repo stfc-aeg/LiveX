@@ -28,6 +28,8 @@ class LiveXController(BaseController):
         self.acq_frame_target = 1000
         self.acq_time = 1  # Time in seconds
 
+        self.acquiring = False
+
         # Requires trigger adapter, so is to be built later
         self.frequency_subtree = {}
         self.frequencies = {}
@@ -115,6 +117,7 @@ class LiveXController(BaseController):
         """Construct the parameter tree once adapters have been initialised."""
         self.param_tree = ParameterTree({
             'acquisition': {
+                'acquiring': (lambda: self.acquiring, None),
                 'start': (lambda: None, self.start_acquisition),
                 'stop': (lambda: None, self.stop_acquisition),
                 'time': (lambda: self.acq_time, self.set_acq_time),
@@ -125,6 +128,8 @@ class LiveXController(BaseController):
 
     def start_acquisition(self, freerun=False):
         """Start an acquisition. Disable timers, configure all values, then start timers simultaneously."""
+        self.acquiring = True
+
         # experiment id is the campaign name plus an incrementing suffix (the acquisition_number)
         campaign_name = self.iac_get(self.metadata, 'fields/campaign_name/value', param='value')
         # Spaces in filenames do not play nice with Linux
@@ -136,13 +141,14 @@ class LiveXController(BaseController):
 
         furnace_file = experiment_id + "_furnace.hdf5"
         markdown_file = experiment_id + "_furnace.md"
+        markdown_filepath = self.filepath + "/logs/acquisitions"
 
         self.iac_set(self.metadata, 'fields/acquisition_num', 'value', acquisition_number)
         self.iac_set(self.metadata, 'fields/experiment_id', 'value', experiment_id)
         self.iac_set(self.metadata, 'hdf', 'file', furnace_file)
         self.iac_set(self.metadata, 'hdf', 'path', self.filepath)
         self.iac_set(self.metadata, 'markdown', 'file', markdown_file)
-        self.iac_set(self.metadata, 'markdown', 'path', self.filepath)
+        self.iac_set(self.metadata, 'markdown', 'path', markdown_filepath)
 
         # Set file name and path for furnace
         self.iac_set(self.furnace, 'filewriter', 'filepath', self.filepath)
@@ -196,6 +202,8 @@ class LiveXController(BaseController):
 
     def stop_acquisition(self, value):
         """Stop the acquisition."""
+        self.acquiring = False
+
         # All timers can be explicitly disabled (even though they should turn themselves off).
         self.trigger.set_all_timers(False)
 
@@ -221,6 +229,11 @@ class LiveXController(BaseController):
 
         # Turn off acquisition coil
         self.iac_set(self.furnace, 'tcp', 'acquire', False)
+
+        # Set temperature profile metadata
+        self.iac_set(self.metadata, 'fields/thermal_gradient_kmm', 'value', self.furnace.controller.gradient.wanted)
+        self.iac_set(self.metadata, 'fields/thermal_gradient_distance', 'value', self.furnace.controller.gradient.distance),
+        self.iac_set(self.metadata, 'fields/cooling_rate', 'value', self.furnace.controller.aspc.rate)
 
         # Write out metadata
         self.iac_set(self.metadata, 'hdf', 'write', True)
