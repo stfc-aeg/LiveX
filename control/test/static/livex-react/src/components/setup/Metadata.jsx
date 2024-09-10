@@ -3,7 +3,7 @@ import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Dropdown from 'react-bootstrap/Dropdown';
 import { useState, useEffect } from 'react';
-import { TitleCard, WithEndpoint, useAdapterEndpoint, DropdownSelector } from 'odin-react';
+import { TitleCard, WithEndpoint, useAdapterEndpoint, DropdownSelector, StatusBox } from 'odin-react';
 import TagInput from "./TagInput";
 
 const EndPointFormControl = WithEndpoint(Form.Control);
@@ -50,6 +50,24 @@ function Metadata(props) {
             const field = metaJson[key];
             const {label, choices, default: defaultValue, multi_choice, user_input, multi_line, enabled} = field;
 
+            const currentValue = metadataEndPoint?.data?.fields?.[key]?.value;
+
+            // Carving out a specific exception for this non-user-input for now
+            if (key=="acquisition_num")
+            {
+              // Label is split on the parentheses of acquisition number
+              // until more refined solution (metadata field property) is introduced
+              return (
+                <InputGroup>
+                  <InputGroup.Text style={{width:labelWidth}}>
+                    {label.split('(')[0]} 
+                  </InputGroup.Text>
+                  <InputGroup.Text>
+                    {currentValue}
+                  </InputGroup.Text>
+                </InputGroup>
+              )
+            }
             if (!user_input) {
                 return null; // Skip non-user-input fields
             }
@@ -66,7 +84,7 @@ function Metadata(props) {
                   event_type="select"
                   fullpath={"fields/"+key+"/value"}
                   variant="outline-secondary"
-                  buttonText={metadataEndPoint?.data?.fields?.[key]?.value}>
+                  buttonText={currentValue}>
                     {choices.map(
                     (selection, index) => (
                       <Dropdown.Item
@@ -88,6 +106,7 @@ function Metadata(props) {
                   field={key}
                   labelWidth={labelWidth}
                   key={key}
+                  currentValue={currentValue}
                 />
               )
             }
@@ -106,7 +125,7 @@ function Metadata(props) {
                     endpoint={metadataEndPoint}
                     type="text"
                     fullpath={"fields/"+key+"/value"}
-                    value={defaultValue}
+                    value={currentValue}
                     as="textarea"
                     rows="5"
                     style={{flex: 1}}>
@@ -125,7 +144,7 @@ function Metadata(props) {
                   endpoint={metadataEndPoint}
                   type="text"
                   fullpath={"fields/"+key+"/value"}
-                  value={defaultValue}>
+                  value={currentValue}>
                 </EndPointFormControl>
               </InputGroup>
               )
@@ -133,7 +152,6 @@ function Metadata(props) {
         })
     }
 return(
-
     <TitleCard title="Experiment Details">
         {renderForm()}
     </TitleCard>
