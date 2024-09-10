@@ -5,7 +5,6 @@ import { useAdapterEndpoint } from 'odin-react';
 
 import OrcaCamera from './OrcaCamera';
 
-
 function Cameras(props) {
     const {endpoint_url} = props;
     const {connectedPuttingDisable} = props;
