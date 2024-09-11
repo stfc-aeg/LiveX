@@ -30,7 +30,7 @@ function Metadata(props) {
         Object.keys(fields).forEach((key) => {
           const labelLength = fields[key].label.length;
           const valid = fields[key].user_input;
-          console.log("label:", fields[key].label)
+          // console.log("label:", fields[key].label)
           if (labelLength > maxLength && valid) {
             maxLength = labelLength;
           }

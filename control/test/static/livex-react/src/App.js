@@ -18,7 +18,7 @@ import { WithEndpoint, useAdapterEndpoint } from 'odin-react';
 import Metadata from './components/setup/Metadata';
 import Cameras from './components/cameras/Cameras';
 import Trigger from './components/setup/Trigger';
-import MonitorGraph from './components/furnace/DualMonitorGraph';
+import MonitorGraph from './components/furnace/MonitorGraph';
 
 const EndPointButton = WithEndpoint(Button);
 
@@ -144,19 +144,21 @@ function App(props) {
     <MonitorGraph
       endpoint={furnaceEndPoint}
       seriesData={[
-        {dataPath: 'temperature', param_a: 'temperature_a', param_b: 'temperature_b'},
-        {dataPath: 'setpoint', param_a: 'setpoint_a', param_b: 'setpoint_b'}
+        {dataPath: 'temperature', param: 'temperature_a', seriesName: "TCA"},
+        {dataPath: 'temperature', param: 'temperature_b', seriesName: "TCB"},
+        {dataPath: 'temperature', param: 'temperature_c', seriesName: "TC3"},
+        {dataPath: 'setpoint', param: 'setpoint_a', seriesName: "SPA"},
+        {dataPath: 'setpoint', param: 'setpoint_b', seriesName: "SPB"}
       ]}
       title={"Temperature and Setpoint Graph"}
-      seriesNames={["TC1", "TC2", "SP1", "SP2"]}
     ></MonitorGraph>
     <MonitorGraph
       endpoint={furnaceEndPoint}
       seriesData={[
-        {dataPath: 'output', param_a: 'output_a', param_b: 'output_b'}
+        {dataPath: 'output', param: 'output_a', seriesName: 'POA'},
+        {dataPath: 'output', param: 'output_b', seriesName: 'POB'}
       ]}
       title={"PID Output Graph"}
-      seriesNames={["PO1", "PO2"]}
     ></MonitorGraph>
     </Col>
     </OdinApp>

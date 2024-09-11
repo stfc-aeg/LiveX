@@ -98,7 +98,8 @@ class FurnaceController():
             'timestamp': [],
             'temperature': {
                 'temperature_a': [],
-                'temperature_b': []
+                'temperature_b': [],
+                'temperature_c': []
             },
             'output': {
                 'output_a': [],
@@ -297,9 +298,6 @@ class FurnaceController():
 
     def background_ioloop_callback(self):
         """Ioloop callback function to populate the monitor graph variables."""
-
-        self._trim_dict_to_retention(self.monitor_graphs)
-
         # Add data
         cur_time = datetime.datetime.now()
         cur_time = cur_time.strftime("%H:%M:%S")
@@ -308,12 +306,16 @@ class FurnaceController():
 
         self.monitor_graphs['temperature']['temperature_a'].append(self.pid_a.thermocouple)
         self.monitor_graphs['temperature']['temperature_b'].append(self.pid_b.thermocouple)
+        self.monitor_graphs['temperature']['temperature_c'].append(self.thermocouple_c)
 
         self.monitor_graphs['output']['output_a'].append(self.pid_a.output)
         self.monitor_graphs['output']['output_b'].append(self.pid_b.output)
 
         self.monitor_graphs['setpoint']['setpoint_a'].append(self.pid_a.setpoint)
         self.monitor_graphs['setpoint']['setpoint_b'].append(self.pid_b.setpoint)
+
+        # Trim arrays down after data is added
+        self._trim_dict_to_retention(self.monitor_graphs)
 
         # self.background_ioloop_counter += 1
 
@@ -344,7 +346,7 @@ class FurnaceController():
                 self.stream_buffer['temperature_a'].append(self.packet_decoder.temperature_a)
                 self.stream_buffer['temperature_b'].append(self.packet_decoder.temperature_b)
 
-                if len(self.stream_buffer['counter']) == 50:
+                if len(self.stream_buffer['counter']) == 50:  # TODO: base this off of given speed
                     self.file_writer.write_hdf5(
                         data=self.stream_buffer,
                         groupname="temperature_readings"
@@ -358,7 +360,8 @@ class FurnaceController():
                         'setpoint_a': [self.pid_a.setpoint],
                         'setpoint_b': [self.pid_b.setpoint],
                         'output_a': [self.pid_a.output],
-                        'output_b': [self.pid_b.output]
+                        'output_b': [self.pid_b.output],
+                        'temperature_c' : [self.thermocouple_c]
                     }
                     self.file_writer.write_hdf5(
                         data=secondary_data,
