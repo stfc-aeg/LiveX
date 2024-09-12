@@ -58,7 +58,7 @@ function MonitorGraph(props) {
                   <Col style={{flexDirection: 'row', justifyContent: 'flex-end'}}>
                     <InputGroup>
                       <InputGroup.Text>
-                          Toggle Traces
+                        Toggle Traces
                       </InputGroup.Text>
                       {seriesNames.map((name, index) => (
                         <Button

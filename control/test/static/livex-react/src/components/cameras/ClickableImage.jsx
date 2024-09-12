@@ -39,38 +39,41 @@ function ClickableImage(props){
     }, []);
 
     const calculateRectangle = useCallback(() => {
-        // Lists of x and y coordinates
-        const xCoords = [startPoint[0], endPoint[0]];
-        const yCoords = [startPoint[1], endPoint[1]];
+      // Lists of x and y coordinates
+      const xCoords = [startPoint[0], endPoint[0]];
+      const yCoords = [startPoint[1], endPoint[1]];
 
-        // Get minimums and maximums for next step
-        let minX = Math.min(...xCoords);
-        let maxX = Math.max(...xCoords);
-        let minY = Math.min(...yCoords);
-        let maxY = Math.max(...yCoords);
+      // Get minimums and maximums for next step
+      let minX = Math.min(...xCoords);
+      let maxX = Math.max(...xCoords);
+      let minY = Math.min(...yCoords);
+      let maxY = Math.max(...yCoords);
 
-        // Handle the 'maxAxis' feature - which ensures that axis is fully selected
-        const canvas = document.getElementById('canvas');
-        if (maxAxis === "x") {
-          minX = 0;
-          maxX = canvas.clientWidth;
-        } else if (maxAxis === "y") {
-          minY = 0;
-          maxY = canvas.clientHeight;
-        }
+      // Handle the 'maxAxis' feature - which ensures that axis is fully selected
+      const canvas = document.getElementById('canvas');
+      if (maxAxis === "x")
+        {
+        minX = 0;
+        maxX = canvas.clientWidth;
+      } 
+      else if (maxAxis === "y")
+      {
+        minY = 0;
+        maxY = canvas.clientHeight;
+      }
 
-        // The polygon draws from the first entry. Top-left is default here, going clockwise
-        const rectanglePoints = [
-          [minX, minY], // Top left
-          [maxX, minY], // Top right
-          [maxX, maxY], // Bottom right
-          [minX, maxY], // Bottom left
-        ];
+      // The polygon draws from the first entry. Top-left is default here, going clockwise
+      const rectanglePoints = [
+        [minX, minY], // Top left
+        [maxX, minY], // Top right
+        [maxX, maxY], // Bottom right
+        [minX, maxY], // Bottom left
+      ];
 
-        setPoints(rectanglePoints);
-        // Coordinates are processed in live_data/controller.py as
-        // [[x_lower, x_upper], [y_lower, y_upper]]
-        setCoords([[minX, maxX], [minY, maxY]]);
+      setPoints(rectanglePoints);
+      // Coordinates are processed in live_data/controller.py as
+      // [[x_lower, x_upper], [y_lower, y_upper]]
+      setCoords([[minX, maxX], [minY, maxY]]);
     }, [startPoint, endPoint]);
 
     const handleMouseDown = useCallback(e => {
@@ -81,15 +84,17 @@ function ClickableImage(props){
     }, [getPoint]);
 
     const handleMouseMove = useCallback(e => {
-        if (startPoint) {
-            let point = getPoint(e);
-            setEndPoint(point);
-            calculateRectangle();
-        }
+      if (startPoint)
+      {
+        let point = getPoint(e);
+        setEndPoint(point);
+        calculateRectangle();
+      }
     }, [startPoint, getPoint, calculateRectangle]);
 
     const handleMouseUp = useCallback(e => {
-      if (startPoint) {
+      if (startPoint) 
+      {
         calculateRectangle();
 
         setStartPoint(null); // Reset start point after creating rectangle
@@ -99,7 +104,8 @@ function ClickableImage(props){
         var sendData = coords;
 
         // Adjust to percentages if needed
-        if (valuesAsPercentages) {
+        if (valuesAsPercentages) 
+        {
           let canvas = document.getElementById('canvas');
           let width = canvas.clientWidth;
           let height = canvas.clientHeight;
@@ -127,21 +133,22 @@ function ClickableImage(props){
       <div style={{position:'relative', display:'inline-block',
       width:'100%', height:'auto'}}>
         <svg
-            id="canvas"
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            style={{position:'absolute',top:0,left:0,width:'100%',height:'100%'}}>
-            {points.length === 4 ?
-              <polygon
-                points={points.map(point => point.join(",")).join(" ")}
-                style={{
-                        pointerEvents:'none', // Unclickable
-                        fill: rectRgbaProperties,
-                        stroke: rectOutlineColour // border
-                      }}
-                />
-            : null}
+          id="canvas"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          style={{position:'absolute',top:0,left:0,width:'100%',height:'100%'}}>
+          {points.length === 4 ?
+            <polygon
+              points={points.map(point => point.join(",")).join(" ")}
+              style={{
+                      pointerEvents:'none', // Unclickable
+                      fill: rectRgbaProperties,
+                      stroke: rectOutlineColour // border
+                    }}
+              />
+            : null
+          }
         </svg>
         <img src={imgData} style={{
           display:'block',

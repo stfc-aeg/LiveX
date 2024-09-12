@@ -43,8 +43,9 @@ function TagInput(props) {
 
     const onChangeHandler = useCallback((selectedOptions) => {
       setSelected(selectedOptions);
-      if(timer.current){
-          clearTimeout(timer.current);
+      if(timer.current)
+      {
+        clearTimeout(timer.current);
       }
       // send data after a delay of a second
       timer.current = setTimeout(() => {console.log("Timer Elapsed. Sending Data"); sendTags(selectedOptions)}, 1000);

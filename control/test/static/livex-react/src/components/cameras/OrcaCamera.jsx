@@ -136,169 +136,172 @@ function OrcaCamera(props) {
               </InputGroup>
               </Stack>
 
-                <Stack>
-                <InputGroup>
-                    <InputGroup.Text>
-                        exposure_time
-                    </InputGroup.Text>
-                    <EndPointFormControl
-                        endpoint={orcaEndPoint}
-                        type="number"
-                        fullpath="config/exposure_time"
-                        disabled={connectedPuttingDisable}>
-                    </EndPointFormControl>
+              <Stack>
+              <InputGroup>
+                <InputGroup.Text>
+                    exposure_time
+                </InputGroup.Text>
+                <EndPointFormControl
+                    endpoint={orcaEndPoint}
+                    type="number"
+                    fullpath="config/exposure_time"
+                    disabled={connectedPuttingDisable}>
+                </EndPointFormControl>
+              </InputGroup>
+              </Stack>
+
+              <TitleCard title={`${orcaEndPoint?.data[name]?.camera_name} preview`}>
+                <Row>
+
+                <ClickableImage
+                  endpoint={liveViewEndPoint}
+                  imgSrc={liveViewData?.image?.data}
+                  fullpath="image"
+                  paramToUpdate="roi"
+                  valuesAsPercentages={true}>
+                </ClickableImage>
+
+                <ClickableImage
+                  endpoint={liveViewEndPoint}
+                  imgSrc={liveViewData?.image?.histogram}
+                  fullpath="image"
+                  paramToUpdate="clip_range_percent"
+                  maximiseAxis="y"
+                  rectOutlineColour='black'
+                  rectRgbaProperties='rgba(50,50,50,0.05)'
+                  valuesAsPercentages={true}>
+                </ClickableImage>
+                </Row>
+                <Col>
+                <Form>
+                <InputGroup className="mt-3">
+                  <InputGroup.Text>
+                    Image Colour Map
+                  </InputGroup.Text>
+                  <EndPointDropdownSelector
+                    endpoint={liveViewEndPoint}
+                    event_type="select"
+                    fullpath="image/colour"
+                    buttonText={liveViewData?.image?.colour}
+                    variant="outline-secondary">
+                      {colourEffects.map((effect, index) => (
+                        <Dropdown.Item
+                          key={index}
+                          eventKey={effect}>
+                            {effect}
+                          </Dropdown.Item>
+                      ))}
+                  </EndPointDropdownSelector>
                 </InputGroup>
-                </Stack>
 
-                <TitleCard title={`${orcaEndPoint?.data[name]?.camera_name} preview`}>
-                    <Row>
+                <Row>
+                  <Col xs="6">
+                    <InputGroup>
+                      <InputGroup.Text>
+                        Image Width
+                      </InputGroup.Text>
+                      <Form.Control
+                        type="number"
+                        placeholder={liveViewData?.image.size_x || "Width"}
+                        value={width}
+                        onChange={widthChange}
+                      />
+                    </InputGroup>
 
-                    <ClickableImage
-                      endpoint={liveViewEndPoint}
-                      imgSrc={liveViewData?.image?.data}
-                      fullpath="image"
-                      paramToUpdate="roi"
-                      valuesAsPercentages={true}>
-                    </ClickableImage>
-
-                    <ClickableImage
-                      endpoint={liveViewEndPoint}
-                      imgSrc={liveViewData?.image?.histogram}
-                      fullpath="image"
-                      paramToUpdate="clip_range_percent"
-                      maximiseAxis="y"
-                      rectOutlineColour='black'
-                      rectRgbaProperties='rgba(50,50,50,0.05)'
-                      valuesAsPercentages={true}>
-                    </ClickableImage>
-                    </Row>
-                    <Col>
-                    <Form>
-                    <InputGroup className="mt-3">
-                    <InputGroup.Text>Image Colour Map</InputGroup.Text>
-                        <EndPointDropdownSelector
-                        endpoint={liveViewEndPoint}
-                        event_type="select"
-                        fullpath="image/colour"
-                        buttonText={liveViewData?.image?.colour}
-                        variant="outline-secondary">
-                            {colourEffects.map((effect, index) => (
-                                <Dropdown.Item
-                                    key={index}
-                                    eventKey={effect}>
-                                        {effect}
-                                </Dropdown.Item>
-                            ))}
-                        </EndPointDropdownSelector>
-                      </InputGroup>
-
-                    <Row>
-                      <Col xs="6">
-                        <InputGroup>
-                            <InputGroup.Text>
-                                Image Width
-                            </InputGroup.Text>
-                            <Form.Control
-                            type="number"
-                            placeholder={liveViewData?.image.size_x || "Width"}
-                            value={width}
-                            onChange={widthChange}
-                            />
-                        </InputGroup>
-
-                        <InputGroup>
-                            <InputGroup.Text>
-                                Image Height
-                            </InputGroup.Text>
-                            <Form.Control
-                            type="number"
-                            placeholder={liveViewData?.image.size_y || "Height"}
-                            value={height}
-                            onChange={heightChange}
-                            />
-                        </InputGroup>
-                      </Col>
-                      <Col xs="6" className="mt-3">
-                        <EndPointButton
-                        endpoint={liveViewEndPoint}
-                        value={dimensions}
-                        fullpath={"image/dimensions"}
-                        event_type="click"
-                        variant="outline-primary"
-                        className="mb-2">
-                            Update image dimensions
-                        </EndPointButton>
-                      </Col>
-                    </Row>
-                    <Row className="mt-3">
-                      <Col xs="8">
-                        <Form>
-                          <Form.Label>Resolution. Current: {liveViewData?.image?.resolution}</Form.Label>
-                          <EndPointSlider
-                          endpoint={liveViewEndPoint}
-                          fullpath="image/resolution"
-                          min={1}
-                          max={100}
-                          step={1}
-                          ></EndPointSlider>
-                        </Form>
-                      </Col>
-                      <Col xs="4">
-                      <InputGroup className="mt-3">
-                        <InputGroup.Text>Common Resolutions (%)</InputGroup.Text>
-                        <EndPointDropdownSelector
-                          endpoint={liveViewEndPoint}
-                          event_type="select"
-                          fullpath="image/resolution"
-                          buttonText={liveViewData?.image?.resolution}
-                          variant="outline-secondary">
-                              {commonImageResolutions.map((effect, index) => (
-                                <Dropdown.Item
-                                    key={index}
-                                    eventKey={effect}>
-                                        {effect}
-                                </Dropdown.Item>
-                              ))}
-                          </EndPointDropdownSelector>
-                        </InputGroup>
-                      </Col>
-                    </Row>
-
-                    <Row className="mt-3">
-                    <EndPointDoubleSlider
-                        endpoint={liveViewEndPoint}
-                        fullpath="image/clip_range_value"
-                        min="0"
-                        max="65535"
-                        steps="100"
-                        title="Clipping range">
-                    </EndPointDoubleSlider>
+                    <InputGroup>
+                        <InputGroup.Text>
+                            Image Height
+                        </InputGroup.Text>
+                        <Form.Control
+                          type="number"
+                          placeholder={liveViewData?.image.size_y || "Height"}
+                          value={height}
+                          onChange={heightChange}
+                        />
+                    </InputGroup>
+                  </Col>
+                  <Col xs="6" className="mt-3">
                     <EndPointButton
-                        endpoint={liveViewEndPoint}
-                        fullpath={"image/clip_range_value"}
-                        event_type="click"
-                        value={[0, 65535]}
-                        variant="outline-primary">
-                        Reset Clipping Range to 100%
+                      endpoint={liveViewEndPoint}
+                      value={dimensions}
+                      fullpath={"image/dimensions"}
+                      event_type="click"
+                      variant="outline-primary"
+                      className="mb-2">
+                        Update image dimensions
                     </EndPointButton>
-                    </Row>
-                    <Row className="mt-3">
-                        <EndPointButton
-                          endpoint={liveViewEndPoint}
-                          fullpath={"image/roi"}
-                          event_type="click"
-                          value={[[0, 100], [0, 100]]}
-                          variant="outline-primary">
-                            Reset Region of Interest to Full Image
-                        </EndPointButton>
-                    </Row>
+                  </Col>
+                </Row>
+                <Row className="mt-3">
+                  <Col xs="8">
+                    <Form>
+                      <Form.Label>
+                        Resolution. Current: {liveViewData?.image?.resolution}
+                      </Form.Label>
+                      <EndPointSlider
+                        endpoint={liveViewEndPoint}
+                        fullpath="image/resolution"
+                        min={1}
+                        max={100}
+                        step={1}>  
+                      </EndPointSlider>
                     </Form>
-                    </Col>
-                </TitleCard>
+                  </Col>
+                  <Col xs="4">
+                  <InputGroup className="mt-3">
+                    <InputGroup.Text>Common Resolutions (%)</InputGroup.Text>
+                    <EndPointDropdownSelector
+                      endpoint={liveViewEndPoint}
+                      event_type="select"
+                      fullpath="image/resolution"
+                      buttonText={liveViewData?.image?.resolution}
+                      variant="outline-secondary">
+                        {commonImageResolutions.map((effect, index) => (
+                          <Dropdown.Item
+                            key={index}
+                            eventKey={effect}>
+                              {effect}
+                          </Dropdown.Item>
+                        ))}
+                      </EndPointDropdownSelector>
+                    </InputGroup>
+                  </Col>
+                </Row>
+
+                <Row className="mt-3">
+                  <EndPointDoubleSlider
+                    endpoint={liveViewEndPoint}
+                    fullpath="image/clip_range_value"
+                    min="0"
+                    max="65535"
+                    steps="100"
+                    title="Clipping range">
+                  </EndPointDoubleSlider>
+                  <EndPointButton
+                    endpoint={liveViewEndPoint}
+                    fullpath={"image/clip_range_value"}
+                    event_type="click"
+                    value={[0, 65535]}
+                    variant="outline-primary">
+                    Reset Clipping Range to 100%
+                  </EndPointButton>
+                </Row>
+                <Row className="mt-3">
+                  <EndPointButton
+                    endpoint={liveViewEndPoint}
+                    fullpath={"image/roi"}
+                    event_type="click"
+                    value={[[0, 100], [0, 100]]}
+                    variant="outline-primary">
+                      Reset Region of Interest to Full Image
+                  </EndPointButton>
+                </Row>
+                </Form>
+                </Col>
+              </TitleCard>
             </Col>
           </TitleCard>
         </Container>
-
     )
 }
 

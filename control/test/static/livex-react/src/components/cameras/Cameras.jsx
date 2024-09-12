@@ -16,19 +16,19 @@ function Cameras(props) {
     const cameras = data?.cameras || {}; // Fallback to an empty object if data or cameras is undefined
 
     return (
-        <Container>
-            <Col>
-              {Object.keys(cameras).map((key) => (
-                <OrcaCamera
-                    key={key}
-                    endpoint_url={endpoint_url}
-                    name={cameraEndPoint.data.cameras[key].camera_name}
-                    connectedPuttingDisable={connectedPuttingDisable}>
-                </OrcaCamera>
-              ))
-              }
-            </Col>
-        </Container>
+      <Container>
+        <Col>
+          {Object.keys(cameras).map((key) => (
+            <OrcaCamera
+              key={key}
+              endpoint_url={endpoint_url}
+              name={cameraEndPoint.data.cameras[key].camera_name}
+              connectedPuttingDisable={connectedPuttingDisable}>
+            </OrcaCamera>
+          ))
+          }
+        </Col>
+      </Container>
     )
 }
 

@@ -21,90 +21,89 @@ function PidControl(props) {
       <TitleCard title={title} type="warning">
         <Container>
         <Row>
-            <Col xs={8}>
-            <EndPointToggle 
-                endpoint={furnaceEndPoint}
-                fullpath={pid+"/enable"}
-                event_type="click"
-                checked={furnaceEndPoint.data[pid]?.enable || false}
-                label="Enable"
-                disabled={connectedPuttingDisable}>
-            </EndPointToggle>
-            </Col>
-            <Col>
-            <StatusBox
-                type="info"
-                label="PID OUT.">
-                    {checkNull(furnaceEndPoint.data[pid]?.output)}
-            </StatusBox>
-            </Col>
-
+          <Col xs={8}>
+          <EndPointToggle 
+            endpoint={furnaceEndPoint}
+            fullpath={pid+"/enable"}
+            event_type="click"
+            checked={furnaceEndPoint.data[pid]?.enable || false}
+            label="Enable"
+            disabled={connectedPuttingDisable}>
+          </EndPointToggle>
+          </Col>
+          <Col>
+          <StatusBox
+            type="info"
+            label="PID OUT.">
+              {checkNull(furnaceEndPoint.data[pid]?.output)}
+          </StatusBox>
+          </Col>
         </Row>
         <Row>
-            <Col xs={4}>
+          <Col xs={4}>
+          <InputGroup>
+            <InputGroup.Text>
+              Proportional
+            </InputGroup.Text>
+            <EndPointFormControl
+              endpoint={furnaceEndPoint}
+              type="number"
+              fullpath={pid+"/proportional"}
+              disabled={connectedPuttingDisable}>
+            </EndPointFormControl>
+          </InputGroup>
+          <InputGroup>
+            <InputGroup.Text>
+              Integral
+            </InputGroup.Text>
+            <EndPointFormControl
+              endpoint={furnaceEndPoint}
+              type="number"
+              fullpath={pid+"/integral"}
+              disabled={connectedPuttingDisable}>
+            </EndPointFormControl>
+          </InputGroup>
+          <InputGroup>
+            <InputGroup.Text>
+              Derivative
+            </InputGroup.Text>
+            <EndPointFormControl
+              endpoint={furnaceEndPoint}
+              type="number"
+              fullpath={pid+"/derivative"}
+              disabled={connectedPuttingDisable}>
+            </EndPointFormControl>
+          </InputGroup>
+          </Col>
+          <Col>
+          <Row>
+            <Stack>
             <InputGroup>
-                <InputGroup.Text>
-                    Proportional
-                </InputGroup.Text>
-                <EndPointFormControl
-                    endpoint={furnaceEndPoint}
-                    type="number"
-                    fullpath={pid+"/proportional"}
-                    disabled={connectedPuttingDisable}>
-                </EndPointFormControl>
+              <InputGroup.Text>
+                Set Pt.
+              </InputGroup.Text>
+              <EndPointFormControl
+                endpoint={furnaceEndPoint}
+                type="number"
+                fullpath={pid+"/setpoint"}
+                disabled={connectedPuttingDisable}>
+              </EndPointFormControl>
             </InputGroup>
-            <InputGroup>
-                <InputGroup.Text>
-                    Integral
-                </InputGroup.Text>
-                <EndPointFormControl
-                    endpoint={furnaceEndPoint}
-                    type="number"
-                    fullpath={pid+"/integral"}
-                    disabled={connectedPuttingDisable}>
-                </EndPointFormControl>
-            </InputGroup>
-            <InputGroup>
-                <InputGroup.Text>
-                    Derivative
-                </InputGroup.Text>
-                <EndPointFormControl
-                    endpoint={furnaceEndPoint}
-                    type="number"
-                    fullpath={pid+"/derivative"}
-                    disabled={connectedPuttingDisable}>
-                </EndPointFormControl>
-            </InputGroup>
-            </Col>
-            <Col>
-            <Row>
-                <Stack>
-                <InputGroup>
-                    <InputGroup.Text>
-                        Set Pt.
-                    </InputGroup.Text>
-                    <EndPointFormControl
-                        endpoint={furnaceEndPoint}
-                        type="number"
-                        fullpath={pid+"/setpoint"}
-                        disabled={connectedPuttingDisable}>
-                    </EndPointFormControl>
-                </InputGroup>
-                <StatusBox as="span" type="info"
-                label="Setpoint">
-                {(furnaceEndPoint.data.gradient?.enable ||false) ?
-                    checkNull(furnaceEndPoint.data[pid]?.gradient_setpoint) :
-                    checkNull(furnaceEndPoint.data[pid]?.setpoint)
-                }
-                </StatusBox>
-                </Stack>
-            </Row>
-            </Col>
-            <Col>
-            <StatusBox type="info" label="TEMP.">
-                {checkNull(furnaceEndPoint.data[pid]?.temperature)}
+            <StatusBox as="span" type="info"
+            label="Setpoint">
+            {(furnaceEndPoint.data.gradient?.enable ||false) ?
+              checkNull(furnaceEndPoint.data[pid]?.gradient_setpoint) :
+              checkNull(furnaceEndPoint.data[pid]?.setpoint)
+            }
             </StatusBox>
-            </Col>
+            </Stack>
+          </Row>
+          </Col>
+          <Col>
+          <StatusBox type="info" label="TEMP.">
+            {checkNull(furnaceEndPoint.data[pid]?.temperature)}
+          </StatusBox>
+          </Col>
         </Row>
         </Container>
       </TitleCard>
