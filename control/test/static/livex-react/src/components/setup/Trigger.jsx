@@ -32,6 +32,9 @@ function Trigger(props) {
       { name: 'Freerun', value: 'free'}
     ];
 
+    const triggers = triggerEndPoint.data?.triggers;
+    const ref_trigger = liveXEndPoint.data.acquisition?.reference_trigger;
+
     return (
       <Container>
         <EndPointButton
@@ -110,7 +113,47 @@ function Trigger(props) {
               </InputGroup>
             </Row>
           </Col>
-          <Col>
+          
+          {triggers && Object.entries(triggers).map(([key, data]) => (
+            <Col key={key}>
+              <TitleCard title={key}>
+                <Row>
+                  <InputGroup>
+                    <InputGroup.Text>Freq. (Hz)</InputGroup.Text>
+                    <EndPointFormControl
+                      endpoint={liveXEndPoint}
+                      type="number"
+                      fullpath={`acquisition/frequency/${key}`}
+                      value={data.frequency}>
+                    </EndPointFormControl>
+                  </InputGroup>
+                </Row>
+                <Row>
+                  <InputGroup>
+                    <InputGroup.Text>Frame #</InputGroup.Text>  
+                    {timeFrameValue==='frame' && key===ref_trigger ? (
+                      <EndPointFormControl
+                        endpoint={liveXEndPoint}
+                        type="number"
+                        fullpath={'acquisition/frame_target'}
+                        value={data.target}
+                        disabled={timeFrameValue==='time' || timeFrameValue==='free'}
+                        style={{
+                          border: timeFrameValue==='frame' ? '1px solid #00cc00' : undefined
+                        }}
+                        />
+                    ) : (
+                      <InputGroup.Text style={{flex:1}}>
+                        {data.target}
+                      </InputGroup.Text>
+                    )}
+                  </InputGroup>
+                </Row>
+              </TitleCard>
+            </Col>
+          ))}
+
+          {/* <Col>
             <TitleCard title="Furnace">
               <Row>
                 <InputGroup>
@@ -210,7 +253,7 @@ function Trigger(props) {
                 </InputGroup>
               </Row>
             </TitleCard>
-          </Col>
+          </Col> */}
         </Row>
         <Row className='mt-3'>
           <Col>

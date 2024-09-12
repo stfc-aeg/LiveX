@@ -122,6 +122,7 @@ class LiveXController(BaseController):
                 'stop': (lambda: None, self.stop_acquisition),
                 'time': (lambda: self.acq_time, self.set_acq_time),
                 'frame_target': (lambda: self.acq_frame_target, self.set_acq_frame_target),
+                'reference_trigger': (lambda: self.ref_trigger, None),
                 'frequencies': self.frequency_subtree
             }
         })
