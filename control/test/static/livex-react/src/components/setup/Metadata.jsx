@@ -2,12 +2,14 @@ import React from 'react';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Dropdown from 'react-bootstrap/Dropdown';
+import Button from 'react-bootstrap/Button';
 import { useState, useEffect } from 'react';
 import { TitleCard, WithEndpoint, useAdapterEndpoint, DropdownSelector, StatusBox } from 'odin-react';
 import TagInput from "./TagInput";
 
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndpointDropdown = WithEndpoint(DropdownSelector);
+const EndpointButton = WithEndpoint(Button);
 
 function Metadata(props) {
 
@@ -65,6 +67,24 @@ function Metadata(props) {
                   <InputGroup.Text>
                     {currentValue}
                   </InputGroup.Text>
+                  <EndpointButton
+                    endpoint={metadataEndPoint}
+                    fullpath={"fields/"+key+"/value"}
+                    value={currentValue+1}
+                    event_type="click"
+                    variant="outline-secondary"
+                  >
+                    +
+                  </EndpointButton>
+                  <EndpointButton
+                    endpoint={metadataEndPoint}
+                    fullpath={"fields/"+key+"/value"}
+                    value={currentValue-1}
+                    event_type="click"
+                    variant="outline-secondary"
+                  >
+                    -
+                  </EndpointButton>
                 </InputGroup>
               )
             }
@@ -80,19 +100,19 @@ function Metadata(props) {
                     {label}:
                   </InputGroup.Text>
                   <EndpointDropdown
-                  endpoint={metadataEndPoint}
-                  event_type="select"
-                  fullpath={"fields/"+key+"/value"}
-                  variant="outline-secondary"
-                  buttonText={currentValue}>
-                    {choices.map(
-                    (selection, index) => (
-                      <Dropdown.Item
-                        eventKey={selection}
-                        key={index}>
-                          {selection}
-                      </Dropdown.Item>
-                    ))}
+                    endpoint={metadataEndPoint}
+                    event_type="select"
+                    fullpath={"fields/"+key+"/value"}
+                    variant="outline-secondary"
+                    buttonText={currentValue}>
+                      {choices.map(
+                      (selection, index) => (
+                        <Dropdown.Item
+                          eventKey={selection}
+                          key={index}>
+                            {selection}
+                        </Dropdown.Item>
+                      ))}
                   </EndpointDropdown>
                 </InputGroup>
                 )
