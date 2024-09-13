@@ -198,6 +198,14 @@ class LiveXController(BaseController):
          # Enable furnace acquisition coil
         self.iac_set(self.furnace, 'tcp', 'acquire', True)
 
+        # Set temperature profile metadata
+        self.iac_set(self.metadata, 'fields/thermal_gradient_kmm', 'value', self.furnace.controller.gradient.wanted)
+        self.iac_set(self.metadata, 'fields/thermal_gradient_distance', 'value', self.furnace.controller.gradient.distance),
+        self.iac_set(self.metadata, 'fields/cooling_rate', 'value', self.furnace.controller.aspc.rate)
+
+        # Write out markdown metadata - done first so it is available during acquisition
+        self.iac_set(self.metadata, 'markdown', 'write', True)
+
         # Enable timer coils simultaneously
         self.trigger.set_all_timers(True)
 
@@ -231,14 +239,8 @@ class LiveXController(BaseController):
         # Turn off acquisition coil
         self.iac_set(self.furnace, 'tcp', 'acquire', False)
 
-        # Set temperature profile metadata
-        self.iac_set(self.metadata, 'fields/thermal_gradient_kmm', 'value', self.furnace.controller.gradient.wanted)
-        self.iac_set(self.metadata, 'fields/thermal_gradient_distance', 'value', self.furnace.controller.gradient.distance),
-        self.iac_set(self.metadata, 'fields/cooling_rate', 'value', self.furnace.controller.aspc.rate)
-
-        # Write out metadata
+        # Write metadata hdf to file afterwards, only md needs doing first
         self.iac_set(self.metadata, 'hdf', 'write', True)
-        self.iac_set(self.metadata, 'markdown', 'write', True)
 
         # Reenable timers
         self.trigger.set_all_timers(True)
