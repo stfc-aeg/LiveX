@@ -1,6 +1,5 @@
 import logging
-import time
-import datetime
+from datetime import datetime
 
 from functools import partial
 
@@ -55,10 +54,12 @@ class LiveXController(BaseController):
         self.adapters = adapters
 
         self.munir = adapters["munir"]
-        self.furnace = adapters["furnace"]
+        self.furnace = adapters["furnace"].controller
         self.trigger = adapters["trigger"].controller
-        self.orca = adapters["camera"]
-        self.metadata = adapters["metadata"]
+        self.orca = adapters["camera"].camera
+        self.metadata = adapters["metadata"]  # This is likely easier with IAC
+
+        self.munir = adapters["munir"].controller
 
         if 'sequencer' in self.adapters:
             logging.debug("Livex controller registering context with sequencer")
@@ -152,56 +153,59 @@ class LiveXController(BaseController):
         self.iac_set(self.metadata, 'markdown', 'path', markdown_filepath)
 
         # Set file name and path for furnace
-        self.iac_set(self.furnace, 'filewriter', 'filepath', self.filepath)
-        self.iac_set(self.furnace, 'filewriter', 'filename', furnace_file)
+        self.furnace.set_filepath(self.filepath)
+        self.furnace.set_filename(self.filename)
 
         # End any current timers
         self.trigger.set_all_timers(False)
 
-        # Set targets to 0 for freerun TODO: UI start_acq button needs variable depending on 'freerun' toggle
+        # Set targets to 0 for freerun
         if freerun:
             for name in self.trigger.triggers.keys():
                 self.trigger.triggers[name].set_target(0)
 
         # Move camera(s) to 'connected' state
-        for i in range(len(self.orca.camera.cameras)):
-            camera = self.orca.camera.cameras[i].name
+        for name, camera in self.orca.cameras.items():
+            # Move camera(s) to connected state
+            if camera.status['camera_status'] == 'disconnected':
+                camera.send_command('connect')
+            elif camera.status['camera_status'] == 'capturing':
+                camera.send_command('end_capture')
 
-            if self.iac_get(self.orca, f'cameras/{camera}/status/camera_status', param='camera_status') == 'disconnected':
-                self.iac_set(self.orca, f'cameras/{camera}', 'command', 'connect')
-            elif self.iac_get(self.orca, f'cameras/{camera}/status/camera_status', param='camera_status') == 'capturing':
-                self.iac_set(self.orca, f'cameras/{camera}', 'command', 'end_capture')
-
-            # Set cameras explicitly to trigger source 2 (external)
-            self.iac_set(self.orca, f'cameras/{camera}/config/', 'trigger_source', 2)
+            # Set cameras to trigger source 2 (external)
+            camera.set_config(value=2, param='trigger_source')
             # Set orca frames to prevent HDF error
-            # No. frames is equal to the target set in the trigger by the user - freerun, this is 0
+            # No. frames is equal to target set in trigger by user (or 0 if freerun)
             target = int(self.trigger.triggers[camera].target)
-            self.iac_set(self.orca, f'cameras/{camera}/config/', 'num_frames', target)
+            camera.set_config(value=target, param='num_frames')
 
-            # Format the same filename as metadata, but with the system name instead of 'metadata'
+            # Format same filename as metadata, but with camera name instead of 'metadata'
             filename = experiment_id + "_" + camera
 
-            # Provide arguments to munir
-            self.iac_set(self.munir, f'subsystems/{camera}/args', 'file_path', self.filepath)
-            self.iac_set(self.munir, f'subsystems/{camera}/args', 'file_name', filename)
-            self.iac_set(self.munir, f'subsystems/{camera}/args', 'num_frames', target)
+            # Munir arguments for subsystem
+            self.munir.munir_managers[name].set_arg(arg='file_path', value=self.filepath)
+            self.munir.munir_managers[name].set_arg(arg='file_name', value=filename)
+            self.munir.munir_managers[name].set_arg(arg='num_frames', value=target)
 
             # Presently, '/' is required for execute
-            self.iac_set(self.munir, 'execute', f'{camera}', True)
+            self.munir.set_execute(subsystem_name=name, value=True)
 
         # Move camera(s) to capture state
-        for i in range(len(self.orca.camera.cameras)):
-            camera = self.orca.camera.cameras[i].name
-            self.iac_set(self.orca, f'cameras/{camera}', 'command', 'capture')
+        for name, camera in self.orca.cameras.items():
+            camera.send_command('capture')
 
-         # Enable furnace acquisition coil
-        self.iac_set(self.furnace, 'tcp', 'acquire', True)
+        # Enable furnace acquisition coil
+        self.furnace.set_acquisition(True)
 
         # Set temperature profile metadata
         self.iac_set(self.metadata, 'fields/thermal_gradient_kmm', 'value', self.furnace.controller.gradient.wanted)
         self.iac_set(self.metadata, 'fields/thermal_gradient_distance', 'value', self.furnace.controller.gradient.distance),
         self.iac_set(self.metadata, 'fields/cooling_rate', 'value', self.furnace.controller.aspc.rate)
+
+        # Start time
+        now = datetime.now()
+        start_time = now.strftime("%d/%m/%Y, %H:%M:%S")
+        self.iac_set(self.metadata, 'fields/start_time', 'value', start_time)
 
         # Write out markdown metadata - done first so it is available during acquisition
         self.iac_set(self.metadata, 'markdown', 'write', True)
@@ -218,17 +222,14 @@ class LiveXController(BaseController):
 
         # cams stop capturing, num-frames to 0, start again
         # Move camera(s) to capture state
-        for i in range(len(self.orca.camera.cameras)):
-            camera = self.orca.camera.cameras[i].name
-            if self.iac_get(self.orca, f'cameras/{camera}/status/camera_status', param='camera_status') == 'capturing':
-                self.iac_set(self.orca, f'cameras/{camera}', 'command', 'end_capture')
+        for name, camera in self.orca.cameras.items():
+            if camera.status['camera_status'] == 'capturing':
+                camera.send_command('end_capture')
 
-            self.iac_set(self.orca, f'cameras/{camera}/config', 'num_frames', 0)
-
-            self.iac_set(self.orca, f'cameras/{camera}', 'command', 'capture')
-
-            # Explicitly stop acquisition
-            self.iac_set(self.munir, f'subsystems/{camera}', 'stop_execute', True)
+            # Set target to 0 (endless run), stop acquisition, start capturing 
+            camera.set_config(value=0, param='num_frames')
+            self.munir.munir_managers[name].stop_acquisition()
+            camera.send_command('capture')
 
         # Set targets to 0 so timers keep running after acquisition, for monitoring
         targets = {}
@@ -237,7 +238,12 @@ class LiveXController(BaseController):
             trigger.set_target(0)
 
         # Turn off acquisition coil
-        self.iac_set(self.furnace, 'tcp', 'acquire', False)
+        self.furnace.set_acquisition(False)
+
+        # Stop time
+        now = datetime.now()
+        stop_time = now.strftime("%d/%m/%Y, %H:%M:%S")
+        self.iac_set(self.metadata, 'fields/stop_time', 'value', stop_time)
 
         # Write metadata hdf to file afterwards, only md needs doing first
         self.iac_set(self.metadata, 'hdf', 'write', True)
