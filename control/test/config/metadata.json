@@ -71,6 +71,30 @@
         "persist": false,
         "user_input": false
     },
+    "thermal_gradient_kmm": {
+        "label": "Thermal Gradient K per mm",
+        "default": 0.0,
+        "persist": false,
+        "user_input": false
+    },
+    "thermal_gradient_distance": {
+        "label": "Thermal Gradient distance (mm)",
+        "default": 0.0,
+        "persist": false,
+        "user_input": false
+    },
+    "start_time": {
+        "label": "Acquisition Start Time",
+        "default": "0",
+        "persist": false,
+        "user_input": false
+    },
+    "stop_time": {
+        "label": "Acquisition Stop Time",
+        "default": "0",
+        "persist": false,
+        "user_input": false
+    },
     "cooling_rate": {
         "label": "Cooling rate",
         "default": 0.0,

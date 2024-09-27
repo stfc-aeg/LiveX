@@ -3,6 +3,7 @@ import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Dropdown from 'react-bootstrap/Dropdown';
 import Button from 'react-bootstrap/Button';
+import Col from 'react-bootstrap/esm/Col';
 import { useState, useEffect } from 'react';
 import { TitleCard, WithEndpoint, useAdapterEndpoint, DropdownSelector, StatusBox } from 'odin-react';
 import TagInput from "./TagInput";
@@ -55,7 +56,7 @@ function Metadata(props) {
             const currentValue = metadataEndPoint?.data?.fields?.[key]?.value;
 
             // Carving out a specific exception for this non-user-input for now
-            if (key=="acquisition_num")
+            if (["acquisition_num", "start_time", "stop_time"].includes(key))
             {
               // Label is split on the parentheses of acquisition number
               // until more refined solution (metadata field property) is introduced
@@ -65,26 +66,33 @@ function Metadata(props) {
                     {label.split('(')[0]} 
                   </InputGroup.Text>
                   <InputGroup.Text>
-                    {currentValue}
-                  </InputGroup.Text>
-                  <EndpointButton
-                    endpoint={metadataEndPoint}
-                    fullpath={"fields/"+key+"/value"}
-                    value={currentValue+1}
-                    event_type="click"
-                    variant="outline-secondary"
-                  >
-                    +
-                  </EndpointButton>
-                  <EndpointButton
-                    endpoint={metadataEndPoint}
-                    fullpath={"fields/"+key+"/value"}
-                    value={currentValue-1}
-                    event_type="click"
-                    variant="outline-secondary"
-                  >
-                    -
-                  </EndpointButton>
+                      {currentValue}
+                    </InputGroup.Text>
+                  {key=='acquisition_num' ?
+                  <Col>
+                    <EndpointButton
+                      endpoint={metadataEndPoint}
+                      fullpath={"fields/"+key+"/value"}
+                      value={currentValue+1}
+                      event_type="click"
+                      variant="outline-secondary"
+                    >
+                      +
+                    </EndpointButton>
+                    <EndpointButton
+                      endpoint={metadataEndPoint}
+                      fullpath={"fields/"+key+"/value"}
+                      value={currentValue-1}
+                      event_type="click"
+                      variant="outline-secondary"
+                    >
+                      -
+                    </EndpointButton>
+                  </Col>
+                    :
+                    <></>
+                }
+
                 </InputGroup>
               )
             }
