@@ -51,6 +51,7 @@ class AutoSetPointControl():
             write_coil(self.client, self.addresses['enable'], 1)
         else:
             write_coil(self.client, self.addresses['enable'], 0)
+        write_coil(self.client, self.addresses['update'], 1)
 
     def set_heating(self, value):
         """Set the boolean for auto set point control heating."""
@@ -59,14 +60,17 @@ class AutoSetPointControl():
         if value:  # 1, heating
             write_coil(self.client, self.addresses['heating'], 1)
         else:      # 0, cooling
-            write_coil(self.client, self.addresses['heating'], 0)
+            write_coil(self.client, self.addresses['heating'], 0)   
+        write_coil(self.client, self.addresses['update'], 1)
 
     def set_rate(self, value):
         """Set the rate value for the auto set point control."""
         self.rate = value
         write_modbus_float(self.client, value, self.addresses['rate'])
+        write_coil(self.client, self.addresses['update'], 1)
 
     def set_imgdegree(self, value):
         """Set the image acquisition per degree for the auto set point control."""
         self.imgdegree = value
         write_modbus_float(self.client, value, self.addresses['imgdegree'])
+        write_coil(self.client, self.addresses['update'], 1)

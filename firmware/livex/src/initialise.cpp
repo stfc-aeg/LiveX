@@ -1,7 +1,7 @@
 #include "initialise.h"
 
 // Initialise timers for pid, for secondary devices, and setting camera to low (enabled by pid)
-void initialiseInterrupts(hw_timer_t** pidFlagTimer, hw_timer_t** secondaryFlagTimer)
+void initialiseInterrupts(hw_timer_t** pidFlagTimer)
 {
   if (USE_EXTERNAL_INTERRUPT)
   {
@@ -11,18 +11,12 @@ void initialiseInterrupts(hw_timer_t** pidFlagTimer, hw_timer_t** secondaryFlagT
   }
   else
   {
-    // Timer for secondary mechanisms
+    // Timer for pid mechanisms if no external interrupt
     *pidFlagTimer = timerBegin(0, 80, true);
     timerAttachInterrupt(*pidFlagTimer, &pidFlagOnTimer, true);
     timerAlarmWrite(*pidFlagTimer, TIMER_PID, true);
     timerAlarmEnable(*pidFlagTimer);
   }
-
-  // Timer for secondary mechanisms
-  *secondaryFlagTimer = timerBegin(1, 80, true);
-  timerAttachInterrupt(*secondaryFlagTimer, &secondaryFlagOnTimer, true);
-  timerAlarmWrite(*secondaryFlagTimer, TIMER_SECONDARY, true);
-  timerAlarmEnable(*secondaryFlagTimer);
 }
 
 // Run the MCP9600 default setup code. Find devices and set defaults
@@ -75,7 +69,7 @@ void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* 
     }
     Serial.println(" type");
 
-    mcp[idx].setFilterCoefficient(3);
+    mcp[idx].setFilterCoefficient(3);  // Filter coefficient averages readings... speed things up by doing just one? It includes 0...
     Serial.print("Filter coefficient value set to: ");
     Serial.println(mcp[idx].getFilterCoefficient());
 

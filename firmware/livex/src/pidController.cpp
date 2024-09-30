@@ -14,13 +14,18 @@ PIDController::PIDController(PIDAddresses addr) : myPID_(&input, &output, &setPo
     // Set PID output range to match ESP3258PLC PWM
     myPID_.SetOutputLimits(0, PID_OUTPUT_LIMIT);
 
+    myPID_.SetSampleTime(100);
+
     // PID mode
     myPID_.SetMode(AUTOMATIC);
 }
 
 void PIDController::run()
 {
+    // TODO consider how pid logic needs to change
     myPID_.Compute();
+
+    // TODO likely also need a 'recreate PID' function in this class
 }
 
  // Check if PID terms in registers are different, and set them accordingly

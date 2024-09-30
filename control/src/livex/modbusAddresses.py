@@ -18,6 +18,8 @@ class modAddr():
     motor_direction_coil = 7
     gradient_high_coil   = 8
     acquisition_coil     = 9
+    gradient_update_coil = 10
+    aspc_update_coil     = 11
 
     # Input registers (read-only, from device) start at 30001-39999
     counter_inp      = 30001
@@ -87,7 +89,8 @@ class modAddr():
         'actual': gradient_actual_inp,
         'theoretical': gradient_theory_inp,
         'high': gradient_high_coil,  # Which heater is the 'high' end of the gradient
-        'high_options': ["A", "B"]
+        'high_options': ["A", "B"],
+        'update': gradient_update_coil
     }
 
     aspc_addresses = {
@@ -96,7 +99,8 @@ class modAddr():
         'heating_options': ["Cooling", "Heating"],
         'rate': autosp_rate_hold,
         'midpt': autosp_midpt_inp,
-        'imgdegree': autosp_imgdegree_hold
+        'imgdegree': autosp_imgdegree_hold,
+        'update': aspc_update_coil
     }
 
     motor_addresses = {

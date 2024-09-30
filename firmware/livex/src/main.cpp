@@ -15,6 +15,8 @@ ModbusServerController modbus_server;
 ExpandedGpio gpio;
 FifoBuffer<BufferObject> buffer(256);
 
+SemaphoreHandle_t gradientAspcMutex;
+
 // addresses for PID objects
 PIDAddresses pidA_addr = {
   PIN_PWM_A,
@@ -78,11 +80,6 @@ void IRAM_ATTR pidInterrupt()
   rising = !rising;
 }
 
-void IRAM_ATTR secondaryFlagOnTimer()
-{
-  secondaryFlag = true;
-}
-
 // Initialise wires, devices, and Modbus/gpio
 void setup()
 {
@@ -96,7 +93,7 @@ void setup()
   modbus_server.initialiseModbus();
   // initialise.cpp
   initialiseEthernet(modbusEthServer, mac, ip, PIN_SPI_SS_ETHERNET_LIB);
-  initialiseInterrupts(&pidFlagTimer, &secondaryFlagTimer);
+  initialiseInterrupts(&pidFlagTimer);
   initialiseThermocouples(mcp, num_mcp, mcp_addr);
   writePIDDefaults(modbus_server, PID_A);
   writePIDDefaults(modbus_server, PID_B);
@@ -110,6 +107,8 @@ void setup()
   gpio.pinMode(PIN_MOTOR_PWM, OUTPUT);
   // Motor LVDT
   gpio.pinMode(PIN_MOTOR_LVDT_IN, INPUT);
+
+  gradientAspcMutex = xSemaphoreCreateMutex();
 
   xTaskCreatePinnedToCore(
     Core0PIDTask,  /* Task function */

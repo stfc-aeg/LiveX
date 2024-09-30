@@ -1,7 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#define DEBUG false
+#define DEBUG true
 
 // Invert output pid analogwrite signal (does not alter output in UI)
 #define INVERT_OUTPUT_SIGNAL false
@@ -9,7 +9,7 @@
 // true: use external interrupt instead of internal timer
 #define USE_EXTERNAL_INTERRUPT true
 // true: output total of external interrupts at given range (e.g.: every 100 interrupts. 100, 200, etc.)
-#define LOG_INTERRUPTS false
+#define LOG_INTERRUPTS true
 #define LOG_INTERRUPTS_INTERVAL 50
 
 // Timeout (no modbus connection) in ms
@@ -44,6 +44,11 @@
 #define MOD_MOTOR_DIRECTION_COIL 7
 #define MOD_GRADIENT_HIGH_COIL 8
 #define MOD_ACQUISITION_COIL 9
+#define MOD_GRADIENT_UPDATE_COIL 10
+#define MOD_ASPC_UPDATE_COIL 11
+
+// Need VALUE_UPDATED coils for at least ASPC and gradient.
+// Not sure on others yet
 
 // input registers start at 30001-39999
 #define MOD_COUNTER_INP 30001
