@@ -33,6 +33,8 @@ extern ModbusServerController modbus_server;
 extern FifoBuffer<BufferObject> buffer;
 extern ExpandedGpio gpio; // not used in comms
 
+extern SemaphoreHandle_t gradientAspcMutex;
+
 // Eth clients - main and taskComms
 extern EthernetClient modbusClient;
 extern EthernetClient streamClient;
@@ -76,5 +78,12 @@ extern void Core0PIDTask(void * pvParameters);
 extern void IRAM_ATTR pidInterrupt();
 extern void IRAM_ATTR pidFlagOnTimer();
 extern void IRAM_ATTR secondaryFlagOnTimer();
+
+// Enum of PIDs - taskPid
+enum PIDEnum {
+    A,  // 0
+    B,  // 1
+    UNKNOWN // 2
+};
 
 #endif
