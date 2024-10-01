@@ -110,12 +110,12 @@ void thermalGradient()
   float actual = fabs(PID_A.input - PID_B.input);
 
   // Write relevant values to modbus
-  modbus_server.writeInputRegisters(MOD_GRADIENT_THEORY_INP, (uint16_t*)(&theoretical), 2);
-  modbus_server.writeInputRegisters(MOD_GRADIENT_ACTUAL_INP, (uint16_t*)(&actual), 2);
+  modbus_server.floatToInputRegisters(MOD_GRADIENT_THEORY_INP, theoretical);
+  modbus_server.floatToInputRegisters(MOD_GRADIENT_ACTUAL_INP, actual);
 
   // Write gradient target setpoints for UI use
-  modbus_server.writeInputRegisters(MOD_GRADIENT_SETPOINT_A_INP, (uint16_t*)(&PID_A.gradientSetPoint), 2);
-  modbus_server.writeInputRegisters(MOD_GRADIENT_SETPOINT_B_INP, (uint16_t*)(&PID_B.gradientSetPoint), 2);
+  modbus_server.floatToInputRegisters(MOD_GRADIENT_SETPOINT_A_INP, PID_A.gradientSetPoint);
+  modbus_server.floatToInputRegisters(MOD_GRADIENT_SETPOINT_B_INP, PID_B.gradientSetPoint);
 
   // Reset 'value updated' coil to not repeatedly fire this function
   modbus_server.writeBool(MOD_GRADIENT_UPDATE_COIL, 0);
