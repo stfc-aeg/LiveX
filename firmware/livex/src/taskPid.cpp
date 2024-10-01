@@ -115,58 +115,62 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
   if (PID != nullptr)
   {
     // Check PID enabled
-    if (modbus_server.readBool(addr.modPidEnableCoil))
+    bool enabled = modbus_server.readBool(addr.modPidEnableCoil);
+    int automatic = PID->myPID_.GetMode(); // Automatic is 1 (true), manual is false (0)
+
+    // Setting PID mode. 'Automatic' is 'let PID adjust output', 'manual' is 'user chooses output'
+    // Translates to: automatic=on, manual=off. If manual, PID.Compute() returns immediately.
+    if (enabled && !automatic) // If turned on but not automatic
     {
-      // Check PID tunings
-      double newKp = double(modbus_server.combineHoldingRegisters(addr.modKpHold));
-      double newKi = double(modbus_server.combineHoldingRegisters(addr.modKiHold));
-      double newKd = double(modbus_server.combineHoldingRegisters(addr.modKdHold));
-      PID->check_PID_tunings(newKp, newKi, newKd);
+      PID->myPID_.SetMode(AUTOMATIC);
+    }
+    else if (!enabled && automatic) // If turned off but still automatic
+    {
+      PID->myPID_.SetMode(MANUAL);
+      PID->output = 0; // Override this to 0 while turned off
+    }
 
-      // Check thermal gradient enable status and use setpoint accordingly
-      if (modbus_server.readBool(MOD_GRADIENT_ENABLE_COIL))
-      {
-        PID->setPoint = PID->gradientSetPoint;
-      }
-      else
-      {
-        PID->setPoint = modbus_server.combineHoldingRegisters(addr.modSetPointHold);
-      }
+    // Check PID tunings - do this even if PID is not enabled
+    double newKp = double(modbus_server.combineHoldingRegisters(addr.modKpHold));
+    double newKi = double(modbus_server.combineHoldingRegisters(addr.modKiHold));
+    double newKd = double(modbus_server.combineHoldingRegisters(addr.modKdHold));
+    PID->check_PID_tunings(newKp, newKi, newKd);
 
-      // Calculate PID output
-      PID->run();
-
-      // Write PID output
-      modbus_server.floatToInputRegisters(addr.modPidOutputInp, PID->output);
-
-      if (INVERT_OUTPUT_SIGNAL)
-      {
-        float inv_output = PID_OUTPUT_LIMIT - PID->output;
-        gpio.analogWrite(addr.outputPin, inv_output);
-      }
-      else
-      {
-        gpio.analogWrite(addr.outputPin, PID->output);
-      }
-
-      // Check autosp enable status. If enabled, add rate to setpoint via holding register
-      if (modbus_server.readBool(MOD_AUTOSP_ENABLE_COIL))
-      {
-        modbus_server.floatToHoldingRegisters(addr.modSetPointHold, (PID->setPoint + PID->autospRate));
-        PID->gradientSetPoint = PID->gradientSetPoint + PID->autospRate;
-        // To be seen on the UI
-        modbus_server.floatToInputRegisters(addr.modGradSetPointHold, PID->gradientSetPoint);
-      }
+    // Check thermal gradient enable status and use setpoint accordingly
+    // No issue doing this even when PID is not enabled
+    if (modbus_server.readBool(MOD_GRADIENT_ENABLE_COIL))
+    {
+      PID->setPoint = PID->gradientSetPoint;
     }
     else
-    { // Write 0 if PID is not enabled.
-      gpio.analogWrite(addr.outputPin, 0);
-      modbus_server.floatToInputRegisters(addr.modPidOutputInp, 0);
+    {
+      PID->setPoint = modbus_server.combineHoldingRegisters(addr.modSetPointHold);
     }
-  }
-  else
-  {
-    gpio.analogWrite(addr.outputPin, 0);
-    modbus_server.floatToInputRegisters(addr.modPidOutputInp, 0);
+
+    // Calculate PID output. When PID is not enabled, this won't do anything
+    PID->run();
+
+    // Write PID output. When PID is not enabled, 
+    modbus_server.floatToInputRegisters(addr.modPidOutputInp, PID->output);
+
+    if (INVERT_OUTPUT_SIGNAL)
+    {
+      float inv_output = PID_OUTPUT_LIMIT - PID->output;
+      gpio.analogWrite(addr.outputPin, inv_output);
+    }
+    else
+    {
+      gpio.analogWrite(addr.outputPin, PID->output);
+    }
+
+    // Check autosp enable status. If enabled, add rate to setpoint via holding register
+    // Only do this when enabled, to avoid permanently altering the setpoint when it's not on 
+    if (enabled && modbus_server.readBool(MOD_AUTOSP_ENABLE_COIL))
+    {
+      modbus_server.floatToHoldingRegisters(addr.modSetPointHold, (PID->setPoint + PID->autospRate));
+      PID->gradientSetPoint = PID->gradientSetPoint + PID->autospRate;
+      // To be seen on the UI
+      modbus_server.floatToInputRegisters(addr.modGradSetPointHold, PID->gradientSetPoint);
+    }
   }
 }
