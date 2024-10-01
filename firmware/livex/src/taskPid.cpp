@@ -154,6 +154,8 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
       {
         modbus_server.floatToHoldingRegisters(addr.modSetPointHold, (PID->setPoint + PID->autospRate));
         PID->gradientSetPoint = PID->gradientSetPoint + PID->autospRate;
+        // To be seen on the UI
+        modbus_server.floatToInputRegisters(addr.modGradSetPointHold, PID->gradientSetPoint);
       }
     }
     else

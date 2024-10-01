@@ -14,6 +14,7 @@ struct PIDAddresses
 {
   int outputPin;
   int modSetPointHold;
+  int modGradSetPointHold;
   int modPidOutputInp;
   int modPidEnableCoil;
   int modThermocoupleInp;
