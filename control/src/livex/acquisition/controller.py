@@ -8,7 +8,12 @@ from odin.adapters.adapter import ApiAdapterRequest, ApiAdapterResponse
 from odin._version import get_versions
 
 from livex.base_controller import BaseController
-from livex.util import LiveXError
+from livex.modbusAddresses import modAddr
+from livex.util import (
+    LiveXError,
+    write_coil,
+    write_modbus_float
+)
 
 class LiveXController(BaseController):
     """LiveXController - class that manages the other adapters for LiveX."""
@@ -275,10 +280,22 @@ class LiveXController(BaseController):
             self.frequencies[timer] = int(value)
             logging.debug(f"self.frequencies: {self.frequencies}")
 
+            # Ensure furnace frequency is updated
+            self.update_furnace_frequency(self.frequencies[self.ref_trigger])
+
             # We can recalculate duration and frame targets for the new frequency by calling this
             # function with the current ref target, instead of duplicating code.
             ref_target = self.trigger.triggers[self.ref_trigger].target
             self.set_acq_frame_target(ref_target)
+
+    def update_furnace_frequency(self, frequency):
+        """Useful function to inform the furnace PLC of its trigger frequency.
+        This helps with SampleTime and the Auto Set Point Control.
+        """
+        logging.debug(f"Writing freq {frequency} to register {modAddr.furnace_freq_hold}")
+        write_modbus_float(self.furnace.mod_client, frequency, modAddr.furnace_freq_hold)
+        logging.debug(f"Writing {True} to coil {modAddr.freq_aspc_update_coil}")
+        write_coil(self.furnace.mod_client, modAddr.freq_aspc_update_coil, True)  
 
     def set_acq_time(self, value):
         """Set the duration of the acquisition. Used to calculate targets from frequencies."""

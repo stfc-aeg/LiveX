@@ -57,22 +57,17 @@ extern const uint8_t mcp_addr[];
 
 // Timers - main, initialise
 extern hw_timer_t *pidFlagTimer;
-extern hw_timer_t *secondaryFlagTimer;
 // Timer flags - main, taskPid
 extern volatile bool pidFlag;
-extern volatile bool secondaryFlag;
+
+// PID operation - main, taskComms
+extern float interruptFrequency;
 
 // debugging tool
 extern volatile int interruptCounter;
 
 // Core task definition for pinning in main
 extern void Core0PIDTask(void * pvParameters);
-
-// temporary measurements of timer consistency
-// volatile long int timerTimer = micros();
-// float timerTimerAvg = 0;
-// volatile long int timerCounter = 0;
-// volatile long int prev = 0;
 
 // Interrupt functions - main, initialise
 extern void IRAM_ATTR pidInterrupt();

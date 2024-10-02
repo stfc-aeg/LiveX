@@ -127,4 +127,7 @@ void writePIDDefaults(ModbusServerController& modbus_server, PIDController PID)
         modbus_server.floatToHoldingRegisters(tempAddress, term);
         tempAddress += 2;
     }
+
+    // Also includes initial frequency, as ASPC depends on it
+    modbus_server.floatToHoldingRegisters(MOD_FURNACE_FREQ_HOLD, DEFAULT_INTERRUPT_FREQUENCY);
 }

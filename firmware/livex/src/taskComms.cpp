@@ -33,9 +33,30 @@ void manageComms()
       thermalGradient();
       xSemaphoreGive(gradientAspcMutex);
     }
-    if (modbus_server.readBool(MOD_ASPC_UPDATE_COIL))
+    if (modbus_server.readBool(MOD_FREQ_ASPC_UPDATE_COIL))
     {
       xSemaphoreTake(gradientAspcMutex, portMAX_DELAY);
+      // Handle frequency update first
+      float new_freq = modbus_server.combineHoldingRegisters(MOD_FURNACE_FREQ_HOLD);
+      // Assign value to correct variable
+      interruptFrequency = new_freq;
+
+      // PID sampleTime is in milliseconds
+      float newSampleTime = floor(1000 / interruptFrequency);
+      // Set sample time
+      PID_A.myPID_.SetSampleTime(newSampleTime);
+      PID_A.myPID_.SetSampleTime(newSampleTime);
+
+      if (DEBUG)
+      {
+        Serial.print("new frequency: ");
+        Serial.print(interruptFrequency);
+        Serial.print(" | sample time: ");
+        Serial.println(newSampleTime);
+      }
+
+      // This relies on frequency and rate/cooling,
+      // so do it after frequency check/change.
       autoSetPointControl();
       xSemaphoreGive(gradientAspcMutex);
     }
@@ -129,7 +150,6 @@ void thermalGradient()
   }
 }
 
-
 // Increment setPoint by an average rate per second
 void autoSetPointControl()
 {
@@ -146,7 +166,7 @@ void autoSetPointControl()
   }
 
   // Rate is average K/s, but value depends on PID interval
-  rate = rate * (static_cast<float>(TIMER_PID)/1000000); // e.g.: 0.5 * 20x10^3/1000x10^3 = 0.01 = 50 times per second
+  rate = rate * (static_cast<float>(1/interruptFrequency)); // e.g.: 0.5 * 20x10^3/1000x10^3 = 0.01 = 50 times per second
   PID_A.autospRate = rate;
   PID_B.autospRate = rate;
 
@@ -158,13 +178,13 @@ void autoSetPointControl()
   modbus_server.floatToInputRegisters(MOD_AUTOSP_MIDPT_INP, midpoint);
 
   // Reset 'value updated' coil to not repeatedly fire this function
-  modbus_server.writeBool(MOD_ASPC_UPDATE_COIL, 0);
+  modbus_server.writeBool(MOD_FREQ_ASPC_UPDATE_COIL, 0);
 
   if (DEBUG)
   {
-    Serial.print("Autosp rate: ");
+    Serial.print("Autosp rate (per PID call): ");
     Serial.print(rate);
     Serial.print(" | interval: ");
-    Serial.print(TIMER_PID/1000000);
+    Serial.println(1/interruptFrequency);
   }
 }

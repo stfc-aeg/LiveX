@@ -123,7 +123,7 @@ function Trigger(props) {
                     <EndPointFormControl
                       endpoint={liveXEndPoint}
                       type="number"
-                      fullpath={`acquisition/frequency/${key}`}
+                      fullpath={`acquisition/frequencies/${key}`}
                       value={data.frequency}>
                     </EndPointFormControl>
                   </InputGroup>

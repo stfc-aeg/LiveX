@@ -66,6 +66,9 @@ volatile bool secondaryFlag = false;
 volatile bool rising = true;
 volatile int interruptCounter = 0;
 
+// Communicated via modbus
+float interruptFrequency = 10;
+
 void IRAM_ATTR pidFlagOnTimer()
 {
   pidFlag = true;

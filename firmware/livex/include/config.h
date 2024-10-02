@@ -17,7 +17,7 @@
 
 // For the internal timer. Set to 50Hz here, other rates should be managed via external trigger.
 #define TIMER_PID 20000
-#define TIMER_SECONDARY 200000 // motor and modifiers
+#define DEFAULT_INTERRUPT_FREQUENCY 10
 
 // Default terms for PID controllers
 #define PID_SETPOINT_DEFAULT 25.5
@@ -45,10 +45,7 @@
 #define MOD_GRADIENT_HIGH_COIL 8
 #define MOD_ACQUISITION_COIL 9
 #define MOD_GRADIENT_UPDATE_COIL 10
-#define MOD_ASPC_UPDATE_COIL 11
-
-// Need VALUE_UPDATED coils for at least ASPC and gradient.
-// Not sure on others yet
+#define MOD_FREQ_ASPC_UPDATE_COIL 11
 
 // input registers start at 30001-39999
 #define MOD_COUNTER_INP 30001
@@ -79,13 +76,15 @@
 #define MOD_KI_B_HOLD 40013
 #define MOD_KD_B_HOLD 40015
 
-#define MOD_GRADIENT_WANTED_HOLD 40017
-#define MOD_GRADIENT_DISTANCE_HOLD 40019
+#define MOD_FURNACE_FREQ_HOLD 40017
 
-#define MOD_AUTOSP_RATE_HOLD 40021
-#define MOD_AUTOSP_IMGDEGREE_HOLD 40023
+#define MOD_GRADIENT_WANTED_HOLD 40019
+#define MOD_GRADIENT_DISTANCE_HOLD 40021
 
-#define MOD_MOTOR_SPEED_HOLD 40025
+#define MOD_AUTOSP_RATE_HOLD 40023
+#define MOD_AUTOSP_IMGDEGREE_HOLD 40025
+
+#define MOD_MOTOR_SPEED_HOLD 40027
 
 #define PIN_PWM_A A0_5
 #define PIN_PWM_B A0_6
