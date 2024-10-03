@@ -45,12 +45,19 @@ class FurnaceController():
         self.ip = options.get('ip', '192.168.0.159')
         self.port = int(options.get('port', '4444'))
 
+        # File name and directory is a default that is later overwritten by metadata
         self.log_directory = options.get('log_directory', 'logs')
-        # Filename may instead be generated? Cannot have just one configurable one,
-        # subsequent uses would overwrite. generation method TBD. metadata, date/time, etc.
         self.log_filename = options.get('log_filename', 'default.hdf5')
 
         self.monitor_retention = int(options.get('monitor_retention', 60))
+
+        # Get default values for PIDs
+        pid_defaults = {
+            'setpoint': float(options.get('setpoint_default', 30.0)),
+            'kp': float(options.get('kp_default', 25.5)),
+            'ki': float(options.get('ki_default', 5.0)),
+            'kd': float(options.get('kd_default', 0.1))
+        }
 
         # Stop modbus from generating excessive logging
         logging.getLogger("pymodbus").setLevel(logging.WARNING)  
@@ -79,8 +86,8 @@ class FurnaceController():
         }
         self.start_acquisition = False
 
-        self.pid_a = PID(modAddr.addresses_pid_a)
-        self.pid_b = PID(modAddr.addresses_pid_b)
+        self.pid_a = PID(modAddr.addresses_pid_a, pid_defaults)
+        self.pid_b = PID(modAddr.addresses_pid_b, pid_defaults)
         self.gradient = Gradient(modAddr.gradient_addresses)
         self.aspc = AutoSetPointControl(modAddr.aspc_addresses)
         self.motor = Motor(modAddr.motor_addresses)
