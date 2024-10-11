@@ -23,7 +23,6 @@ function ThermalGradient(props){
 
     return (
       <TitleCard title="Thermal Gradient">
-        <Container>
         <Row>
           <Col>
             <EndPointToggle 
@@ -119,7 +118,6 @@ function ThermalGradient(props){
             </InputGroup>
           </Col>
         </Row>
-        </Container>
       </TitleCard>
     )
 }

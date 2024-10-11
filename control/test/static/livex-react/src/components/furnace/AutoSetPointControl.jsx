@@ -21,69 +21,67 @@ function AutoSetPointControl(props){
 
     return (
         <TitleCard title="Auto Set Point Control">
-        <Container>
           <Row>
-            <Col>
-              <EndPointToggle
-                endpoint={furnaceEndPoint}
-                fullpath="autosp/enable"
-                event_type="click" 
-                checked={furnaceEndPoint.data.autosp?.enable || false}
-                label="Enable"
-                disabled={connectedPuttingDisable}>
-              </EndPointToggle>
-            </Col>
+              <Col>
+                <EndPointToggle
+                  endpoint={furnaceEndPoint}
+                  fullpath="autosp/enable"
+                  event_type="click" 
+                  checked={furnaceEndPoint.data.autosp?.enable || false}
+                  label="Enable"
+                  disabled={connectedPuttingDisable}>
+                </EndPointToggle>
+              </Col>
           </Row>
           <Row className="mt-3">
-            <Col>
+              <Col xs={12} sm={4}>
+                <InputGroup>
+                  <InputGroup.Text style={{width: labelWidth}}>
+                    Midpt. temp
+                  </InputGroup.Text>
+                  <InputGroup.Text style={{
+                    width: labelWidth,
+                    border: '1px solid lightblue',
+                    backgroundColor: '#e0f7ff'
+                  }}>
+                    {checkNull(furnaceEndPoint.data.autosp?.midpt_temp)}
+                  </InputGroup.Text>
+                </InputGroup>
+              </Col>
+              <Col xs={12} sm={4}>
               <InputGroup>
-                <InputGroup.Text style={{width: labelWidth}}>
-                  Theoretical
-                </InputGroup.Text>
-                <InputGroup.Text style={{
-                  width: labelWidth,
-                  border: '1px solid lightblue',
-                  backgroundColor: '#e0f7ff'
-                }}>
-                  {checkNull(furnaceEndPoint.data.autosp?.midpt_temp)}
-                </InputGroup.Text>
+                <InputGroup.Text>Heating/Cooling:</InputGroup.Text>
+                <EndpointDropdown
+                  endpoint={furnaceEndPoint} event_type="select"
+                  fullpath="autosp/heating"
+                  variant='outline-secondary'
+                  buttonText={furnaceEndPoint.data.autosp?.heating_options[furnaceEndPoint.data.autosp.heating] || "Unknown"} disabled={connectedPuttingDisable}>
+                  {furnaceEndPoint.data.autosp?.heating_options ? furnaceEndPoint.data.autosp.heating_options.map(
+                  (selection, index) => (
+                    <Dropdown.Item
+                      eventKey={index}
+                      key={index}>
+                        {selection}
+                    </Dropdown.Item>
+                  )) : <></> }
+                </EndpointDropdown>
               </InputGroup>
-            </Col>
-            <Col>
-            <InputGroup>
-              <InputGroup.Text>Heating/Cooling:</InputGroup.Text>
-              <EndpointDropdown
-                endpoint={furnaceEndPoint} event_type="select"
-                fullpath="autosp/heating"
-                variant='outline-secondary'
-                buttonText={furnaceEndPoint.data.autosp?.heating_options[furnaceEndPoint.data.autosp.heating] || "Unknown"} disabled={connectedPuttingDisable}>
-                {furnaceEndPoint.data.autosp?.heating_options ? furnaceEndPoint.data.autosp.heating_options.map(
-                (selection, index) => (
-                  <Dropdown.Item
-                    eventKey={index}
-                    key={index}>
-                      {selection}
-                  </Dropdown.Item>
-                )) : <></> }
-              </EndpointDropdown>
-            </InputGroup>
 
-            </Col>
-            <Col>
-              <InputGroup>
-                <InputGroup.Text>
-                   Rate (K/s)
-                </InputGroup.Text>
-                <EndPointFormControl
-                  endpoint={furnaceEndPoint}
-                  type="number"
-                  fullpath="autosp/rate"
-                  disabled={connectedPuttingDisable}>
-                </EndPointFormControl>
-              </InputGroup>
-            </Col>
+              </Col>
+              <Col xs={12} sm={4}>
+                <InputGroup>
+                  <InputGroup.Text>
+                    Rate (K/s)
+                  </InputGroup.Text>
+                  <EndPointFormControl
+                    endpoint={furnaceEndPoint}
+                    type="number"
+                    fullpath="autosp/rate"
+                    disabled={connectedPuttingDisable}>
+                  </EndPointFormControl>
+                </InputGroup>
+              </Col>
           </Row>
-        </Container>
       </TitleCard>
     )
 }

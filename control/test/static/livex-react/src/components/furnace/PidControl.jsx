@@ -26,8 +26,9 @@ function PidControl(props) {
       <TitleCard title={title} type="warning">
         <Row>
           <Col xs={6} sm={8} md={8} lg={8} xl={8} xxl={8}>
+          <Container>
             <Row>
-              <EndPointToggle 
+              <EndPointToggle
                 endpoint={furnaceEndPoint}
                 fullpath={pid+"/enable"}
                 event_type="click"
@@ -36,45 +37,47 @@ function PidControl(props) {
                 disabled={connectedPuttingDisable}>
               </EndPointToggle>
             </Row>
-            <Row className="mt-4">
+          </Container>
+            <Row>
               <Col xs={12} md={6}>
-                <InputGroup>
-                  <InputGroup.Text style={{width:pidLabelWidth}}>
-                    Proportional
-                  </InputGroup.Text>
-                  <EndPointFormControl
-                    endpoint={furnaceEndPoint}
-                    type="number"
-                    fullpath={pid+"/proportional"}
-                    disabled={connectedPuttingDisable}>
-                  </EndPointFormControl>
-                </InputGroup>
-                <InputGroup>
-                  <InputGroup.Text style={{width:pidLabelWidth}}>
-                    Integral
-                  </InputGroup.Text>
-                  <EndPointFormControl
-                    endpoint={furnaceEndPoint}
-                    type="number"
-                    fullpath={pid+"/integral"}
-                    disabled={connectedPuttingDisable}>
-                  </EndPointFormControl>
-                </InputGroup>
-                <InputGroup>
-                  <InputGroup.Text style={{width:pidLabelWidth}}>
-                    Derivative
-                  </InputGroup.Text>
-                  <EndPointFormControl
-                    endpoint={furnaceEndPoint}
-                    type="number"
-                    fullpath={pid+"/derivative"}
-                    disabled={connectedPuttingDisable}>
-                  </EndPointFormControl>
-                </InputGroup>
+                <Row className="mt-4">
+                  <InputGroup>
+                    <InputGroup.Text style={{width:pidLabelWidth}}>
+                      Proportional
+                    </InputGroup.Text>
+                    <EndPointFormControl
+                      endpoint={furnaceEndPoint}
+                      type="number"
+                      fullpath={pid+"/proportional"}
+                      disabled={connectedPuttingDisable}>
+                    </EndPointFormControl>
+                  </InputGroup>
+                  <InputGroup>
+                    <InputGroup.Text style={{width:pidLabelWidth}}>
+                      Integral
+                    </InputGroup.Text>
+                    <EndPointFormControl
+                      endpoint={furnaceEndPoint}
+                      type="number"
+                      fullpath={pid+"/integral"}
+                      disabled={connectedPuttingDisable}>
+                    </EndPointFormControl>
+                  </InputGroup>
+                  <InputGroup>
+                    <InputGroup.Text style={{width:pidLabelWidth}}>
+                      Derivative
+                    </InputGroup.Text>
+                    <EndPointFormControl
+                      endpoint={furnaceEndPoint}
+                      type="number"
+                      fullpath={pid+"/derivative"}
+                      disabled={connectedPuttingDisable}>
+                    </EndPointFormControl>
+                  </InputGroup>
+                </Row>
               </Col>
               <Col xs={12} md={6}>
-                <Row>
-                  <Stack>
+                <Row className="mt-4">
                   <InputGroup>
                     <InputGroup.Text style={{width:labelWidth}}>
                       Set Pt. In
@@ -102,7 +105,6 @@ function PidControl(props) {
                     }
                     </InputGroup.Text>
                   </InputGroup>
-                  </Stack>
                 </Row>
               </Col>
 

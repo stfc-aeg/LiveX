@@ -233,7 +233,7 @@ function OrcaCamera(props) {
                   </Col>
                 </Row>
                 <Row className="mt-3">
-                  <Col xs="8">
+                  <Col xs={12} md={8}>
                     <Form>
                       <Form.Label>
                         Resolution. Current: {liveViewData?.image?.resolution}
@@ -247,9 +247,9 @@ function OrcaCamera(props) {
                       </EndPointSlider>
                     </Form>
                   </Col>
-                  <Col xs="4">
+                  <Col md={4}>
                   <InputGroup className="mt-3">
-                    <InputGroup.Text>Common Resolutions (%)</InputGroup.Text>
+                    <InputGroup.Text>Common Res (%)</InputGroup.Text>
                     <EndPointDropdownSelector
                       endpoint={liveViewEndPoint}
                       event_type="select"

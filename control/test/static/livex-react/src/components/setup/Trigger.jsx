@@ -50,7 +50,7 @@ function Trigger(props) {
         <TitleCard title="Acquisition details">
         <Container>
         <Row>
-          <Col>
+          <Col xs={12} sm={4} className="mb-3">
             <Row>
               Measure acq. duration in:
               <ButtonGroup>

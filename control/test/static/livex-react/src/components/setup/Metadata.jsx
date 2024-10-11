@@ -4,6 +4,7 @@ import InputGroup from 'react-bootstrap/InputGroup';
 import Dropdown from 'react-bootstrap/Dropdown';
 import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/esm/Col';
+import { Container } from 'react-bootstrap';
 import { useState, useEffect } from 'react';
 import { TitleCard, WithEndpoint, useAdapterEndpoint, DropdownSelector, StatusBox } from 'odin-react';
 import TagInput from "./TagInput";
@@ -180,9 +181,11 @@ function Metadata(props) {
         })
     }
 return(
+  <Container>
     <TitleCard title="Experiment Details">
         {renderForm()}
     </TitleCard>
+  </Container>
     )
 }
 
