@@ -17,6 +17,8 @@ function AutoSetPointControl(props){
     const {furnaceEndPoint} = props;
     const {connectedPuttingDisable} = props;
 
+    const labelWidth = 80;
+
     return (
         <TitleCard title="Auto Set Point Control">
         <Container>
@@ -32,13 +34,20 @@ function AutoSetPointControl(props){
               </EndPointToggle>
             </Col>
           </Row>
-          <Row>
+          <Row className="mt-3">
             <Col>
-              <StatusBox
-                type="info"
-                label="Mid Pt. TEMP.">
+              <InputGroup>
+                <InputGroup.Text style={{width: labelWidth}}>
+                  Theoretical
+                </InputGroup.Text>
+                <InputGroup.Text style={{
+                  width: labelWidth,
+                  border: '1px solid lightblue',
+                  backgroundColor: '#e0f7ff'
+                }}>
                   {checkNull(furnaceEndPoint.data.autosp?.midpt_temp)}
-              </StatusBox>
+                </InputGroup.Text>
+              </InputGroup>
             </Col>
             <Col>
             <InputGroup>
@@ -69,21 +78,6 @@ function AutoSetPointControl(props){
                   endpoint={furnaceEndPoint}
                   type="number"
                   fullpath="autosp/rate"
-                  disabled={connectedPuttingDisable}>
-                </EndPointFormControl>
-              </InputGroup>
-            </Col>
-          </Row>
-          <Row>
-            <Col>
-              <InputGroup>
-                <InputGroup.Text>
-                  Img Aquisition Per Degree (Img/K)
-                </InputGroup.Text>
-                <EndPointFormControl
-                  endpoint={furnaceEndPoint}
-                  type="number"
-                  fullpath="autosp/img_per_degree"
                   disabled={connectedPuttingDisable}>
                 </EndPointFormControl>
               </InputGroup>

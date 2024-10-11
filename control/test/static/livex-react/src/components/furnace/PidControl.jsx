@@ -17,95 +17,145 @@ function PidControl(props) {
     const {title} = props;
     const {pid} = props;
 
+    // Fixing the label width of the display labels so that they're consistent
+    // ~6px per character. 
+    const labelWidth = 64;
+    const pidLabelWidth = 72;
+
     return (
       <TitleCard title={title} type="warning">
-        <Container>
         <Row>
-          <Col xs={8}>
-          <EndPointToggle 
-            endpoint={furnaceEndPoint}
-            fullpath={pid+"/enable"}
-            event_type="click"
-            checked={furnaceEndPoint.data[pid]?.enable || false}
-            label="Enable"
-            disabled={connectedPuttingDisable}>
-          </EndPointToggle>
-          </Col>
-          <Col>
-          <StatusBox
-            type="info"
-            label="PID OUT.">
-              {checkNull(furnaceEndPoint.data[pid]?.output)}
-          </StatusBox>
-          </Col>
-        </Row>
-        <Row>
-          <Col xs={4}>
-          <InputGroup>
-            <InputGroup.Text>
-              Proportional
-            </InputGroup.Text>
-            <EndPointFormControl
-              endpoint={furnaceEndPoint}
-              type="number"
-              fullpath={pid+"/proportional"}
-              disabled={connectedPuttingDisable}>
-            </EndPointFormControl>
-          </InputGroup>
-          <InputGroup>
-            <InputGroup.Text>
-              Integral
-            </InputGroup.Text>
-            <EndPointFormControl
-              endpoint={furnaceEndPoint}
-              type="number"
-              fullpath={pid+"/integral"}
-              disabled={connectedPuttingDisable}>
-            </EndPointFormControl>
-          </InputGroup>
-          <InputGroup>
-            <InputGroup.Text>
-              Derivative
-            </InputGroup.Text>
-            <EndPointFormControl
-              endpoint={furnaceEndPoint}
-              type="number"
-              fullpath={pid+"/derivative"}
-              disabled={connectedPuttingDisable}>
-            </EndPointFormControl>
-          </InputGroup>
-          </Col>
-          <Col>
-          <Row>
-            <Stack>
-            <InputGroup>
-              <InputGroup.Text>
-                Set Pt.
-              </InputGroup.Text>
-              <EndPointFormControl
+          <Col xs={6} sm={8} md={8} lg={8} xl={8} xxl={8}>
+            <Row>
+              <EndPointToggle 
                 endpoint={furnaceEndPoint}
-                type="number"
-                fullpath={pid+"/setpoint"}
+                fullpath={pid+"/enable"}
+                event_type="click"
+                checked={furnaceEndPoint.data[pid]?.enable || false}
+                label="Enable"
                 disabled={connectedPuttingDisable}>
-              </EndPointFormControl>
-            </InputGroup>
-            <StatusBox as="span" type="info"
-            label="Setpoint">
-            {(furnaceEndPoint.data.gradient?.enable ||false) ?
-              checkNull(furnaceEndPoint.data[pid]?.gradient_setpoint) :
-              checkNull(furnaceEndPoint.data[pid]?.setpoint)
-            }
-            </StatusBox>
-            </Stack>
-          </Row>
+              </EndPointToggle>
+            </Row>
+            <Row className="mt-4">
+              <Col xs={12} md={6}>
+                <InputGroup>
+                  <InputGroup.Text style={{width:pidLabelWidth}}>
+                    Proportional
+                  </InputGroup.Text>
+                  <EndPointFormControl
+                    endpoint={furnaceEndPoint}
+                    type="number"
+                    fullpath={pid+"/proportional"}
+                    disabled={connectedPuttingDisable}>
+                  </EndPointFormControl>
+                </InputGroup>
+                <InputGroup>
+                  <InputGroup.Text style={{width:pidLabelWidth}}>
+                    Integral
+                  </InputGroup.Text>
+                  <EndPointFormControl
+                    endpoint={furnaceEndPoint}
+                    type="number"
+                    fullpath={pid+"/integral"}
+                    disabled={connectedPuttingDisable}>
+                  </EndPointFormControl>
+                </InputGroup>
+                <InputGroup>
+                  <InputGroup.Text style={{width:pidLabelWidth}}>
+                    Derivative
+                  </InputGroup.Text>
+                  <EndPointFormControl
+                    endpoint={furnaceEndPoint}
+                    type="number"
+                    fullpath={pid+"/derivative"}
+                    disabled={connectedPuttingDisable}>
+                  </EndPointFormControl>
+                </InputGroup>
+              </Col>
+              <Col xs={12} md={6}>
+                <Row>
+                  <Stack>
+                  <InputGroup>
+                    <InputGroup.Text style={{width:labelWidth}}>
+                      Set Pt. In
+                    </InputGroup.Text>
+                    <EndPointFormControl
+                      endpoint={furnaceEndPoint}
+                      type="number"
+                      fullpath={pid+"/setpoint"}
+                      disabled={connectedPuttingDisable}>
+                    </EndPointFormControl>
+                  </InputGroup>
+                  <InputGroup>
+                    <InputGroup.Text style={{width: labelWidth}}>
+                      Set Pt Out
+                    </InputGroup.Text>
+                    <InputGroup.Text style={{
+                      width: labelWidth,
+                      border: '1px solid lightblue',
+                      backgroundColor: '#e0f7ff'
+                    }}>
+                    {
+                      (furnaceEndPoint.data.gradient?.enable ||false) ?
+                      checkNull(furnaceEndPoint.data[pid]?.gradient_setpoint) :
+                      checkNull(furnaceEndPoint.data[pid]?.setpoint)
+                    }
+                    </InputGroup.Text>
+                  </InputGroup>
+                  </Stack>
+                </Row>
+              </Col>
+
+            </Row>
           </Col>
-          <Col>
-          <StatusBox type="info" label="TEMP.">
-            {checkNull(furnaceEndPoint.data[pid]?.temperature)}
-          </StatusBox>
+          <Col xs={4}>
+            <Row>
+                <InputGroup>
+                  <InputGroup.Text style={{width:labelWidth}}>
+                    PID out.:
+                  </InputGroup.Text>
+                  <InputGroup.Text
+                    style={{
+                      width: labelWidth,
+                      border: '1px solid lightblue',
+                      backgroundColor: '#e0f7ff'
+                    }}>
+                      {checkNull(furnaceEndPoint.data[pid]?.output)}
+                  </InputGroup.Text>
+                </InputGroup>
+              </Row>
+            <Row>
+              <InputGroup>
+                <InputGroup.Text style={{width:labelWidth}}>
+                  Volt out.:
+                </InputGroup.Text>
+                <InputGroup.Text
+                  style={{
+                    width: labelWidth,
+                    border: '1px solid lightblue',
+                    backgroundColor: '#e0f7ff'
+                  }}>
+                    {checkNull((furnaceEndPoint.data[pid]?.output) * 10 * 0.8)}
+                </InputGroup.Text>
+              </InputGroup>
+            </Row>
+            <Row>
+              <InputGroup>
+                <InputGroup.Text style={{width:labelWidth}}>
+                  Temp.:
+                </InputGroup.Text>
+                <InputGroup.Text
+                  style={{
+                    width: labelWidth,
+                    border: '1px solid lightblue',
+                    backgroundColor: '#e0f7ff'
+                  }}>
+                    {checkNull((furnaceEndPoint.data[pid]?.output) * 10 * 0.8)}
+                </InputGroup.Text>
+              </InputGroup>
+            </Row>
           </Col>
         </Row>
-        </Container>
       </TitleCard>
     )
 }

@@ -18,8 +18,11 @@ function ThermalGradient(props){
     const {furnaceEndPoint} = props;
     const {connectedPuttingDisable} = props;
 
+    const labelWidth=128;
+    const inputLabelWidth=96;
+
     return (
-        <TitleCard title="Thermal Gradient">
+      <TitleCard title="Thermal Gradient">
         <Container>
         <Row>
           <Col>
@@ -31,27 +34,10 @@ function ThermalGradient(props){
             </EndPointToggle>
           </Col>
         </Row>
-        <Row>
-          <Col>
-            <StatusBox
-              type="info"
-              label="Actual">
-                {checkNull(furnaceEndPoint.data.gradient?.actual)}
-            </StatusBox>
-          <StatusBox
-            type="info"
-            label="Theoretical">
-              {checkNull(furnaceEndPoint.data.gradient?.theoretical)}
-          </StatusBox>
-          <StatusBox
-            type="info"
-            label="Centre Thermocouple">
-              {checkNull(furnaceEndPoint.data.thermocouples?.centre)}
-          </StatusBox>
-          </Col>
+        <Row className="mt-3">
           <Col>
           <InputGroup>
-            <InputGroup.Text>
+            <InputGroup.Text style={{width: inputLabelWidth}}>
               Wanted (K/mm)
             </InputGroup.Text>
             <EndPointFormControl
@@ -62,7 +48,7 @@ function ThermalGradient(props){
             </EndPointFormControl>
           </InputGroup>
           <InputGroup>
-            <InputGroup.Text>
+            <InputGroup.Text style={{width: inputLabelWidth}}>
               Distance (mm)
             </InputGroup.Text>
             <EndPointFormControl
@@ -94,9 +80,47 @@ function ThermalGradient(props){
             </EndpointDropdown>
           </InputGroup>
           </Col>
+          <Col>
+            <InputGroup>
+              <InputGroup.Text style={{width: labelWidth}}>
+                Actual
+              </InputGroup.Text>
+              <InputGroup.Text style={{
+                width: labelWidth,
+                border: '1px solid lightblue',
+                backgroundColor: '#e0f7ff'
+              }}>
+                {checkNull(furnaceEndPoint.data.gradient?.actual)}
+              </InputGroup.Text>
+            </InputGroup>
+            <InputGroup>
+              <InputGroup.Text style={{width: labelWidth}}>
+                Theoretical
+              </InputGroup.Text>
+              <InputGroup.Text style={{
+                width: labelWidth,
+                border: '1px solid lightblue',
+                backgroundColor: '#e0f7ff'
+              }}>
+                {checkNull(furnaceEndPoint.data.gradient?.theoretical)}
+              </InputGroup.Text>
+            </InputGroup>
+            <InputGroup>
+              <InputGroup.Text style={{width: labelWidth}}>
+                Centre Thermocouple
+              </InputGroup.Text>
+              <InputGroup.Text style={{
+                width: labelWidth,
+                border: '1px solid lightblue',
+                backgroundColor: '#e0f7ff'
+              }}>
+                {checkNull(furnaceEndPoint.data.thermocouples?.centre)}
+              </InputGroup.Text>
+            </InputGroup>
+          </Col>
         </Row>
         </Container>
-    </TitleCard>
+      </TitleCard>
     )
 }
 

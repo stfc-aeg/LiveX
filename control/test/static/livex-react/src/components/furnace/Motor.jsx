@@ -19,6 +19,7 @@ function Motor(props){
     const {connectedPuttingDisable} = props;
 
     const motorDirections = ['Down', 'Up'];
+    const labelWidth=80;
 
     return (
       <TitleCard title="Motor Controls">
@@ -35,13 +36,20 @@ function Motor(props){
               </EndPointToggle>
             </Col>
           </Row>
-          <Row>
+          <Row className="mt-3">
             <Col>
-              <StatusBox
-              type="info"
-              label="LVDT (mm)">
-                {checkNull(furnaceEndPoint.data.motor?.lvdt)}
-              </StatusBox>
+              <InputGroup>
+                <InputGroup.Text style={{width: labelWidth}}>
+                  LVDT (mm)
+                </InputGroup.Text>
+                <InputGroup.Text style={{
+                  width: labelWidth,
+                  border: '1px solid lightblue',
+                  backgroundColor: '#e0f7ff'
+                  }}>
+                  {checkNull(furnaceEndPoint.data.motor?.lvdt)}
+                </InputGroup.Text>
+              </InputGroup>
             </Col>
             <Col>
               <InputGroup>
