@@ -1,7 +1,11 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+// DEBUG outputs some internal values to ensure correct sending/calculation
 #define DEBUG true
+// PID_DEBUG changes the TCP object sent to be PID calculated values
+// Ensure that the adapter also has this set, otherwise reading TCP values may throw errors.
+#define PID_DEBUG false
 
 // Invert output pid analogwrite signal (does not alter output in UI)
 #define INVERT_OUTPUT_SIGNAL false
@@ -13,7 +17,7 @@
 #define LOG_INTERRUPTS_INTERVAL 50
 
 // Timeout (no modbus connection) in ms
-#define INTERVAL_TIMEOUT 30000
+#define INTERVAL_TIMEOUT 10000
 
 // For the internal timer. Set to 50Hz here, other rates should be managed via external trigger.
 #define TIMER_PID 20000
@@ -24,7 +28,7 @@
 #define PID_KP_DEFAULT       25.5
 #define PID_KI_DEFAULT       5.0
 #define PID_KD_DEFAULT       0.1
-#define PID_OUTPUT_LIMIT     4095
+#define PID_OUTPUT_LIMIT     1
 
 // Modbus setup/addresses
 

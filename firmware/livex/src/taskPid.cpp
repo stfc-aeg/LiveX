@@ -4,6 +4,7 @@
 // void thermalGradient();
 // void autoSetPointControl();
 void runPID(String pid);
+void fillPidDebugBuffer(DebugBufferObject& obj);
 
 // Task to be run on core 0 to control devices.
 // This includes the PID operation, motor driving, and calculation of thermal gradient and auto set point control.
@@ -47,21 +48,29 @@ void Core0PIDTask(void * pvParameters)
           counter = 1;
           acquiringFlag = true;
         }
-        // Construct object
-        BufferObject obj;
-        obj.counter = counter;
-        obj.temperatureA = PID_A.input;
-        obj.temperatureB = PID_B.input;
+        if (PID_DEBUG)
+        {
+          // DEBUG object
+          float error = PID_A.setPoint - PID_A.input;
+          DebugBufferObject obj;
+          fillPidDebugBuffer(obj); // Convenience/readability function
+          // Queue only if there is room in the buffer
+          if (debugbuffer.isFull()) { /* Serial.print("."); */ }
+          else { debugbuffer.enqueue(&obj); }
+        }
+        else // The default case
+        {
+          // Data object for 
+          BufferObject obj;
+          obj.counter = counter;
+          obj.temperatureA = PID_A.input;
+          obj.temperatureB = PID_B.input;
+          
+          // Queue only if there is room in the buffer
+          if (buffer.isFull()) { /* Serial.print("."); */ }
+          else { buffer.enqueue(&obj); }
+        }
 
-        // Queue only if there is room in the buffer
-        if (buffer.isFull())
-        {
-          // Serial.print(".");
-        }
-        else
-        {
-          buffer.enqueue(&obj);
-        }
       }
       else
       {
@@ -150,17 +159,26 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
     // Calculate PID output. When PID is not enabled, this won't do anything
     PID->run();
 
+    // Power is now on a scale of 0->1
+    // The value output is still 0->4095 bits representing 0->10V
+    // But we want to scale this down to 80% of the available range
+    float out = 4095 * PID->output;
+    out = out * 0.8;
+
+    // Scale power output down, giving it a soft limit of 80% of its calculation
+    // PID->output = PID->output * 0.8;
+
     // Write PID output. When PID is not enabled, 
     modbus_server.floatToInputRegisters(addr.modPidOutputInp, PID->output);
 
     if (INVERT_OUTPUT_SIGNAL)
     {
-      float inv_output = PID_OUTPUT_LIMIT - PID->output;
+      float inv_output = 4095 - out;
       gpio.analogWrite(addr.outputPin, inv_output);
     }
     else
     {
-      gpio.analogWrite(addr.outputPin, PID->output);
+      gpio.analogWrite(addr.outputPin, out);
     }
 
     // Check autosp enable status. If enabled, add rate to setpoint via holding register
@@ -173,4 +191,29 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
       modbus_server.floatToInputRegisters(addr.modGradSetPointHold, PID->gradientSetPoint);
     }
   }
+}
+
+// Take a DebugBufferObject and populate it with PID attributes.
+void fillPidDebugBuffer(DebugBufferObject& obj)
+{
+    obj.counter = counter;
+    // PID_A calculations
+    float error = PID_A.setPoint - PID_A.input;
+    obj.temperatureA = PID_A.input;
+    obj.lastInputA = PID_A.myPID_.GetLastInput();
+    obj.outputA = PID_A.output;
+    obj.outputSumA = PID_A.myPID_.GetOutputSum();
+    obj.kpA = PID_A.myPID_.GetKp() * error;
+    obj.kiA = PID_A.myPID_.GetKi() * error;
+    obj.kdA = PID_A.myPID_.GetKd() * (PID_A.input - PID_A.myPID_.GetLastInput());
+
+    // PID_B calculations
+    error = PID_B.setPoint - PID_B.input;
+    obj.temperatureB = PID_B.input;
+    obj.lastInputB = PID_B.myPID_.GetLastInput();
+    obj.outputB = PID_B.output;
+    obj.outputSumB = PID_B.myPID_.GetOutputSum();
+    obj.kpB = PID_B.myPID_.GetKp() * error;
+    obj.kiB = PID_B.myPID_.GetKi() * error;
+    obj.kdB = PID_B.myPID_.GetKd() * (PID_B.input - PID_B.myPID_.GetLastInput());
 }

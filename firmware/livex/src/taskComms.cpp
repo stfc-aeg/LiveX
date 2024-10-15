@@ -68,11 +68,24 @@ void manageComms()
     // Serial.print(".");
 
     // Dequeue object, if its not a nullptr, write its data out
-    BufferObject* dequeued = buffer.dequeue();
-    if (dequeued != nullptr)
+    if (PID_DEBUG)
     {
-      tcpEthServer.write((uint8_t*)dequeued, sizeof(BufferObject));
+      
+      DebugBufferObject* dequeued = debugbuffer.dequeue();
+      if (dequeued != nullptr)
+      {
+        tcpEthServer.write((uint8_t*)dequeued, sizeof(DebugBufferObject));
+      }
     }
+    else
+    {
+      BufferObject* dequeued = buffer.dequeue();
+      if (dequeued != nullptr)
+      {
+        tcpEthServer.write((uint8_t*)dequeued, sizeof(BufferObject));
+      }
+    }
+
   }
   else
   {

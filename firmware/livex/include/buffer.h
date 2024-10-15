@@ -10,6 +10,27 @@ struct BufferObject
     float temperatureB;
 };
 
+struct DebugBufferObject
+{
+    float counter;
+    // PID A attributes
+    float temperatureA;
+    float outputA;
+    float kpA;
+    float kiA;
+    float kdA;
+    float lastInputA;
+    float outputSumA;
+    // PID B attributes
+    float temperatureB;
+    float outputB;
+    float kpB;
+    float kiB;
+    float kdB;
+    float lastInputB;
+    float outputSumB;
+};
+
 template<typename T>
 class FifoBuffer
 {

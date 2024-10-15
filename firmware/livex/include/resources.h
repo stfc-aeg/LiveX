@@ -31,6 +31,7 @@ extern EthernetServer modbusEthServer;
 extern EthernetServer tcpEthServer;
 extern ModbusServerController modbus_server;
 extern FifoBuffer<BufferObject> buffer;
+extern FifoBuffer<DebugBufferObject> debugbuffer;
 extern ExpandedGpio gpio; // not used in comms
 
 extern SemaphoreHandle_t gradientAspcMutex;

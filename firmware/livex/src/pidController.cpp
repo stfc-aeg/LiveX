@@ -22,10 +22,7 @@ PIDController::PIDController(PIDAddresses addr) : myPID_(&input, &output, &setPo
 
 void PIDController::run()
 {
-    // TODO consider how pid logic needs to change
     myPID_.Compute();
-
-    // TODO likely also need a 'recreate PID' function in this class
 }
 
  // Check if PID terms in registers are different, and set them accordingly
