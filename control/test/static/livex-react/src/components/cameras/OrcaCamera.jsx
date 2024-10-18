@@ -49,6 +49,8 @@ function OrcaCamera(props) {
         10, 25, 50, 75, 100
     ];
 
+    const labelWidth = 64;
+
     // Handle image data
     const [width, setWidth] = useState('');
     const [height, setHeight] = useState('');
@@ -65,63 +67,85 @@ function OrcaCamera(props) {
         setDimensions([newWidth, height]);
     };
 
+    /* The titlecard buttons have variable output, display, and colour, depending on the camera status.
+    Example, when the camera isn't connected, you can connect. If it's connected, you can disconnect.
+    When capturing, that button is disabled - you need to move it out of that state first.*/
     return (
         <Container>
-          <TitleCard title={orcaEndPoint?.data[name]?.camera_name + " control"}>
-            <Col>
+          <TitleCard title={
             <Row>
-              <Col xs={4}>
-                <StatusBox as="span" label="Status">
-                  {(orcaStatus || "Not found" )}
-                </StatusBox>
-                <StatusBox label="Frame count">
-                  {checkNullNoDp(orcaEndPoint?.data[name]?.status.frame_number)}
-                </StatusBox>
-              </Col>
-              {/* These buttons have variable output, display, and colour, depending on the camera status.
-              Example, when the camera isn't connected, you can connect. If it's connected, you can disconnect.
-              When capturing, that button is disabled - you need to move it out of that state first.*/}
-              <Col>
-              {orcaConnected ? (
-              <Row>
-              <Col>
-                <EndPointButton // Move between statuses 1 and 0
-                  endpoint={orcaEndPoint}
-                  value={orcaStatus!==status[0] ? "disconnect" : "connect"}
-                  fullpath="command"
-                  event_type="click"
-                  disabled={![status[1], status[0]].includes(orcaStatus)}
-                  variant={orcaStatus!==status[0] ? "warning" : "success"}>
-                    {orcaStatus!==status[0] ? 'Disconnect' : 'Connect'}
-                </EndPointButton>
+              <Col xs={3} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>
+                {orcaEndPoint?.data[name]?.camera_name + " control"}
               </Col>
               <Col>
-                <EndPointButton // Move between statuses 3 and 1
-                  endpoint={orcaEndPoint}
-                  value={orcaStatus===status[2] ? "end_capture" : "capture"}
-                  fullpath="command"
-                  event_type="click"
-                  disabled={![status[2], status[1]].includes(orcaStatus)}
-                  variant={orcaStatus===status[2] ? "warning" : "success"}>
-                  {orcaStatus===status[2] ? 'Stop Capturing' : 'Capture'}
-                </EndPointButton>
+                {orcaConnected ? (
+                <Row>
+                  <Col xs={3}>
+                    <EndPointButton // Move between statuses 1 and 0
+                      endpoint={orcaEndPoint}
+                      value={orcaStatus!==status[0] ? "disconnect" : "connect"}
+                      fullpath="command"
+                      event_type="click"
+                      disabled={![status[1], status[0]].includes(orcaStatus)}
+                      variant={orcaStatus!==status[0] ? "warning" : "success"}>
+                        {orcaStatus!==status[0] ? 'Disconnect' : 'Connect'}
+                    </EndPointButton>
+                  </Col>
+                  <Col xs={3}>
+                    <EndPointButton // Move between statuses 3 and 1
+                      endpoint={orcaEndPoint}
+                      value={orcaStatus===status[2] ? "end_capture" : "capture"}
+                      fullpath="command"
+                      event_type="click"
+                      disabled={![status[2], status[1]].includes(orcaStatus)}
+                      variant={orcaStatus===status[2] ? "warning" : "success"}>
+                      {orcaStatus===status[2] ? 'Stop Capturing' : 'Capture'}
+                    </EndPointButton>
+                  </Col>
+                </Row>
+                ) : (
+                <Col>
+                  <EndPointButton
+                    endpoint={orcaEndPoint}
+                    value={true}
+                    fullpath="connection/reconnect"
+                    event_type="click"
+                    disabled={orcaConnected}
+                    variant={orcaConnected ? "info" : "danger"}>
+                    {orcaConnected ? 'Connected' : 'Reconnect'}
+                  </EndPointButton>
+                </Col>
+                )}
               </Col>
-              </Row>
-              ) : (
-              <Col>
-                <EndPointButton
-                  endpoint={orcaEndPoint}
-                  value={true}
-                  fullpath="connection/reconnect"
-                  event_type="click"
-                  disabled={orcaConnected}
-                  variant={orcaConnected ? "info" : "danger"}>
-                  {orcaConnected ? 'Connected' : 'Reconnect'}
-                </EndPointButton>
-              </Col>
-              )}
-            </Col>
             </Row>
+          }>
+            <Col>
+              <Row className="mb-3">
+                <Col xs={6}>
+                  <InputGroup>
+                    <InputGroup.Text>Status</InputGroup.Text>
+                    <InputGroup.Text style={{
+                      width: labelWidth,
+                      border: '1px solid lightblue',
+                      backgroundColor: '#e0f7ff'
+                    }}>
+                        {(orcaStatus || "Not found")}
+                    </InputGroup.Text>
+                  </InputGroup>
+                </Col>
+                <Col xs={6}>
+                  <InputGroup>
+                    <InputGroup.Text>Frame count</InputGroup.Text>
+                    <InputGroup.Text style={{
+                      width: labelWidth,
+                      border: '1px solid lightblue',
+                      backgroundColor: '#e0f7ff'
+                    }}>
+                        {checkNullNoDp(orcaEndPoint?.data[name]?.status.frame_number)}
+                    </InputGroup.Text>
+                  </InputGroup>
+                </Col>
+              </Row>
               <Stack>
               <InputGroup>
                 <InputGroup.Text>

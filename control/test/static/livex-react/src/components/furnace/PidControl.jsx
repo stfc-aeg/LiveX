@@ -5,7 +5,7 @@ import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import { TitleCard, WithEndpoint, ToggleSwitch, StatusBox } from 'odin-react';
-
+import Card from 'react-bootstrap/Card';
 import { checkNull  } from '../../utils';
 
 const EndPointFormControl = WithEndpoint(Form.Control);
@@ -23,11 +23,11 @@ function PidControl(props) {
     const pidLabelWidth = 72;
 
     return (
-      <TitleCard title={title} type="warning">
-        <Row>
-          <Col xs={6} sm={8} md={8} lg={8} xl={8} xxl={8}>
-          <Container>
-            <Row>
+      <TitleCard
+        title={
+          <Row>
+            <Col xs={3} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>{title}</Col>
+            <Col xs={3}>
               <EndPointToggle
                 endpoint={furnaceEndPoint}
                 fullpath={pid+"/enable"}
@@ -36,11 +36,14 @@ function PidControl(props) {
                 label="Enable"
                 disabled={connectedPuttingDisable}>
               </EndPointToggle>
-            </Row>
-          </Container>
+            </Col>
+          </Row>
+        }>
+        <Row>
+          <Col xs={6} sm={8} md={8} lg={8} xl={8} xxl={8}>
             <Row>
               <Col xs={12} md={6}>
-                <Row className="mt-4">
+                <Row>
                   <InputGroup>
                     <InputGroup.Text style={{width:pidLabelWidth}}>
                       Proportional
@@ -77,7 +80,7 @@ function PidControl(props) {
                 </Row>
               </Col>
               <Col xs={12} md={6}>
-                <Row className="mt-4">
+                <Row>
                   <InputGroup>
                     <InputGroup.Text style={{width:labelWidth}}>
                       Set Pt. In

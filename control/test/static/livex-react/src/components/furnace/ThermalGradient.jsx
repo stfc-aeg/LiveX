@@ -22,9 +22,10 @@ function ThermalGradient(props){
     const inputLabelWidth=96;
 
     return (
-      <TitleCard title="Thermal Gradient">
+      <TitleCard title={
         <Row>
-          <Col>
+          <Col xs={3} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>Thermal Gradient</Col>
+          <Col xs={3}>
             <EndPointToggle 
               endpoint={furnaceEndPoint}
               fullpath="gradient/enable"
@@ -33,7 +34,9 @@ function ThermalGradient(props){
             </EndPointToggle>
           </Col>
         </Row>
-        <Row className="mt-3">
+      }>
+
+        <Row>
           <Col>
           <InputGroup>
             <InputGroup.Text style={{width: inputLabelWidth}}>
