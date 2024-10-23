@@ -88,6 +88,7 @@ function Trigger(props) {
                         type="number"
                         fullpath={"acquisition/time"}
                         value={liveXEndPoint.data.acquisition?.time}
+                        event_type="enter"
                         disabled={timeFrameValue==='frame' || timeFrameValue==='free'}
                         style={{border: timeFrameValue==='time' ? '1px solid #00cc00' : undefined}}>
                       </EndPointFormControl>
@@ -132,6 +133,7 @@ function Trigger(props) {
                           endpoint={liveXEndPoint}
                           type="number"
                           fullpath={`acquisition/frequencies/${key}`}
+                          event_type="enter"
                           value={data.frequency}>
                         </EndPointFormControl>
                       </InputGroup>
@@ -144,6 +146,7 @@ function Trigger(props) {
                             endpoint={liveXEndPoint}
                             type="number"
                             fullpath={'acquisition/frame_target'}
+                            event_type="enter"
                             value={data.target}
                             disabled={timeFrameValue==='time' || timeFrameValue==='free'}
                             style={{

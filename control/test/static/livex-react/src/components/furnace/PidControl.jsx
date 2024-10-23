@@ -52,6 +52,7 @@ function PidControl(props) {
                       endpoint={furnaceEndPoint}
                       type="number"
                       fullpath={pid+"/proportional"}
+                      event_type="enter"
                       disabled={connectedPuttingDisable}>
                     </EndPointFormControl>
                   </InputGroup>
@@ -63,6 +64,7 @@ function PidControl(props) {
                       endpoint={furnaceEndPoint}
                       type="number"
                       fullpath={pid+"/integral"}
+                      event_type="enter"
                       disabled={connectedPuttingDisable}>
                     </EndPointFormControl>
                   </InputGroup>
@@ -74,6 +76,7 @@ function PidControl(props) {
                       endpoint={furnaceEndPoint}
                       type="number"
                       fullpath={pid+"/derivative"}
+                      event_type="enter"
                       disabled={connectedPuttingDisable}>
                     </EndPointFormControl>
                   </InputGroup>
@@ -89,6 +92,7 @@ function PidControl(props) {
                       endpoint={furnaceEndPoint}
                       type="number"
                       fullpath={pid+"/setpoint"}
+                      event_type="enter"
                       disabled={connectedPuttingDisable}>
                     </EndPointFormControl>
                   </InputGroup>

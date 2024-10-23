@@ -46,6 +46,7 @@ function AutoSetPointControl(props){
                   endpoint={furnaceEndPoint}
                   type="number"
                   fullpath="autosp/rate"
+                  event_type="enter"
                   disabled={connectedPuttingDisable}>
                 </EndPointFormControl>
               </InputGroup>

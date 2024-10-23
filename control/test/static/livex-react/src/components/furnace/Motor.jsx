@@ -47,6 +47,7 @@ function Motor(props){
                 endpoint={furnaceEndPoint}
                 type="number"
                 fullpath="motor/speed"
+                event_type="enter"
                 disabled={connectedPuttingDisable}>
               </EndPointFormControl>
             </InputGroup>

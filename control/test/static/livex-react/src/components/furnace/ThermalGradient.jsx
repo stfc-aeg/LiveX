@@ -46,6 +46,7 @@ function ThermalGradient(props){
               endpoint={furnaceEndPoint}
               type="number"
               fullpath="gradient/wanted"
+              event_type="enter"
               disabled={connectedPuttingDisable}>
             </EndPointFormControl>
           </InputGroup>
@@ -57,6 +58,7 @@ function ThermalGradient(props){
               endpoint={furnaceEndPoint}
               type="number"
               fullpath="gradient/distance"
+              event_type="enter"
               disabled={connectedPuttingDisable}>
             </EndPointFormControl>
           </InputGroup>

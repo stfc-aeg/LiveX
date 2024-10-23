@@ -155,6 +155,7 @@ function OrcaCamera(props) {
                   endpoint={orcaEndPoint}
                   type="text"
                   fullpath="command"
+                  event_type="enter"
                   disabled={connectedPuttingDisable}>
                 </EndPointFormControl>
               </InputGroup>
@@ -169,6 +170,7 @@ function OrcaCamera(props) {
                     endpoint={orcaEndPoint}
                     type="number"
                     fullpath="config/exposure_time"
+                    event_type="enter"
                     disabled={connectedPuttingDisable}>
                 </EndPointFormControl>
               </InputGroup>

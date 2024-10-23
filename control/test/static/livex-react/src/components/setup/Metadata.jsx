@@ -154,6 +154,7 @@ function Metadata(props) {
                     endpoint={metadataEndPoint}
                     type="text"
                     fullpath={"fields/"+key+"/value"}
+                    event_type="enter"
                     value={currentValue}
                     as="textarea"
                     rows="5"
@@ -173,6 +174,7 @@ function Metadata(props) {
                   endpoint={metadataEndPoint}
                   type="text"
                   fullpath={"fields/"+key+"/value"}
+                  event_type="enter"
                   value={currentValue}>
                 </EndPointFormControl>
               </InputGroup>
