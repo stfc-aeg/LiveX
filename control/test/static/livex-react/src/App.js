@@ -11,9 +11,10 @@ import Button from 'react-bootstrap/Button';
 import PidControl from './components/furnace/PidControl';
 import ThermalGradient from './components/furnace/ThermalGradient';
 import AutoSetPointControl from './components/furnace/AutoSetPointControl';
+import FurnaceRecording from './components/furnace/FurnaceRecording';
 import Motor from './components/furnace/Motor';
 import React from "react";
-import { TitleCard, StatusBox, OdinApp } from 'odin-react';
+import { OdinApp } from 'odin-react';
 import { WithEndpoint, useAdapterEndpoint } from 'odin-react';
 import Metadata from './components/setup/Metadata';
 import Cameras from './components/cameras/Cameras';
@@ -41,7 +42,7 @@ function App(props) {
           </Metadata>
         </Col>
         <Col xs={12}>
-        <Trigger
+          <Trigger
             endpoint_url={endpoint_url}>
           </Trigger>
         </Col>
@@ -90,28 +91,10 @@ function App(props) {
             pid="pid_b">
           </PidControl>
 
-          <TitleCard title="'Acquisition card'">
-            <Container>
-              <Row>
-              <EndPointButton
-                endpoint={furnaceEndPoint}
-                fullpath={"tcp/acquire"}
-                value={furnaceEndPoint.data.tcp?.acquire ? false : true}
-                event_type="click"
-                disable={connectedPuttingDisable}
-                variant={furnaceEndPoint.data.tcp?.acquire ? "danger" : "success" }>
-                  {furnaceEndPoint.data.tcp?.acquire ? "Stop acquisition" : "Start acquisition"}
-              </EndPointButton>
-              <Col>
-              <Row>
-                <StatusBox as="span" type="info" label="reading">
-                  {furnaceEndPoint.data.tcp?.tcp_reading?.counter}{furnaceEndPoint.data.tcp?.tcp_reading?.temperature_a}
-                </StatusBox>
-                </Row>
-                </Col>
-              </Row>
-            </Container>
-          </TitleCard>
+          <FurnaceRecording
+            furnaceEndPoint={furnaceEndPoint}>
+          </FurnaceRecording>
+
         </Col>
         <Col lg={6} xl={6} xxl={6}>
           <ThermalGradient
