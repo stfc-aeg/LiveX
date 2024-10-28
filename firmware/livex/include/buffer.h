@@ -14,21 +14,23 @@ struct DebugBufferObject
 {
     float counter;
     // PID A attributes
-    float temperatureA;
-    float outputA;
-    float kpA;
-    float kiA;
-    float kdA;
-    float lastInputA;
-    float outputSumA;
+    float temperature_a;
+    float output_a;
+    float kp_a;
+    float ki_a;
+    float kd_a;
+    float lastInput_a;
+    float outputSum_a;
+    float setpoint_a;
     // PID B attributes
-    float temperatureB;
-    float outputB;
-    float kpB;
-    float kiB;
-    float kdB;
-    float lastInputB;
-    float outputSumB;
+    float temperature_b;
+    float output_b;
+    float kp_b;
+    float ki_b;
+    float kd_b;
+    float lastInput_b;
+    float outputSum_b;
+    float setpoint_b;
 };
 
 template<typename T>

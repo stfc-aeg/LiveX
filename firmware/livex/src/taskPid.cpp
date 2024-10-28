@@ -15,6 +15,10 @@ void Core0PIDTask(void * pvParameters)
   Serial.println(xPortGetCoreID());
   delay(1000);
 
+  // Without triggers, this task sets off the watchdog timer.
+  // Core 1, loop()/manageComms(), services it automatically, so we can just turn it off here.
+  disableCore0WDT();
+
   for(;;)
   {
     if (pidFlag)
@@ -77,7 +81,6 @@ void Core0PIDTask(void * pvParameters)
         // Counter will be set to 1 when starting acquisition
         acquiringFlag = false;
       }
-
       // Semaphore needed for all PID runs as gradient/ASPC calculations are used
       xSemaphoreTake(gradientAspcMutex, portMAX_DELAY);
       runPID(A);
@@ -87,7 +90,6 @@ void Core0PIDTask(void * pvParameters)
       // Set flag back to false for timer
       pidFlag=false;
     }
-
     /*
       Secondary flag is gone, 'moved' to TaskComms. No timer anymore
       This task just waits for the pidFlag.
@@ -199,21 +201,23 @@ void fillPidDebugBuffer(DebugBufferObject& obj)
     obj.counter = counter;
     // PID_A calculations
     float error = PID_A.setPoint - PID_A.input;
-    obj.temperatureA = PID_A.input;
-    obj.lastInputA = PID_A.myPID_.GetLastInput();
-    obj.outputA = PID_A.output;
-    obj.outputSumA = PID_A.myPID_.GetOutputSum();
-    obj.kpA = PID_A.myPID_.GetKp() * error;
-    obj.kiA = PID_A.myPID_.GetKi() * error;
-    obj.kdA = PID_A.myPID_.GetKd() * (PID_A.input - PID_A.myPID_.GetLastInput());
+    obj.temperature_a = PID_A.input;
+    obj.lastInput_a = PID_A.myPID_.GetLastInput(); 
+    obj.output_a = PID_A.output;
+    obj.outputSum_a = PID_A.myPID_.GetOutputSum();
+    obj.kp_a = PID_A.myPID_.GetKp() * error;
+    obj.ki_a = PID_A.myPID_.GetKi() * error;
+    obj.kd_a = PID_A.myPID_.GetKd() * (PID_A.input - PID_A.myPID_.GetLastInput());
+    obj.setpoint_a = PID_A.setPoint;
 
     // PID_B calculations
     error = PID_B.setPoint - PID_B.input;
-    obj.temperatureB = PID_B.input;
-    obj.lastInputB = PID_B.myPID_.GetLastInput();
-    obj.outputB = PID_B.output;
-    obj.outputSumB = PID_B.myPID_.GetOutputSum();
-    obj.kpB = PID_B.myPID_.GetKp() * error;
-    obj.kiB = PID_B.myPID_.GetKi() * error;
-    obj.kdB = PID_B.myPID_.GetKd() * (PID_B.input - PID_B.myPID_.GetLastInput());
+    obj.temperature_b = PID_B.input;
+    obj.lastInput_b = PID_B.myPID_.GetLastInput();
+    obj.output_b = PID_B.output;
+    obj.outputSum_b = PID_B.myPID_.GetOutputSum();
+    obj.kp_b = PID_B.myPID_.GetKp() * error;
+    obj.ki_b = PID_B.myPID_.GetKi() * error;
+    obj.kd_b = PID_B.myPID_.GetKd() * (PID_B.input - PID_B.myPID_.GetLastInput());
+    obj.setpoint_b = PID_B.setPoint;
 }

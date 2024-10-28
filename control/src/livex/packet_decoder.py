@@ -9,13 +9,13 @@ class LiveXPacketDecoder(struct.Struct):
         :param pid_debug: bool dictating whether to unpack debugging data or normal datas
         """
         if pid_debug:
-            super().__init__('f fffffff fffffff')  # counter, then 7 for each
+            super().__init__('f ffffffff ffffffff')  # counter, then 7 for each
 
             # Values
             self.keys = [
                 'counter',
-                'temperatureA', 'outputA', 'kpA', 'kiA', 'kdA', 'lastInputA', 'outputSumA',
-                'temperatureB', 'outputB', 'kpB', 'kiB', 'kdB', 'lastInputB', 'outputSumB'
+                'temperature_a', 'output_a', 'kp_a', 'ki_a', 'kd_a', 'lastInputA_a', 'outputSum_a', 'setpoint_a'
+                'temperature_b', 'output_b', 'kp_b', 'ki_b', 'kd_b', 'lastInput_b', 'outputSum_b', 'setpoint_a'
             ]
         else:
             super().__init__('fff')

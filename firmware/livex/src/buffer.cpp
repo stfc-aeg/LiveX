@@ -56,10 +56,3 @@ private:
     size_t maxSize;
     size_t front, back, count;
 };
-
-struct BufferObject
-{
-    float counter;
-    float temperatureA;
-    float temperatureB;
-};
