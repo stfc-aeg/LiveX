@@ -135,9 +135,24 @@ class TriggerController(BaseController):
             for name, trigger in self.triggers.items():
                 trigger._get_parameters()
 
-    def set_all_timers(self, value):
-        """Enable or disable all timers."""
-        self.all_triggers_enable = bool(value)
+    def set_all_timers(self, values):
+        """Enable or disable all timers.
+        :param values: list of needed values. (bool) enable, (bool) freerun (0 target)
+        """
+        enable = values[0]
+        freerun = values[1]
+        self.all_triggers_enable = bool(enable)
+
+        # If freerun, write the target as 0 to the trigger without setting the target count.
+        # This is to avoid users needing to re-enter the value if the change their mind.
+        # The acquisition start still overrides the target if freerun is enabled.
+        if freerun:
+            for trigger in self.triggers.values():
+                write_modbus_float(self.mod_client, 0, trigger.addr['target_hold'])
+        else:
+            for trigger in self.triggers.values():
+                write_modbus_float(self.mod_client, trigger.target, trigger.addr['target_hold'])
+
         if self.all_triggers_enable:
             logging.debug("Enabling all timers.")
             write_coil(self.mod_client, modAddr.trig_enable_coil, True)

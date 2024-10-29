@@ -134,7 +134,9 @@ class LiveXController(BaseController):
         })
 
     def start_acquisition(self, freerun=False):
-        """Start an acquisition. Disable timers, configure all values, then start timers simultaneously."""
+        """Start an acquisition. Disable timers, configure all values, then start timers simultaneously.
+        :param freerun: bool deciding if frame target is overridden to 0 for indefinite capture
+        """
         self.acquiring = True
 
         # experiment id is the campaign name plus an incrementing suffix (the acquisition_number)

@@ -105,7 +105,10 @@ function Trigger(props) {
                     <EndPointButton
                         endpoint={triggerEndPoint}
                         fullpath={"all_timers_enable"}
-                        value={true}
+                        value={[
+                          true,
+                          timeFrameValue==='free' ? true : false
+                        ]}
                         event_type="click"
                       >
                         Start all
@@ -113,7 +116,10 @@ function Trigger(props) {
                       <EndPointButton
                         endpoint={triggerEndPoint}
                         fullpath={"all_timers_enable"}
-                        value={false}
+                        value={[
+                          false, 
+                          timeFrameValue==='free' ? true : false
+                        ]}
                         event_type="click"
                         variant='danger'
                       >
@@ -193,8 +199,8 @@ function Trigger(props) {
             <Row>
               <EndPointButton style={{}}
                 endpoint={liveXEndPoint}
-                fullpath={"acquisition/acquiring"}
-                value={liveXEndPoint.data.acquisition?.acquiring ? false : true}
+                fullpath={liveXEndPoint.data.acquisition?.acquiring ? "acquisition/stop" : "acquisition/start"}
+                value={timeFrameValue==='free' ? true : false}
                 event_type="click"
                 variant={liveXEndPoint.data.acquisition?.acquiring ? "danger" : "success" }>
                   {liveXEndPoint.data.acquisition?.acquiring ? "Stop acquisition" : "Start acquisition"}
