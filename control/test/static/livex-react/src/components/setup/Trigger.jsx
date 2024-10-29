@@ -105,10 +105,10 @@ function Trigger(props) {
                     <EndPointButton
                         endpoint={triggerEndPoint}
                         fullpath={"all_timers_enable"}
-                        value={[
-                          true,
-                          timeFrameValue==='free' ? true : false
-                        ]}
+                        value={{
+                          'enable': true,
+                          'freerun': timeFrameValue==='free' ? true : false
+                        }}
                         event_type="click"
                       >
                         Start all
@@ -116,10 +116,10 @@ function Trigger(props) {
                       <EndPointButton
                         endpoint={triggerEndPoint}
                         fullpath={"all_timers_enable"}
-                        value={[
-                          false, 
-                          timeFrameValue==='free' ? true : false
-                        ]}
+                        value={{
+                          'enable': false,
+                          'freerun': timeFrameValue==='free' ? true : false
+                        }}
                         event_type="click"
                         variant='danger'
                       >

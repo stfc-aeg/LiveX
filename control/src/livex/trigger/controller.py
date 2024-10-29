@@ -137,10 +137,10 @@ class TriggerController(BaseController):
 
     def set_all_timers(self, values):
         """Enable or disable all timers.
-        :param values: list of needed values. (bool) enable, (bool) freerun (0 target)
+        :param values: dict/obj of needed values. (bool) enable, (bool) freerun
         """
-        enable = values[0]
-        freerun = values[1]
+        enable = values['enable']
+        freerun = values['freerun']
         self.all_triggers_enable = bool(enable)
 
         # If freerun, write the target as 0 to the trigger without setting the target count.
