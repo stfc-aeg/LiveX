@@ -55,6 +55,18 @@ function OrcaCamera(props) {
     const [width, setWidth] = useState('');
     const [height, setHeight] = useState('');
     const [dimensions, setDimensions] = useState('');
+    const [rotation, setRotation] = useState(0);
+
+    const rotateClockwise = () => {
+      console.log(`prev rotation: ${rotation}`);
+      console.log(`new rotation: ${rotation+90}`);
+      setRotation((prevRotation) => prevRotation+90);
+    };
+    const rotateAntiClockwise = () => {
+      console.log(`prev rotation: ${rotation}`);
+      console.log(`new rotation: ${rotation-90}`);
+      setRotation((prevRotation) => prevRotation-90);
+    };
 
     const heightChange = (e) => {
         let newHeight = e.target.value;
@@ -178,25 +190,36 @@ function OrcaCamera(props) {
 
               <TitleCard title={`${orcaEndPoint?.data[name]?.camera_name} preview`}>
                 <Row>
-
-                <ClickableImage
-                  endpoint={liveViewEndPoint}
-                  imgSrc={liveViewData?.image?.data}
-                  fullpath="image"
-                  paramToUpdate="roi"
-                  valuesAsPercentages={true}>
-                </ClickableImage>
-
-                <ClickableImage
-                  endpoint={liveViewEndPoint}
-                  imgSrc={liveViewData?.image?.histogram}
-                  fullpath="image"
-                  paramToUpdate="clip_range_percent"
-                  maximiseAxis="y"
-                  rectOutlineColour='black'
-                  rectRgbaProperties='rgba(50,50,50,0.05)'
-                  valuesAsPercentages={true}>
-                </ClickableImage>
+                  <ClickableImage
+                    id={`image-${name}`}
+                    endpoint={liveViewEndPoint}
+                    imgSrc={liveViewData?.image?.data}
+                    fullpath="image"
+                    paramToUpdate="roi"
+                    valuesAsPercentages={true}
+                    style={{
+                      transform: `rotate(${rotation}deg)`
+                    }}>
+                  </ClickableImage>
+                  </Row>
+                  <Row>
+                  <ClickableImage
+                    id={`histogram-${name}`}
+                    endpoint={liveViewEndPoint}
+                    imgSrc={liveViewData?.image?.histogram}
+                    fullpath="image"
+                    paramToUpdate="clip_range_percent"
+                    maximiseAxis="y"
+                    rectOutlineColour='black'
+                    rectRgbaProperties='rgba(50,50,50,0.05)'
+                    valuesAsPercentages={true}>
+                  </ClickableImage>
+                </Row>
+                <Row>
+                  <Col xs={3}>
+                    <Button onClick={rotateClockwise} variant="outline-secondary">↻</Button>
+                    <Button onClick={rotateAntiClockwise} variant="outline-secondary">↺</Button>
+                  </Col>
                 </Row>
                 <Col>
                 <Form>
