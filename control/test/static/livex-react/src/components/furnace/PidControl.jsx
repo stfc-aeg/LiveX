@@ -121,7 +121,7 @@ function PidControl(props) {
             <Row>
                 <InputGroup>
                   <InputGroup.Text style={{width:labelWidth}}>
-                    PID out.:
+                    PID %.:
                   </InputGroup.Text>
                   <InputGroup.Text
                     style={{
@@ -136,7 +136,7 @@ function PidControl(props) {
             <Row>
               <InputGroup>
                 <InputGroup.Text style={{width:labelWidth}}>
-                  Volt out.:
+                  PLC volt.:
                 </InputGroup.Text>
                 <InputGroup.Text
                   style={{
@@ -144,7 +144,7 @@ function PidControl(props) {
                     border: '1px solid lightblue',
                     backgroundColor: '#e0f7ff'
                   }}>
-                    {checkNull((furnaceEndPoint.data[pid]?.output) * 10 * 0.8)}
+                    {checkNull((furnaceEndPoint.data[pid]?.output) * 0.1 * 0.8)}
                 </InputGroup.Text>
               </InputGroup>
             </Row>
@@ -159,7 +159,7 @@ function PidControl(props) {
                     border: '1px solid lightblue',
                     backgroundColor: '#e0f7ff'
                   }}>
-                    {checkNull((furnaceEndPoint.data[pid]?.output) * 10 * 0.8)}
+                    {checkNull((furnaceEndPoint.data[pid]?.temperature))}
                 </InputGroup.Text>
               </InputGroup>
             </Row>
