@@ -161,21 +161,18 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
     // Calculate PID output. When PID is not enabled, this won't do anything
     PID->run();
 
-    // Power is now on a scale of 0->1
+    // Power is now on a scale of 0->100 (acting as %)
     // The value output is still 0->4095 bits representing 0->10V
     // But we want to scale this down to 80% of the available range
-    float out = 4095 * PID->output;
-    out = out * 0.8;
-
-    // Scale power output down, giving it a soft limit of 80% of its calculation
-    // PID->output = PID->output * 0.8;
+    float out = POWER_OUTPUT_BITS * PID->output / PID_OUTPUT_LIMIT;
+    out = out * POWER_OUTPUT_SCALE;
 
     // Write PID output. When PID is not enabled, 
     modbus_server.floatToInputRegisters(addr.modPidOutputInp, PID->output);
 
     if (INVERT_OUTPUT_SIGNAL)
     {
-      float inv_output = 4095 - out;
+      float inv_output = POWER_OUTPUT_BITS - out;
       gpio.analogWrite(addr.outputPin, inv_output);
     }
     else

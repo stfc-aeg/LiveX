@@ -5,7 +5,7 @@
 #define DEBUG true
 // PID_DEBUG changes the TCP object sent to be PID calculated values
 // Ensure that the adapter also has this set, otherwise reading TCP values may throw errors.
-#define PID_DEBUG false
+#define PID_DEBUG true
 
 // Invert output pid analogwrite signal (does not alter output in UI)
 #define INVERT_OUTPUT_SIGNAL false
@@ -25,10 +25,17 @@
 
 // Default terms for PID controllers
 #define PID_SETPOINT_DEFAULT 25.5
-#define PID_KP_DEFAULT       25.5
-#define PID_KI_DEFAULT       5.0
-#define PID_KD_DEFAULT       0.1
-#define PID_OUTPUT_LIMIT     1
+#define PID_KP_DEFAULT       0.3  // From testing, these values seem coherent/safe
+#define PID_KI_DEFAULT       0.02
+#define PID_KD_DEFAULT       0.0
+
+// MAX # of bits written to relevant power output channel. Min is 0.
+#define POWER_OUTPUT_BITS 4095
+// Scale the output value (0->1*POWER_OUTPUT_BITS) by a 0.1 value. e.g. 0.8 for 80% output
+#define POWER_OUTPUT_SCALE 0.8
+// PID Output is the higher end of the range for this. temporarily moved up here for convenience
+#define PID_OUTPUT_LIMIT 100
+
 
 // Modbus setup/addresses
 

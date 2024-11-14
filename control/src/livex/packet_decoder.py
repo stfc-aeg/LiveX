@@ -14,7 +14,7 @@ class LiveXPacketDecoder(struct.Struct):
             # Values
             self.keys = [
                 'counter',
-                'temperature_a', 'output_a', 'kp_a', 'ki_a', 'kd_a', 'lastInputA_a', 'outputSum_a', 'setpoint_a'
+                'temperature_a', 'output_a', 'kp_a', 'ki_a', 'kd_a', 'lastInput_a', 'outputSum_a', 'setpoint_a',
                 'temperature_b', 'output_b', 'kp_b', 'ki_b', 'kd_b', 'lastInput_b', 'outputSum_b', 'setpoint_a'
             ]
         else:
