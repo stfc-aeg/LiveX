@@ -13,12 +13,19 @@ EthernetServer modbusEthServer(502);
 EthernetServer tcpEthServer(4444);
 ModbusServerController modbus_server;
 ExpandedGpio gpio;
+#if PID_DEBUG
+FifoBuffer<DebugBufferObject> debugbuffer(256);
+#else
 FifoBuffer<BufferObject> buffer(256);
+#endif
+
+SemaphoreHandle_t gradientAspcMutex;
 
 // addresses for PID objects
 PIDAddresses pidA_addr = {
   PIN_PWM_A,
   MOD_SETPOINT_A_HOLD,
+  MOD_GRADIENT_SETPOINT_A_INP,
   MOD_PID_OUTPUT_A_INP,
   MOD_PID_ENABLE_A_COIL,
   MOD_THERMOCOUPLE_A_INP,
@@ -30,6 +37,7 @@ PIDAddresses pidA_addr = {
 PIDAddresses pidB_addr = {
   PIN_PWM_B,
   MOD_SETPOINT_B_HOLD,
+  MOD_GRADIENT_SETPOINT_B_INP,
   MOD_PID_OUTPUT_B_INP,
   MOD_PID_ENABLE_B_COIL,
   MOD_THERMOCOUPLE_B_INP,
@@ -62,6 +70,9 @@ volatile bool secondaryFlag = false;
 volatile bool rising = true;
 volatile int interruptCounter = 0;
 
+// Communicated via modbus
+float interruptFrequency = 10;
+
 void IRAM_ATTR pidFlagOnTimer()
 {
   pidFlag = true;
@@ -78,11 +89,6 @@ void IRAM_ATTR pidInterrupt()
   rising = !rising;
 }
 
-void IRAM_ATTR secondaryFlagOnTimer()
-{
-  secondaryFlag = true;
-}
-
 // Initialise wires, devices, and Modbus/gpio
 void setup()
 {
@@ -96,7 +102,7 @@ void setup()
   modbus_server.initialiseModbus();
   // initialise.cpp
   initialiseEthernet(modbusEthServer, mac, ip, PIN_SPI_SS_ETHERNET_LIB);
-  initialiseInterrupts(&pidFlagTimer, &secondaryFlagTimer);
+  initialiseInterrupts(&pidFlagTimer);
   initialiseThermocouples(mcp, num_mcp, mcp_addr);
   writePIDDefaults(modbus_server, PID_A);
   writePIDDefaults(modbus_server, PID_B);
@@ -110,6 +116,8 @@ void setup()
   gpio.pinMode(PIN_MOTOR_PWM, OUTPUT);
   // Motor LVDT
   gpio.pinMode(PIN_MOTOR_LVDT_IN, INPUT);
+
+  gradientAspcMutex = xSemaphoreCreateMutex();
 
   xTaskCreatePinnedToCore(
     Core0PIDTask,  /* Task function */

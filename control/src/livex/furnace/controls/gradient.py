@@ -54,16 +54,19 @@ class Gradient():
             write_coil(self.client, self.addresses['enable'], 1)
         else:
             write_coil(self.client, self.addresses['enable'], 0)
+        write_coil(self.client, self.addresses['update'], 1)
 
     def set_distance(self, value):
         """Set the distance value for the thermal gradient."""
         self.distance = value
         write_modbus_float(self.client, value, self.addresses['distance'])
+        write_coil(self.client, self.addresses['update'], 1)
 
     def set_wanted(self, value):
         """Set the desired temperature change per mm for the thermal gradient."""
         self.wanted = value
         write_modbus_float(self.client, value, self.addresses['wanted'])
+        write_coil(self.client, self.addresses['update'], 1)
 
     def set_high(self, value):
         """Set the boolean for thermal gradient high heater."""
@@ -73,3 +76,4 @@ class Gradient():
             write_coil(self.client, self.addresses['high'], 1)
         else:
             write_coil(self.client, self.addresses['high'], 0)
+        write_coil(self.client, self.addresses['update'], 1)

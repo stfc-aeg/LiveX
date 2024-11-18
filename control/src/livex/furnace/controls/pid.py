@@ -7,13 +7,14 @@ class PID():
     It stores the values, and provides functions to write to the modbus server on the PLC.
     """
 
-    def __init__(self, addresses):
+    def __init__(self, addresses, pid_defaults):
         """Initialise the PID class with addresses, creating the Parameter Tree and its
         required parameters to be populated when a modbus connection is established via the 
         controller.
         """
         # Addresses are generic via dictionary usage. Particularly important here for two PIDs
         self.addresses = addresses
+        self.pid_defaults = pid_defaults
 
         self.enable = None
         self.setpoint = None
@@ -41,6 +42,7 @@ class PID():
         self.client = client
         try:
             self._get_parameters()
+            self._write_pid_defaults()
         except:
             logging.debug("Error when attempting to get PID parameters after client connection.")
 
@@ -55,6 +57,17 @@ class PID():
         self.output = read_decode_input_reg(self.client, self.addresses['output'])
         self.gradient_setpoint = read_decode_input_reg(self.client, self.addresses['gradient_setpoint'])
         self.thermocouple = read_decode_input_reg(self.client, self.addresses['thermocouple'])
+
+    def _write_pid_defaults(self):
+        """Write the setpoint and PID terms of the controller.
+        This is called immediately after a client is registered.
+        On PID class initialisation, this will be the defaults in the furnace details in livex.cfg.
+        """
+        logging.debug(f"defaults: {self.pid_defaults}")
+        self.set_setpoint(self.pid_defaults['setpoint'])
+        self.set_proportional(self.pid_defaults['kp'])
+        self.set_integral(self.pid_defaults['ki'])
+        self.set_derivative(self.pid_defaults['kd'])
 
     def set_setpoint(self, value):
         """Set the setpoint of the PID."""

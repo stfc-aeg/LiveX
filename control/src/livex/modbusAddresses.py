@@ -9,15 +9,17 @@ class modAddr():
         pass
 
     # Coils start at 00001-09999
-    pid_enable_a_coil    = 1
-    pid_enable_b_coil    = 2
-    gradient_enable_coil = 3
-    autosp_enable_coil   = 4
-    autosp_heating_coil  = 5
-    motor_enable_coil    = 6
-    motor_direction_coil = 7
-    gradient_high_coil   = 8
-    acquisition_coil     = 9
+    pid_enable_a_coil     = 1
+    pid_enable_b_coil     = 2
+    gradient_enable_coil  = 3
+    autosp_enable_coil    = 4
+    autosp_heating_coil   = 5
+    motor_enable_coil     = 6
+    motor_direction_coil  = 7
+    gradient_high_coil    = 8
+    acquisition_coil      = 9
+    gradient_update_coil  = 10
+    freq_aspc_update_coil = 11
 
     # Input registers (read-only, from device) start at 30001-39999
     counter_inp      = 30001
@@ -48,13 +50,15 @@ class modAddr():
     pid_ki_b_hold       = 40013
     pid_kd_b_hold       = 40015
 
-    gradient_wanted_hold   = 40017
-    gradient_distance_hold = 40019
+    furnace_freq_hold   = 40017
 
-    autosp_rate_hold       = 40021
-    autosp_imgdegree_hold  = 40023
+    gradient_wanted_hold   = 40019
+    gradient_distance_hold = 40021
 
-    motor_speed_hold = 40025
+    autosp_rate_hold       = 40023
+    autosp_imgdegree_hold  = 40025
+
+    motor_speed_hold = 40027
 
     # Addresses for controls
 
@@ -87,7 +91,8 @@ class modAddr():
         'actual': gradient_actual_inp,
         'theoretical': gradient_theory_inp,
         'high': gradient_high_coil,  # Which heater is the 'high' end of the gradient
-        'high_options': ["A", "B"]
+        'high_options': ["A", "B"],
+        'update': gradient_update_coil
     }
 
     aspc_addresses = {
@@ -96,7 +101,8 @@ class modAddr():
         'heating_options': ["Cooling", "Heating"],
         'rate': autosp_rate_hold,
         'midpt': autosp_midpt_inp,
-        'imgdegree': autosp_imgdegree_hold
+        'imgdegree': autosp_imgdegree_hold,
+        'update': freq_aspc_update_coil
     }
 
     motor_addresses = {

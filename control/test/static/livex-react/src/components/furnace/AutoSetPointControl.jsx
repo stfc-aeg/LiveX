@@ -17,30 +17,41 @@ function AutoSetPointControl(props){
     const {furnaceEndPoint} = props;
     const {connectedPuttingDisable} = props;
 
+    const labelWidth = 80;
+
     return (
-        <TitleCard title="Auto Set Point Control">
-        <Container>
+        <TitleCard
+          title={
+            <Row>
+              <Col xs={3} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>Auto Set Point Control</Col>
+              <Col xs={3}>
+                <EndPointToggle
+                    endpoint={furnaceEndPoint}
+                    fullpath="autosp/enable"
+                    event_type="click" 
+                    checked={furnaceEndPoint.data.autosp?.enable || false}
+                    label="Enable"
+                    disabled={connectedPuttingDisable}>
+                  </EndPointToggle>   
+              </Col>
+            </Row>
+          }>
           <Row>
-            <Col>
-              <EndPointToggle
-                endpoint={furnaceEndPoint}
-                fullpath="autosp/enable"
-                event_type="click" 
-                checked={furnaceEndPoint.data.autosp?.enable || false}
-                label="Enable"
-                disabled={connectedPuttingDisable}>
-              </EndPointToggle>
+            <Col xs={12} sm={4}>
+              <InputGroup>
+                <InputGroup.Text>
+                  Rate (K/s)
+                </InputGroup.Text>
+                <EndPointFormControl
+                  endpoint={furnaceEndPoint}
+                  type="number"
+                  fullpath="autosp/rate"
+                  event_type="enter"
+                  disabled={connectedPuttingDisable}>
+                </EndPointFormControl>
+              </InputGroup>
             </Col>
-          </Row>
-          <Row>
-            <Col>
-              <StatusBox
-                type="info"
-                label="Mid Pt. TEMP.">
-                  {checkNull(furnaceEndPoint.data.autosp?.midpt_temp)}
-              </StatusBox>
-            </Col>
-            <Col>
+            <Col xs={12} sm={4}>
             <InputGroup>
               <InputGroup.Text>Heating/Cooling:</InputGroup.Text>
               <EndpointDropdown
@@ -58,38 +69,22 @@ function AutoSetPointControl(props){
                 )) : <></> }
               </EndpointDropdown>
             </InputGroup>
-
             </Col>
-            <Col>
+            <Col xs={12} sm={4}>
               <InputGroup>
-                <InputGroup.Text>
-                   Rate (K/s)
+                <InputGroup.Text style={{width: labelWidth}}>
+                  Midpt. temp
                 </InputGroup.Text>
-                <EndPointFormControl
-                  endpoint={furnaceEndPoint}
-                  type="number"
-                  fullpath="autosp/rate"
-                  disabled={connectedPuttingDisable}>
-                </EndPointFormControl>
+                <InputGroup.Text style={{
+                  width: labelWidth,
+                  border: '1px solid lightblue',
+                  backgroundColor: '#e0f7ff'
+                }}>
+                  {checkNull(furnaceEndPoint.data.autosp?.midpt_temp)}
+                </InputGroup.Text>
               </InputGroup>
             </Col>
           </Row>
-          <Row>
-            <Col>
-              <InputGroup>
-                <InputGroup.Text>
-                  Img Aquisition Per Degree (Img/K)
-                </InputGroup.Text>
-                <EndPointFormControl
-                  endpoint={furnaceEndPoint}
-                  type="number"
-                  fullpath="autosp/img_per_degree"
-                  disabled={connectedPuttingDisable}>
-                </EndPointFormControl>
-              </InputGroup>
-            </Col>
-          </Row>
-        </Container>
       </TitleCard>
     )
 }

@@ -1,7 +1,11 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#define DEBUG false
+// DEBUG outputs some internal values to ensure correct sending/calculation
+#define DEBUG true
+// PID_DEBUG changes the TCP object sent to be PID calculated values
+// Ensure that the adapter also has this set, otherwise reading TCP values may throw errors.
+#define PID_DEBUG true
 
 // Invert output pid analogwrite signal (does not alter output in UI)
 #define INVERT_OUTPUT_SIGNAL false
@@ -9,22 +13,29 @@
 // true: use external interrupt instead of internal timer
 #define USE_EXTERNAL_INTERRUPT true
 // true: output total of external interrupts at given range (e.g.: every 100 interrupts. 100, 200, etc.)
-#define LOG_INTERRUPTS false
+#define LOG_INTERRUPTS true
 #define LOG_INTERRUPTS_INTERVAL 50
 
 // Timeout (no modbus connection) in ms
-#define INTERVAL_TIMEOUT 30000
+#define INTERVAL_TIMEOUT 10000
 
 // For the internal timer. Set to 50Hz here, other rates should be managed via external trigger.
 #define TIMER_PID 20000
-#define TIMER_SECONDARY 200000 // motor and modifiers
+#define DEFAULT_INTERRUPT_FREQUENCY 10
 
 // Default terms for PID controllers
 #define PID_SETPOINT_DEFAULT 25.5
-#define PID_KP_DEFAULT       25.5
-#define PID_KI_DEFAULT       5.0
-#define PID_KD_DEFAULT       0.1
-#define PID_OUTPUT_LIMIT     4095
+#define PID_KP_DEFAULT       0.3  // From testing, these values seem coherent/safe
+#define PID_KI_DEFAULT       0.02
+#define PID_KD_DEFAULT       0.0
+
+// MAX # of bits written to relevant power output channel. Min is 0.
+#define POWER_OUTPUT_BITS 4095
+// Scale the output value (0->1*POWER_OUTPUT_BITS) by a 0.1 value. e.g. 0.8 for 80% output
+#define POWER_OUTPUT_SCALE 0.8
+// PID Output is the higher end of the range for this. temporarily moved up here for convenience
+#define PID_OUTPUT_LIMIT 100
+
 
 // Modbus setup/addresses
 
@@ -44,6 +55,8 @@
 #define MOD_MOTOR_DIRECTION_COIL 7
 #define MOD_GRADIENT_HIGH_COIL 8
 #define MOD_ACQUISITION_COIL 9
+#define MOD_GRADIENT_UPDATE_COIL 10
+#define MOD_FREQ_ASPC_UPDATE_COIL 11
 
 // input registers start at 30001-39999
 #define MOD_COUNTER_INP 30001
@@ -74,13 +87,15 @@
 #define MOD_KI_B_HOLD 40013
 #define MOD_KD_B_HOLD 40015
 
-#define MOD_GRADIENT_WANTED_HOLD 40017
-#define MOD_GRADIENT_DISTANCE_HOLD 40019
+#define MOD_FURNACE_FREQ_HOLD 40017
 
-#define MOD_AUTOSP_RATE_HOLD 40021
-#define MOD_AUTOSP_IMGDEGREE_HOLD 40023
+#define MOD_GRADIENT_WANTED_HOLD 40019
+#define MOD_GRADIENT_DISTANCE_HOLD 40021
 
-#define MOD_MOTOR_SPEED_HOLD 40025
+#define MOD_AUTOSP_RATE_HOLD 40023
+#define MOD_AUTOSP_IMGDEGREE_HOLD 40025
+
+#define MOD_MOTOR_SPEED_HOLD 40027
 
 #define PIN_PWM_A A0_5
 #define PIN_PWM_B A0_6

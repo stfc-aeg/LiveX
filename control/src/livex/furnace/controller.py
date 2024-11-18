@@ -36,21 +36,28 @@ class FurnaceController():
         """
 
         # Parse options
-        self.bg_read_task_enable = bool(options.get('background_read_task_enable', False))
+        self.bg_read_task_enable = bool(int(options.get('background_read_task_enable', False)))
         self.bg_read_task_interval = float(options.get('background_read_task_interval', 1.0))
 
-        self.bg_stream_task_enable = bool(options.get('background_stream_task_enable', False))
+        self.bg_stream_task_enable = bool(int(options.get('background_stream_task_enable', False)))
         self.pid_frequency = int(options.get('pid_frequency', 50))
 
         self.ip = options.get('ip', '192.168.0.159')
         self.port = int(options.get('port', '4444'))
 
+        # File name and directory is a default that is later overwritten by metadata
         self.log_directory = options.get('log_directory', 'logs')
-        # Filename may instead be generated? Cannot have just one configurable one,
-        # subsequent uses would overwrite. generation method TBD. metadata, date/time, etc.
         self.log_filename = options.get('log_filename', 'default.hdf5')
 
         self.monitor_retention = int(options.get('monitor_retention', 60))
+
+        # Get default values for PIDs
+        pid_defaults = {
+            'setpoint': float(options.get('setpoint_default', 30.0)),
+            'kp': float(options.get('kp_default', 25.5)),
+            'ki': float(options.get('ki_default', 5.0)),
+            'kd': float(options.get('kd_default', 0.1))
+        }
 
         # Stop modbus from generating excessive logging
         logging.getLogger("pymodbus").setLevel(logging.WARNING)  
@@ -64,23 +71,24 @@ class FurnaceController():
         # Set the background task counters to zero
         self.background_thread_counter = 0
 
-        self.packet_decoder = LiveXPacketDecoder()
-
         self.file_writer = FileWriter(self.log_directory, self.log_filename, {'timestamps': 'S'})
         
         # File is not open by default in case of multiple acquisitions per software run
         self.file_open_flag = False
 
         self.tcp_reading = None
-        self.stream_buffer = {
-            'counter': [],
-            'temperature_a': [],
-            'temperature_b': []
-        }
+
+        # Create packet decoder and stream buffer for TCP values sent by PLC
+        # If pid_debug is true (and set in the PLC as well), this is a range of PID behaviour data
+        pid_debug = bool(int(options.get('pid_debug', False)))
+        self.packet_decoder = LiveXPacketDecoder(pid_debug)
+        self.stream_buffer = {key: [] for key in self.packet_decoder.data.keys()}  # Same data structure
+        self.data_groupname = "debug readings"
+
         self.start_acquisition = False
 
-        self.pid_a = PID(modAddr.addresses_pid_a)
-        self.pid_b = PID(modAddr.addresses_pid_b)
+        self.pid_a = PID(modAddr.addresses_pid_a, pid_defaults)
+        self.pid_b = PID(modAddr.addresses_pid_b, pid_defaults)
         self.gradient = Gradient(modAddr.gradient_addresses)
         self.aspc = AutoSetPointControl(modAddr.aspc_addresses)
         self.motor = Motor(modAddr.motor_addresses)
@@ -98,7 +106,8 @@ class FurnaceController():
             'timestamp': [],
             'temperature': {
                 'temperature_a': [],
-                'temperature_b': []
+                'temperature_b': [],
+                'temperature_c': []
             },
             'output': {
                 'output_a': [],
@@ -276,7 +285,7 @@ class FurnaceController():
         self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.tcp_client.connect((self.ip, self.port))
 
-        self.tcp_client.settimeout(0.1)
+        self.tcp_client.settimeout(0.2)
         activate = '1'
         self.tcp_client.send(activate.encode())
 
@@ -297,9 +306,6 @@ class FurnaceController():
 
     def background_ioloop_callback(self):
         """Ioloop callback function to populate the monitor graph variables."""
-
-        self._trim_dict_to_retention(self.monitor_graphs)
-
         # Add data
         cur_time = datetime.datetime.now()
         cur_time = cur_time.strftime("%H:%M:%S")
@@ -308,12 +314,16 @@ class FurnaceController():
 
         self.monitor_graphs['temperature']['temperature_a'].append(self.pid_a.thermocouple)
         self.monitor_graphs['temperature']['temperature_b'].append(self.pid_b.thermocouple)
+        self.monitor_graphs['temperature']['temperature_c'].append(self.thermocouple_c)
 
         self.monitor_graphs['output']['output_a'].append(self.pid_a.output)
         self.monitor_graphs['output']['output_b'].append(self.pid_b.output)
 
         self.monitor_graphs['setpoint']['setpoint_a'].append(self.pid_a.setpoint)
         self.monitor_graphs['setpoint']['setpoint_b'].append(self.pid_b.setpoint)
+
+        # Trim arrays down after data is added
+        self._trim_dict_to_retention(self.monitor_graphs)
 
         # self.background_ioloop_counter += 1
 
@@ -325,9 +335,9 @@ class FurnaceController():
         while self.bg_stream_task_enable:
             if self.start_acquisition:
                 try:
-                    reading = self.tcp_client.recv(self.packet_decoder.size) # fff: 12
-                    logging.debug(self.packet_decoder.counter)
-                    reading = self.packet_decoder.unpack(reading)
+                    reading = self.tcp_client.recv(self.packet_decoder.size)
+                    logging.debug(self.packet_decoder.data['counter'])
+                    self.tcp_reading = self.packet_decoder.unpack(reading)
 
                 except socket.timeout:
                     logging.debug("TCP Socket timeout: read no data")
@@ -338,27 +348,30 @@ class FurnaceController():
                     self.stop_background_tasks()
                     break
 
-                self.tcp_reading = self.packet_decoder.as_dict()
+                self.tcp_reading = self.packet_decoder.data
 
-                self.stream_buffer['counter'].append(self.packet_decoder.counter)
-                self.stream_buffer['temperature_a'].append(self.packet_decoder.temperature_a)
-                self.stream_buffer['temperature_b'].append(self.packet_decoder.temperature_b)
+                # Add decoded data to the stream buffer
+                for attr in self.packet_decoder.data.keys():
+                    self.stream_buffer[attr].append(self.packet_decoder.data[attr])
 
-                if len(self.stream_buffer['counter']) == 50:
+                # After a certain number of data reads, write data to the file
+                if len(self.stream_buffer['counter']) == 10:
                     self.file_writer.write_hdf5(
                         data=self.stream_buffer,
-                        groupname="temperature_readings"
+                        groupname=self.data_groupname
                     )
-                    # Clear the buffer
+                    # Then clear the stream buffer
                     for key in self.stream_buffer:
                         self.stream_buffer[key].clear()
 
+                    # Additional information written at a lower frequency
                     secondary_data = {
-                        'counter': [self.packet_decoder.counter],
+                        'counter': [self.packet_decoder.data['counter']],
                         'setpoint_a': [self.pid_a.setpoint],
                         'setpoint_b': [self.pid_b.setpoint],
                         'output_a': [self.pid_a.output],
-                        'output_b': [self.pid_b.output]
+                        'output_b': [self.pid_b.output],
+                        'temperature_c' : [self.thermocouple_c]
                     }
                     self.file_writer.write_hdf5(
                         data=secondary_data,

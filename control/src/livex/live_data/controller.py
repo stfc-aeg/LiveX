@@ -263,7 +263,7 @@ class LiveDataController(BaseController):
         :param processor: LiveDataProcessor object
         """
         value = int(value)
-        processor.resolution = value
+        processor.resolution_percent = value
         new_x = int(processor.max_size_x*(value/100))
         new_y = int(processor.max_size_y*(value/100))
         self.set_img_dims([new_x, new_y], processor)
