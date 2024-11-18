@@ -57,17 +57,6 @@ function OrcaCamera(props) {
     const [dimensions, setDimensions] = useState('');
     const [rotation, setRotation] = useState(0);
 
-    const rotateClockwise = () => {
-      console.log(`prev rotation: ${rotation}`);
-      console.log(`new rotation: ${rotation+90}`);
-      setRotation((prevRotation) => prevRotation+90);
-    };
-    const rotateAntiClockwise = () => {
-      console.log(`prev rotation: ${rotation}`);
-      console.log(`new rotation: ${rotation-90}`);
-      setRotation((prevRotation) => prevRotation-90);
-    };
-
     const heightChange = (e) => {
         let newHeight = e.target.value;
         setHeight(newHeight);
@@ -214,12 +203,6 @@ function OrcaCamera(props) {
                     rectRgbaProperties='rgba(50,50,50,0.05)'
                     valuesAsPercentages={true}>
                   </ClickableImage>
-                </Row>
-                <Row>
-                  <Col xs={3}>
-                    <Button onClick={rotateClockwise} variant="outline-secondary">↻</Button>
-                    <Button onClick={rotateAntiClockwise} variant="outline-secondary">↺</Button>
-                  </Col>
                 </Row>
                 <Col>
                 <Form>
