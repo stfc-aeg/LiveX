@@ -1,17 +1,14 @@
 import React from 'react';
 import InputGroup from 'react-bootstrap/InputGroup';
-import Button from 'react-bootstrap/Button';
 import { useState, useCallback, useRef } from 'react';
 import { MultiSelect } from 'react-multi-select-component';
-import { WithEndpoint } from 'odin-react';
-
-const EndPointButton = WithEndpoint(Button);
 
 function TagInput(props) {
     const {options} = props;
     const {metadataEndPoint} = props;
     const {field} = props;
     const {labelWidth} = props;
+    const {currentValue} = props;
 
     const timer = useRef(null);
 
@@ -21,8 +18,15 @@ function TagInput(props) {
       disabled: false
     }));
 
-    const [selected, setSelected] = useState([]);
-
+    // Default state should be the current values. Those values are an array of the tag text,
+    // so they need to be converted to the right format (label, value, disabled).
+    const [selected, setSelected] = useState(
+      currentValue.map(value => ({
+        label: value,
+        value: value,
+        disabled: false
+      }))
+    );
 
     // This onchange function essentially duplicates the functionality of the WithEndpoint
     // sendRequest function. That cannot be used for the MultiSelect normally, as the 'value' it
@@ -39,8 +43,9 @@ function TagInput(props) {
 
     const onChangeHandler = useCallback((selectedOptions) => {
       setSelected(selectedOptions);
-      if(timer.current){
-          clearTimeout(timer.current);
+      if(timer.current)
+      {
+        clearTimeout(timer.current);
       }
       // send data after a delay of a second
       timer.current = setTimeout(() => {console.log("Timer Elapsed. Sending Data"); sendTags(selectedOptions)}, 1000);

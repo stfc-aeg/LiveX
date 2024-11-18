@@ -1,0 +1,76 @@
+{
+    "widefov": {
+      "acquisition_config": {
+        "orcaquest": {
+          "update_config": true,
+          "rx_enable": false,
+          "proc_enable": true,
+          "rx_frames": 1000
+        },
+        "hdf": {
+          "file": {
+            "path": "/tmp"
+          },
+          "frames": 1000,
+          "acquisition_id": "acquisition_id",
+          "write": false
+        }
+      },
+      "start_config": {
+        "orcaquest": {
+          "update_config": true,
+          "rx_enable": true
+        },
+        "hdf": {
+          "write": true
+        }
+      },
+      "stop_config": {
+        "orcaquest": {
+          "update_config": true,
+          "rx_enable": false,
+          "proc_enable": true
+        },
+        "hdf": {
+          "write": false
+        }
+      }
+    },
+    "narrowfov": {
+      "acquisition_config": {
+        "orcaquest": {
+          "update_config": true,
+          "rx_enable": false,
+          "proc_enable": true,
+          "rx_frames": 1000
+        },
+        "hdf": {
+          "file": {
+            "path": "/tmp"
+          },
+          "frames": 1000,
+          "acquisition_id": "acquisition_id",
+          "write": false
+        }
+      },
+      "start_config": {
+        "orcaquest": {
+          "update_config": true,
+          "rx_enable": true
+        },
+        "hdf": {
+          "write": true
+        }
+      },
+      "stop_config": {
+        "orcaquest": {
+          "update_config": true,
+          "rx_enable": false,
+          "proc_enable": true
+        },
+        "hdf": {
+          "write": false
+        }
+      }
+    }
+  }

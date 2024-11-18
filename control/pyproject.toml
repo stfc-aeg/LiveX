@@ -16,7 +16,11 @@ dependencies = [
     "odin-control @ git+https://git@github.com/odin-detector/odin-control.git@1.5.0",
     "pymodbus",
     "h5py",
-    "Jinja2"
+    "Jinja2",
+    "opencv-python",
+    "blosc",
+    "numpy",
+    "matplotlib"
 ]
 dynamic = ["version"]
 license.file = "LICENSE"

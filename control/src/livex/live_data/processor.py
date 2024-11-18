@@ -6,15 +6,17 @@ import zmq
 from multiprocessing import Process, Queue, Pipe
 
 import logging
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from tornado.escape import json_decode
-from odin_data.ipc_channel import IpcChannel
+from odin_data.control.ipc_channel import IpcChannel
 
 class LiveDataProcessor():
     """Class to process image data received on a multiprocess that it instantiates."""
 
-    def __init__(self, endpoint, resolution, size_x=640, size_y=480, colour='bone'):
+    def __init__(self, endpoint, resolution, size_x=2048, size_y=1152, colour='bone'):
         """Initialise the LiveDataProcessor object.
         This method constructs the Queue, Pipes and Process necessary for multiprocessing.
         :param endpoint: string representation of endpoint for image data.
@@ -108,13 +110,14 @@ class LiveDataProcessor():
         header = json_decode(msg[0])
 
         dtype = 'float32' if header['dtype'] == "float" else header['dtype']
-        data = np.frombuffer(msg[1], dtype=dtype)
 
         # Check for image compression by checking raw data size. Decompress if needed
         # Currently assumes bytes-per-pixel of 2
         if len(msg[1]) != (self.max_size_x*self.max_size_y*2):
-            uncompressed_data = blosc.decompress(data)
+            uncompressed_data = blosc.decompress(msg[1])
             data = np.fromstring(uncompressed_data, dtype=dtype)
+        else:
+            data = np.frombuffer(msg[1], dtype=dtype)  # Otherwise, grab the data as-is
 
         # For histogram, it's easier to clip the data before reshaping it
         clipped_data = np.clip(data, self.clipping['min'], self.clipping['max'])

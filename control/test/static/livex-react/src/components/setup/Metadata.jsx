@@ -2,16 +2,22 @@ import React from 'react';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Dropdown from 'react-bootstrap/Dropdown';
+import Button from 'react-bootstrap/Button';
+import Col from 'react-bootstrap/esm/Col';
+import { Container } from 'react-bootstrap';
 import { useState, useEffect } from 'react';
-import { TitleCard, WithEndpoint, useAdapterEndpoint, DropdownSelector } from 'odin-react';
+import { TitleCard, WithEndpoint, useAdapterEndpoint, DropdownSelector, StatusBox } from 'odin-react';
 import TagInput from "./TagInput";
 
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndpointDropdown = WithEndpoint(DropdownSelector);
+const EndpointButton = WithEndpoint(Button);
 
 function Metadata(props) {
 
-    const metadataEndPoint = useAdapterEndpoint('metadata', 'http://192.168.0.22:8888', 5000);
+    const {endpoint_url} = props;
+
+    const metadataEndPoint = useAdapterEndpoint('metadata', endpoint_url, 5000);
     // Need some object defined even when metadataEndPoint is resolving to null
     const metaJson = metadataEndPoint?.data?.fields ? metadataEndPoint.data.fields : {} ;
 
@@ -28,7 +34,7 @@ function Metadata(props) {
         Object.keys(fields).forEach((key) => {
           const labelLength = fields[key].label.length;
           const valid = fields[key].user_input;
-          console.log("label:", fields[key].label)
+          // console.log("label:", fields[key].label)
           if (labelLength > maxLength && valid) {
             maxLength = labelLength;
           }
@@ -48,6 +54,49 @@ function Metadata(props) {
             const field = metaJson[key];
             const {label, choices, default: defaultValue, multi_choice, user_input, multi_line, enabled} = field;
 
+            const currentValue = metadataEndPoint?.data?.fields?.[key]?.value;
+
+            // Carving out a specific exception for this non-user-input for now
+            if (["acquisition_num", "start_time", "stop_time"].includes(key))
+            {
+              // Label is split on the parentheses of acquisition number
+              // until more refined solution (metadata field property) is introduced
+              return (
+                <InputGroup>
+                  <InputGroup.Text style={{width:labelWidth}}>
+                    {label.split('(')[0]} 
+                  </InputGroup.Text>
+                  <InputGroup.Text>
+                      {currentValue}
+                    </InputGroup.Text>
+                  {key=='acquisition_num' ?
+                  <Col>
+                    <EndpointButton
+                      endpoint={metadataEndPoint}
+                      fullpath={"fields/"+key+"/value"}
+                      value={currentValue+1}
+                      event_type="click"
+                      variant="outline-secondary"
+                    >
+                      +
+                    </EndpointButton>
+                    <EndpointButton
+                      endpoint={metadataEndPoint}
+                      fullpath={"fields/"+key+"/value"}
+                      value={currentValue-1}
+                      event_type="click"
+                      variant="outline-secondary"
+                    >
+                      -
+                    </EndpointButton>
+                  </Col>
+                    :
+                    <></>
+                }
+
+                </InputGroup>
+              )
+            }
             if (!user_input) {
                 return null; // Skip non-user-input fields
             }
@@ -60,19 +109,19 @@ function Metadata(props) {
                     {label}:
                   </InputGroup.Text>
                   <EndpointDropdown
-                  endpoint={metadataEndPoint}
-                  event_type="select"
-                  fullpath={"fields/"+key+"/value"}
-                  variant="outline-secondary"
-                  buttonText={metadataEndPoint?.data?.fields?.[key]?.value}>
-                    {choices.map(
-                    (selection, index) => (
-                      <Dropdown.Item
-                        eventKey={selection}
-                        key={index}>
-                          {selection}
-                      </Dropdown.Item>
-                    ))}
+                    endpoint={metadataEndPoint}
+                    event_type="select"
+                    fullpath={"fields/"+key+"/value"}
+                    variant="outline-secondary"
+                    buttonText={currentValue}>
+                      {choices.map(
+                      (selection, index) => (
+                        <Dropdown.Item
+                          eventKey={selection}
+                          key={index}>
+                            {selection}
+                        </Dropdown.Item>
+                      ))}
                   </EndpointDropdown>
                 </InputGroup>
                 )
@@ -86,6 +135,7 @@ function Metadata(props) {
                   field={key}
                   labelWidth={labelWidth}
                   key={key}
+                  currentValue={currentValue}
                 />
               )
             }
@@ -104,7 +154,8 @@ function Metadata(props) {
                     endpoint={metadataEndPoint}
                     type="text"
                     fullpath={"fields/"+key+"/value"}
-                    value={defaultValue}
+                    event_type="enter"
+                    value={currentValue}
                     as="textarea"
                     rows="5"
                     style={{flex: 1}}>
@@ -123,7 +174,8 @@ function Metadata(props) {
                   endpoint={metadataEndPoint}
                   type="text"
                   fullpath={"fields/"+key+"/value"}
-                  value={defaultValue}>
+                  event_type="enter"
+                  value={currentValue}>
                 </EndPointFormControl>
               </InputGroup>
               )
@@ -131,10 +183,11 @@ function Metadata(props) {
         })
     }
 return(
-
+  <Container>
     <TitleCard title="Experiment Details">
         {renderForm()}
     </TitleCard>
+  </Container>
     )
 }
 

@@ -13,12 +13,19 @@ EthernetServer modbusEthServer(502);
 EthernetServer tcpEthServer(4444);
 ModbusServerController modbus_server;
 ExpandedGpio gpio;
+#if PID_DEBUG
+FifoBuffer<DebugBufferObject> debugbuffer(256);
+#else
 FifoBuffer<BufferObject> buffer(256);
+#endif
+
+SemaphoreHandle_t gradientAspcMutex;
 
 // addresses for PID objects
 PIDAddresses pidA_addr = {
   PIN_PWM_A,
   MOD_SETPOINT_A_HOLD,
+  MOD_GRADIENT_SETPOINT_A_INP,
   MOD_PID_OUTPUT_A_INP,
   MOD_PID_ENABLE_A_COIL,
   MOD_THERMOCOUPLE_A_INP,
@@ -30,6 +37,7 @@ PIDAddresses pidA_addr = {
 PIDAddresses pidB_addr = {
   PIN_PWM_B,
   MOD_SETPOINT_B_HOLD,
+  MOD_GRADIENT_SETPOINT_B_INP,
   MOD_PID_OUTPUT_B_INP,
   MOD_PID_ENABLE_B_COIL,
   MOD_THERMOCOUPLE_B_INP,
@@ -49,17 +57,26 @@ float counter = 1;
 bool acquiringFlag = false;
 
 // Thermocouples - main, taskPid
-Adafruit_MCP9600 mcp[] = {Adafruit_MCP9600(), Adafruit_MCP9600()};
+Adafruit_MCP9600 mcp[] = {Adafruit_MCP9600(), Adafruit_MCP9600(), Adafruit_MCP9600()};
 const unsigned int num_mcp = sizeof(mcp) / sizeof(mcp[0]);
-const uint8_t mcp_addr[] = {0x60, 0x67};
+const uint8_t mcp_addr[] = {0x60, 0x67, 0x65};
 
 // Timers and flags - main, taskPid
+hw_timer_t *pidFlagTimer = NULL;
 hw_timer_t *secondaryFlagTimer = NULL;
 volatile bool pidFlag = false;
 volatile bool secondaryFlag = false;
-// Pin interrupt flag 
+// Pin interrupt flag
 volatile bool rising = true;
 volatile int interruptCounter = 0;
+
+// Communicated via modbus
+float interruptFrequency = 10;
+
+void IRAM_ATTR pidFlagOnTimer()
+{
+  pidFlag = true;
+}
 
 // may be rolled into toggledInterrupt
 void IRAM_ATTR pidInterrupt()
@@ -70,11 +87,6 @@ void IRAM_ATTR pidInterrupt()
     interruptCounter += 1;
   }
   rising = !rising;
-}
-
-void IRAM_ATTR secondaryFlagOnTimer()
-{
-  secondaryFlag = true;
 }
 
 // Initialise wires, devices, and Modbus/gpio
@@ -90,21 +102,22 @@ void setup()
   modbus_server.initialiseModbus();
   // initialise.cpp
   initialiseEthernet(modbusEthServer, mac, ip, PIN_SPI_SS_ETHERNET_LIB);
-  initialiseInterrupts(&secondaryFlagTimer);
+  initialiseInterrupts(&pidFlagTimer);
   initialiseThermocouples(mcp, num_mcp, mcp_addr);
   writePIDDefaults(modbus_server, PID_A);
   writePIDDefaults(modbus_server, PID_B);
 
   gpio.init();
   // PID
-  gpio.pinMode(A0_5, OUTPUT);
+  gpio.pinMode(PIN_PWM_A, OUTPUT);
+  gpio.pinMode(PIN_PWM_B, OUTPUT);
   // Motor direction/speed outputs
-  gpio.pinMode(Q1_6, OUTPUT);
-  gpio.pinMode(Q1_7, OUTPUT);
+  gpio.pinMode(PIN_MOTOR_DIRECTION, OUTPUT);
+  gpio.pinMode(PIN_MOTOR_PWM, OUTPUT);
   // Motor LVDT
-  gpio.pinMode(I0_7, INPUT);
-  // External trigger pin
-  gpio.pinMode(Q1_0, OUTPUT);
+  gpio.pinMode(PIN_MOTOR_LVDT_IN, INPUT);
+
+  gradientAspcMutex = xSemaphoreCreateMutex();
 
   xTaskCreatePinnedToCore(
     Core0PIDTask,  /* Task function */

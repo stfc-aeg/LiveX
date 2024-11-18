@@ -31,7 +31,10 @@ extern EthernetServer modbusEthServer;
 extern EthernetServer tcpEthServer;
 extern ModbusServerController modbus_server;
 extern FifoBuffer<BufferObject> buffer;
+extern FifoBuffer<DebugBufferObject> debugbuffer;
 extern ExpandedGpio gpio; // not used in comms
+
+extern SemaphoreHandle_t gradientAspcMutex;
 
 // Eth clients - main and taskComms
 extern EthernetClient modbusClient;
@@ -54,25 +57,29 @@ extern const unsigned int num_mcp;
 extern const uint8_t mcp_addr[];
 
 // Timers - main, initialise
-extern hw_timer_t *secondaryFlagTimer;
+extern hw_timer_t *pidFlagTimer;
 // Timer flags - main, taskPid
 extern volatile bool pidFlag;
-extern volatile bool secondaryFlag;
 
-// may not be needed as used for debugging
+// PID operation - main, taskComms
+extern float interruptFrequency;
+
+// debugging tool
 extern volatile int interruptCounter;
 
 // Core task definition for pinning in main
 extern void Core0PIDTask(void * pvParameters);
 
-// temporary measurements of timer consistency
-// volatile long int timerTimer = micros();
-// float timerTimerAvg = 0;
-// volatile long int timerCounter = 0;
-// volatile long int prev = 0;
-
 // Interrupt functions - main, initialise
 extern void IRAM_ATTR pidInterrupt();
+extern void IRAM_ATTR pidFlagOnTimer();
 extern void IRAM_ATTR secondaryFlagOnTimer();
+
+// Enum of PIDs - taskPid
+enum PIDEnum {
+    A,  // 0
+    B,  // 1
+    UNKNOWN // 2
+};
 
 #endif

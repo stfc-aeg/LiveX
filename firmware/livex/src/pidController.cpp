@@ -14,6 +14,8 @@ PIDController::PIDController(PIDAddresses addr) : myPID_(&input, &output, &setPo
     // Set PID output range to match ESP3258PLC PWM
     myPID_.SetOutputLimits(0, PID_OUTPUT_LIMIT);
 
+    myPID_.SetSampleTime(100);
+
     // PID mode
     myPID_.SetMode(AUTOMATIC);
 }

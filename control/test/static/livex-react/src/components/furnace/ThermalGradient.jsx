@@ -18,78 +18,112 @@ function ThermalGradient(props){
     const {furnaceEndPoint} = props;
     const {connectedPuttingDisable} = props;
 
+    const labelWidth=128;
+    const inputLabelWidth=96;
+
     return (
-        <TitleCard title="Thermal Gradient">
-        <Container>
+      <TitleCard title={
         <Row>
-            <Col>
+          <Col xs={3} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>Thermal Gradient</Col>
+          <Col xs={3}>
             <EndPointToggle 
-                endpoint={furnaceEndPoint}
-                fullpath="gradient/enable"
-                event_type="click"
-                checked={furnaceEndPoint.data.gradient?.enable || false} label="Enable" disabled={connectedPuttingDisable}>
+              endpoint={furnaceEndPoint}
+              fullpath="gradient/enable"
+              event_type="click"
+              checked={furnaceEndPoint.data.gradient?.enable || false} label="Enable" disabled={connectedPuttingDisable}>
             </EndPointToggle>
-            </Col>
+          </Col>
         </Row>
+      }>
+
         <Row>
-            <Col>
-            <StatusBox
-                type="info"
-                label="Actual">
-                {checkNull(furnaceEndPoint.data.gradient?.actual)}
-                </StatusBox>
-            <StatusBox
-                type="info"
-                label="Theoretical">
-                {checkNull(furnaceEndPoint.data.gradient?.theoretical)}
-            </StatusBox>
-            </Col>
-            <Col>
-            <InputGroup>
-                <InputGroup.Text>
-                Wanted (K/mm)
-                </InputGroup.Text>
-                <EndPointFormControl
-                endpoint={furnaceEndPoint}
-                type="number"
-                fullpath="gradient/wanted"
-                disabled={connectedPuttingDisable}>
-                </EndPointFormControl>
-            </InputGroup>
-        
-            <InputGroup>
-                <InputGroup.Text>
-                Distance (mm)
-                </InputGroup.Text>
-                <EndPointFormControl
-                endpoint={furnaceEndPoint}
-                type="number"
-                fullpath="gradient/distance"
-                disabled={connectedPuttingDisable}></EndPointFormControl>
-            </InputGroup>
-            <InputGroup>
-                <InputGroup.Text> Gradient high towards heater: </InputGroup.Text>
-                <EndpointDropdown
-                endpoint={furnaceEndPoint}
-                event_type="select"
-                fullpath="gradient/high_heater"
-                variant="outline-secondary"
-                buttonText={furnaceEndPoint.data.gradient?.high_heater_options[furnaceEndPoint.data.gradient.high_heater] || "Unknown"}
-                disabled={connectedPuttingDisable}>
+          <Col>
+          <InputGroup>
+            <InputGroup.Text style={{width: inputLabelWidth}}>
+              Wanted (K/mm)
+            </InputGroup.Text>
+            <EndPointFormControl
+              endpoint={furnaceEndPoint}
+              type="number"
+              fullpath="gradient/wanted"
+              event_type="enter"
+              disabled={connectedPuttingDisable}>
+            </EndPointFormControl>
+          </InputGroup>
+          <InputGroup>
+            <InputGroup.Text style={{width: inputLabelWidth}}>
+              Distance (mm)
+            </InputGroup.Text>
+            <EndPointFormControl
+              endpoint={furnaceEndPoint}
+              type="number"
+              fullpath="gradient/distance"
+              event_type="enter"
+              disabled={connectedPuttingDisable}>
+            </EndPointFormControl>
+          </InputGroup>
+          <InputGroup>
+            <InputGroup.Text>
+              Gradient high towards heater:
+            </InputGroup.Text>
+            <EndpointDropdown
+              endpoint={furnaceEndPoint}
+              event_type="select"
+              fullpath="gradient/high_heater"
+              variant="outline-secondary"
+              buttonText={furnaceEndPoint.data.gradient?.high_heater_options[furnaceEndPoint.data.gradient.high_heater] || "Unknown"}
+              disabled={connectedPuttingDisable}>
                 {furnaceEndPoint.data.gradient?.high_heater_options ? furnaceEndPoint.data.gradient.high_heater_options.map(
                 (selection, index) => (
-                    <Dropdown.Item
-                    eventKey={index}
-                    key={index}>
-                        {selection}
-                    </Dropdown.Item>
+                  <Dropdown.Item
+                  eventKey={index}
+                  key={index}>
+                    {selection}
+                  </Dropdown.Item>
                 )) : <></> }
             </EndpointDropdown>
+          </InputGroup>
+          </Col>
+          <Col>
+            <InputGroup>
+              <InputGroup.Text style={{width: labelWidth}}>
+                Actual
+              </InputGroup.Text>
+              <InputGroup.Text style={{
+                width: labelWidth,
+                border: '1px solid lightblue',
+                backgroundColor: '#e0f7ff'
+              }}>
+                {checkNull(furnaceEndPoint.data.gradient?.actual)}
+              </InputGroup.Text>
             </InputGroup>
-            </Col>
+            <InputGroup>
+              <InputGroup.Text style={{width: labelWidth}}>
+                Theoretical
+              </InputGroup.Text>
+              <InputGroup.Text style={{
+                width: labelWidth,
+                border: '1px solid lightblue',
+                backgroundColor: '#e0f7ff'
+              }}>
+                {checkNull(furnaceEndPoint.data.gradient?.theoretical)}
+              </InputGroup.Text>
+            </InputGroup>
+            <InputGroup>
+              <InputGroup.Text style={{width: labelWidth}}>
+                Centre Thermocouple
+              </InputGroup.Text>
+              <InputGroup.Text style={{
+                width: labelWidth,
+                border: '1px solid lightblue',
+                backgroundColor: '#e0f7ff'
+              }}>
+                {checkNull(furnaceEndPoint.data.thermocouples?.centre)}
+              </InputGroup.Text>
+            </InputGroup>
+          </Col>
         </Row>
-        </Container>
-    </TitleCard>
+      </TitleCard>
     )
 }
 

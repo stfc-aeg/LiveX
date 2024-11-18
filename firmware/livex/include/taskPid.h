@@ -6,6 +6,6 @@
 void Core0PIDTask(void * pvParameters);
 void thermalGradient();
 void autoSetPointControl();
-void runPID(String pid);
+void runPID(PIDEnum pid);
 
 #endif
