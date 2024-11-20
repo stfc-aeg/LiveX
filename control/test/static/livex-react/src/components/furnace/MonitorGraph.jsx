@@ -25,11 +25,14 @@ function MonitorGraph(props) {
 
     useEffect(() => {
       // Map props data out to be returned in array form
-      const allData = seriesData.map(({dataPath, param, seriesName}) => {
-        const dataA = endpoint.data?.monitor?.[dataPath]?.[param];
-        return [dataA];
+      const allData = seriesData.map(({dataPath, param}) => {
+        let keys = dataPath.split("/");
+        let dataA = keys.reduce((accum,key) => accum?.[key], endpoint?.data);
+
+        // Ensure dataA[param] exists to avoid errors
+        return dataA?.[param] !== undefined ? [dataA?.[param]] : [];
       });
-      const legendData = seriesData.map(({dataPath, param, seriesName}) => {
+      const legendData = seriesData.map(({seriesName}) => {
         return seriesName;
       })
 

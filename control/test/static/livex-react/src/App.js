@@ -25,9 +25,12 @@ const EndPointButton = WithEndpoint(Button);
 
 function App(props) {
 
-  const endpoint_url = process.env.REACT_APP_ENDPOINT_URL
+  // axios.defaults.baseURL = process.env.REACT_APP_ENDPOINT_URL;
+
+  const endpoint_url = process.env.REACT_APP_ENDPOINT_URL;
 
   const furnaceEndPoint = useAdapterEndpoint('furnace', endpoint_url, 1000);
+  const graphEndPoint = useAdapterEndpoint('graph', endpoint_url, 1000);
   const connectedPuttingDisable = (!(furnaceEndPoint.data.status?.connected || false)) || (furnaceEndPoint.loading === "putting")
 
   const sequencer_url = endpoint_url + "/sequencer.html";
@@ -122,23 +125,23 @@ function App(props) {
       <Row>
         <Col xs={12} sm={12} lg={12} xl={6} xxl={6}>
           <MonitorGraph
-            endpoint={furnaceEndPoint}
+            endpoint={graphEndPoint}
             seriesData={[
-              {dataPath: 'temperature', param: 'temperature_a', seriesName: "TCA"},
-              {dataPath: 'temperature', param: 'temperature_b', seriesName: "TCB"},
-              {dataPath: 'temperature', param: 'temperature_c', seriesName: "TC3"},
-              {dataPath: 'setpoint', param: 'setpoint_a', seriesName: "SPA"},
-              {dataPath: 'setpoint', param: 'setpoint_b', seriesName: "SPB"}
+              {dataPath: 'temperature_a', param: 'data', seriesName: "TCA"},
+              {dataPath: 'temperature_b', param: 'data', seriesName: "TCB"},
+              {dataPath: 'temperature_c', param: 'data', seriesName: "TC3"},
+              {dataPath: 'setpoint_a', param: 'data', seriesName: "SPA"},
+              {dataPath: 'setpoint_b', param: 'data', seriesName: "SPB"}
             ]}
             title={"Temperature and Setpoint Graph"}
           ></MonitorGraph>
         </Col>
         <Col xs={12} sm={12} xl={6} xxl={6}>
           <MonitorGraph
-            endpoint={furnaceEndPoint}
+            endpoint={graphEndPoint}
             seriesData={[
-              {dataPath: 'output', param: 'output_a', seriesName: 'POA'},
-              {dataPath: 'output', param: 'output_b', seriesName: 'POB'}
+              {dataPath: 'output_a', param: 'data', seriesName: 'POA'},
+              {dataPath: 'output_b', param: 'data', seriesName: 'POB'}
             ]}
             title={"PID Output Graph"}
           ></MonitorGraph>

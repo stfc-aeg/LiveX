@@ -1,10 +1,8 @@
 import logging
 import time
-import datetime
 import socket
 from concurrent import futures
 
-from tornado.ioloop import PeriodicCallback
 from tornado.concurrent import run_on_executor
 
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
@@ -48,8 +46,6 @@ class FurnaceController():
         # File name and directory is a default that is later overwritten by metadata
         self.log_directory = options.get('log_directory', 'logs')
         self.log_filename = options.get('log_filename', 'default.hdf5')
-
-        self.monitor_retention = int(options.get('monitor_retention', 60))
 
         # Get default values for PIDs
         pid_defaults = {
@@ -101,24 +97,6 @@ class FurnaceController():
         self.lifetime_counter = 0
         self.reconnect = False
 
-        # For monitoring/graphing
-        self.monitor_graphs = {
-            'timestamp': [],
-            'temperature': {
-                'temperature_a': [],
-                'temperature_b': [],
-                'temperature_c': []
-            },
-            'output': {
-                'output_a': [],
-                'output_b': []
-            },
-            'setpoint': {
-                'setpoint_a': [],
-                'setpoint_b': []
-            }
-        }
-
         bg_task = ParameterTree({
             'thread_count': (lambda: self.background_thread_counter, None),
             'enable': (lambda: self.bg_read_task_enable, self.set_task_enable),
@@ -149,7 +127,6 @@ class FurnaceController():
             'gradient': self.gradient.tree,
             'motor': self.motor.tree,
             'tcp': tcp,
-            'monitor': (lambda: self.monitor_graphs, None),
             'filewriter': {
                 'filepath': (lambda: self.file_writer.filepath, self.set_filepath),
                 'filename': (lambda: self.file_writer.filename, self.set_filename)
@@ -293,40 +270,6 @@ class FurnaceController():
         """Safely end the TCP connection."""
         self.tcp_client.close()
 
-    def _trim_dict_to_retention(self, toTrim):
-        """Iterate through a dictionary and trim its lists down to the retention length.
-        Purpose-made for the self.monitor_graphs dictionary. Could be edited to use a given target.
-        """
-        for key, value in toTrim.items():
-            if isinstance(value, dict):
-                self._trim_dict_to_retention(value)
-            elif isinstance(value, list):
-                while (len(value) > self.monitor_retention):
-                    value.pop(0)
-
-    def background_ioloop_callback(self):
-        """Ioloop callback function to populate the monitor graph variables."""
-        # Add data
-        cur_time = datetime.datetime.now()
-        cur_time = cur_time.strftime("%H:%M:%S")
-
-        self.monitor_graphs['timestamp'].append(cur_time)
-
-        self.monitor_graphs['temperature']['temperature_a'].append(self.pid_a.thermocouple)
-        self.monitor_graphs['temperature']['temperature_b'].append(self.pid_b.thermocouple)
-        self.monitor_graphs['temperature']['temperature_c'].append(self.thermocouple_c)
-
-        self.monitor_graphs['output']['output_a'].append(self.pid_a.output)
-        self.monitor_graphs['output']['output_b'].append(self.pid_b.output)
-
-        self.monitor_graphs['setpoint']['setpoint_a'].append(self.pid_a.setpoint)
-        self.monitor_graphs['setpoint']['setpoint_b'].append(self.pid_b.setpoint)
-
-        # Trim arrays down after data is added
-        self._trim_dict_to_retention(self.monitor_graphs)
-
-        # self.background_ioloop_counter += 1
-
     @run_on_executor
     def background_stream_task(self):
         """Instruct the packet decoder to receive an object, then put that object
@@ -457,11 +400,6 @@ class FurnaceController():
         )
         self.bg_read_task_enable = True
         self.bg_stream_task_enable = True
-
-        self.background_ioloop_task = PeriodicCallback(
-            self.background_ioloop_callback, 1000
-        )  # Hardcode interval for now
-        self.background_ioloop_task.start()
 
         # Run the background thread task in the thread execution pool
         self.background_stream_task()
