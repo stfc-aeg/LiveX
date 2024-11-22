@@ -349,9 +349,6 @@ class FurnaceController():
                     self.gradient.actual      = read_decode_input_reg(self.mod_client, modAddr.gradient_actual_inp)
                     self.gradient.theoretical = read_decode_input_reg(self.mod_client, modAddr.gradient_theory_inp)
 
-                    self.pid_a.gradient_setpoint = read_decode_input_reg(self.mod_client, modAddr.gradient_setpoint_a_inp)
-                    self.pid_b.gradient_setpoint = read_decode_input_reg(self.mod_client, modAddr.gradient_setpoint_b_inp)
-
                     self.aspc.midpt = read_decode_input_reg(self.mod_client, modAddr.autosp_midpt_inp)
 
                     self.pid_a.setpoint = read_decode_holding_reg(self.mod_client, modAddr.pid_setpoint_a_hold)

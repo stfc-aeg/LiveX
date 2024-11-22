@@ -68,11 +68,23 @@ int ModbusServerController::floatToHoldingRegisters(int address, float value)
   return holdingRegisterWrite(address+1, converter.registers.high);
 }
 
-// See union ModbusFloat. Stich two ints into one float
+// See union ModbusFloat. Stitch two ints from holding registers into one float
 float ModbusServerController::combineHoldingRegisters(int address)
 {
   uint16_t A = holdingRegisterRead(address);
   uint16_t B = holdingRegisterRead(address+1);
+
+  ModbusFloat modbusFloat;
+  modbusFloat.registers.high = B; // little-endian
+  modbusFloat.registers.low = A;
+  return modbusFloat.value;
+}
+
+// See unionModbusFloat. Stitch two ints from input registers into one float
+float ModbusServerController::combineInputRegisters(int address)
+{
+  uint16_t A = inputRegisterRead(address);
+  uint16_t B = inputRegisterRead(address+1);
 
   ModbusFloat modbusFloat;
   modbusFloat.registers.high = B; // little-endian

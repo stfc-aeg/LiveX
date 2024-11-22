@@ -14,7 +14,6 @@ struct PIDAddresses
 {
   int outputPin;
   int modSetPointHold;
-  int modGradSetPointHold;
   int modPidOutputInp;
   int modPidEnableCoil;
   int modThermocoupleInp;
@@ -30,7 +29,7 @@ class PIDController
     double setPoint, input, output;
     double Kp, Ki, Kd;
     double baseSetPoint;
-    float gradientSetPoint = 0;
+    float gradientModifier = 0;
     float autospRate = 0;
 
     PID myPID_;

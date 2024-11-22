@@ -20,6 +20,7 @@ class modAddr():
     acquisition_coil      = 9
     gradient_update_coil  = 10
     freq_aspc_update_coil = 11
+    setpoint_update_coil  = 12
 
     # Input registers (read-only, from device) start at 30001-39999
     counter_inp      = 30001
@@ -33,9 +34,7 @@ class modAddr():
 
     gradient_actual_inp     = 30015
     gradient_theory_inp     = 30017
-    gradient_setpoint_a_inp = 30019
-    gradient_setpoint_b_inp = 30021
-    autosp_midpt_inp        = 30023
+    autosp_midpt_inp        = 30019
 
     motor_lvdt_inp = 30027
 
@@ -69,8 +68,8 @@ class modAddr():
         'ki': pid_ki_a_hold,
         'kd': pid_kd_a_hold,
         'output': pid_output_a_inp,
-        'gradient_setpoint': gradient_setpoint_a_inp,
-        'thermocouple': thermocouple_a_inp
+        'thermocouple': thermocouple_a_inp,
+        'setpoint_update': setpoint_update_coil
     }
 
     addresses_pid_b = {
@@ -80,8 +79,8 @@ class modAddr():
         'ki': pid_ki_b_hold,
         'kd': pid_kd_b_hold,
         'output': pid_output_b_inp,
-        'gradient_setpoint': gradient_setpoint_b_inp,
-        'thermocouple': thermocouple_b_inp
+        'thermocouple': thermocouple_b_inp,
+        'setpoint_update': setpoint_update_coil
     }
 
     gradient_addresses = {

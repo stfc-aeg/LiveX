@@ -147,15 +147,19 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
     double newKd = double(modbus_server.combineHoldingRegisters(addr.modKdHold));
     PID->check_PID_tunings(newKp, newKi, newKd);
 
-    // Check thermal gradient enable status and use setpoint accordingly
-    // No issue doing this even when PID is not enabled
+    // Setpoint and computation handling
+    // The goal here is that the setPoint used in PID computation is always derived from the
+    // baseSetPoint of the PID. the bSP is gotten from a register in taskComms when changed,
+    // and the thermal gradient is a modifier, recalculated when the bSP is changed.
+
+    // If gradient is enabled, take the base setpoint and add the modifier for this run
     if (modbus_server.readBool(MOD_GRADIENT_ENABLE_COIL))
     {
-      PID->setPoint = PID->gradientSetPoint;
+      PID->setPoint = PID->baseSetPoint + PID->gradientModifier;
     }
     else
-    {
-      PID->setPoint = modbus_server.combineHoldingRegisters(addr.modSetPointHold);
+    { // Otherwise, the setpoint for this run is just the base setpoint
+      PID->setPoint = PID->baseSetPoint;
     }
 
     // Calculate PID output. When PID is not enabled, this won't do anything
@@ -180,15 +184,14 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
       gpio.analogWrite(addr.outputPin, out);
     }
 
-    // Check autosp enable status. If enabled, add rate to setpoint via holding register
-    // Only do this when enabled, to avoid permanently altering the setpoint when it's not on 
+    // Check auto set point control and modify the base setpoint if it and the PID is enabled
     if (enabled && modbus_server.readBool(MOD_AUTOSP_ENABLE_COIL))
     {
-      modbus_server.floatToHoldingRegisters(addr.modSetPointHold, (PID->setPoint + PID->autospRate));
-      PID->gradientSetPoint = PID->gradientSetPoint + PID->autospRate;
-      // To be seen on the UI
-      modbus_server.floatToInputRegisters(addr.modGradSetPointHold, PID->gradientSetPoint);
+      PID->baseSetPoint = PID->baseSetPoint + PID->autospRate;
     }
+
+    // Write the current setpoint to the register
+    modbus_server.floatToHoldingRegisters(addr.modSetPointHold, PID->setPoint);
   }
 }
 

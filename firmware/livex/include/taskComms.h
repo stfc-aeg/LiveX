@@ -4,5 +4,6 @@
 #include <resources.h>
 
 void manageComms();
+void updateSetPoints();
 
 #endif

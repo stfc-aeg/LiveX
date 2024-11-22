@@ -105,11 +105,7 @@ function PidControl(props) {
                       border: '1px solid lightblue',
                       backgroundColor: '#e0f7ff'
                     }}>
-                    {
-                      (furnaceEndPoint.data.gradient?.enable ||false) ?
-                      checkNull(furnaceEndPoint.data[pid]?.gradient_setpoint) :
-                      checkNull(furnaceEndPoint.data[pid]?.setpoint)
-                    }
+                    {checkNull(furnaceEndPoint.data[pid]?.setpoint)}
                     </InputGroup.Text>
                   </InputGroup>
                 </Row>
