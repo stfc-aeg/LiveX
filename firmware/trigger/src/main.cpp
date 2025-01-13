@@ -3,12 +3,15 @@
 #include <ArduinoModbus.h>
 #include "esp_eth.h"
 #include "esp_log.h"
-#include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 #include "config.h"
 #include "modbusUtils.h"
+
+#include <cmath>
+#include <esp32-hal-timer.h>
+#include <driver/timer.h>
 
 // Debug mode: uncomment to enable extra logging
 // #define DEBUG_MODE
@@ -24,8 +27,16 @@ void setupModbus();
 void fastLoopTask(void *pvParameters);
 void modbusTask(void *pvParameters);
 void WiFiEvent(WiFiEvent_t event);
-void startTimer(int timerIndex);
+void startTimer(int index);
+void stopTimer(int index);
+void startAllTimers();
 void stopAllTimers();
+int updateTimer(int index);
+
+void IRAM_ATTR onTimer0();
+void IRAM_ATTR onTimer1();
+void IRAM_ATTR onTimer2();
+void IRAM_ATTR handleInterrupt(int index);
 
 // Global variables
 ModbusTCPServer modbusTCPServer;
@@ -36,19 +47,28 @@ SemaphoreHandle_t pwmMutex;
 
 // PWM parameters
 uint32_t frequency[3] = {0, 0, 0};
-uint32_t pulseCount[3] = {0, 0, 0};
-uint32_t timerPulseCount[3] = {0, 0, 0};
-bool enablePWM[3] = {false, false, false};
+uint32_t pulseCount[3] = {0, 0, 0}; // Target # of instances
+volatile uint32_t activePulseCount[3] = {0, 0, 0}; // For use in interrupts, enables restart logic
+volatile bool enablePWM[3] = {false, false, false};
+bool timersRunning[3] = {false, false, false};
 
 static bool eth_connected = false;
 bool startAll = false;
 bool stopAll = false;
 
-// New variables for fast loop implementation
+// GPIO and timer variables
 const int pwmPins[3] = {PIN_TRIGGER_1, PIN_TRIGGER_2, PIN_TRIGGER_3};
-uint32_t cycleCounters[3] = {0, 0, 0};
-uint32_t halfPeriods[3] = {0, 0, 0};
-bool pinStates[3] = {false, false, false};
+volatile bool pinStates[3] = {false, false, false};
+hw_timer_t *timers[3] = {nullptr, nullptr, nullptr};
+
+// For readable address referencing
+int addrEnable[3] = {TRIG_FURNACE_ENABLE_COIL, TRIG_WIDEFOV_ENABLE_COIL, TRIG_NARROWFOV_ENABLE_COIL};
+int addrDisable[3] = {TRIG_FURNACE_DISABLE_COIL, TRIG_WIDEFOV_DISABLE_COIL, TRIG_NARROWFOV_DISABLE_COIL};
+int addrRunning[3] = {TRIG_FURNACE_RUNNING_COIL, TRIG_WIDEFOV_RUNNING_COIL, TRIG_NARROWFOV_RUNNING_COIL};
+int addrIntvl[3] = {TRIG_FURNACE_INTVL_HOLD, TRIG_WIDEFOV_INTVL_HOLD, TRIG_NARROWFOV_INTVL_HOLD};
+int addrTarget[3] = {TRIG_FURNACE_TARGET_HOLD, TRIG_WIDEFOV_TARGET_HOLD, TRIG_NARROWFOV_TARGET_HOLD};
+
+volatile int counter = 0;
 
 // Debug logging macro
 #ifdef DEBUG_MODE
@@ -57,6 +77,74 @@ bool pinStates[3] = {false, false, false};
 #define DEBUG_PRINT(x)
 #endif
 
+// Timer interrupt handlers
+void IRAM_ATTR onTimer0()
+{
+  counter++;
+  pinStates[0] = !pinStates[0];
+  digitalWrite(pwmPins[0], pinStates[0]);
+
+  // Count down on falling edge provided the target is higher than 0
+  if (!pinStates[0] && activePulseCount[0] > 0)
+  {
+    activePulseCount[0]--;
+    // at 0, disable PWM
+    if (activePulseCount[0] == 0)
+    {
+      enablePWM[0] = false;
+      digitalWrite(pwmPins[0], LOW);
+      timerAlarmDisable(timers[0]);
+    }
+  }
+}
+
+// Written with less whitespace for space
+void IRAM_ATTR onTimer1(){
+  counter++;
+  pinStates[1] = !pinStates[1];
+  digitalWrite(pwmPins[1], pinStates[1]);
+  if (!pinStates[1] && activePulseCount[1] > 0){
+    activePulseCount[1]--;
+    if (activePulseCount[1] == 0){
+      enablePWM[1] = false;
+      digitalWrite(pwmPins[1], LOW);
+      timerAlarmDisable(timers[1]);
+  }}
+}
+
+void IRAM_ATTR onTimer2(){
+  counter++;
+  pinStates[2] = !pinStates[2];
+  digitalWrite(pwmPins[2], pinStates[2]);
+  if (!pinStates[2] && activePulseCount[2] > 0){
+    activePulseCount[2]--;
+    if (activePulseCount[2] == 0){
+      enablePWM[2] = false;
+      digitalWrite(pwmPins[2], LOW);
+      timerAlarmDisable(timers[2]);
+  }}
+}
+
+void IRAM_ATTR handleInterrupt(int index)
+{
+
+  // Always toggle state and count down
+  pinStates[index] = !pinStates[index]; // toggle state
+  digitalWrite(pwmPins[index], pinStates[index]); // write state to pin
+
+  // Count down on falling edge provided the target is higher than 0
+  if (!pinStates[index] && pulseCount[index] > 0)
+  {
+    pulseCount[index]--;
+    // at 0, disable PWM
+    if (pulseCount[index] == 0)
+    {
+      enablePWM[index] = false;
+      digitalWrite(pwmPins[index], LOW);
+      timerAlarmDisable(timers[index]);
+    }
+  }
+}
 
 void WiFiEvent(WiFiEvent_t event)
 {
@@ -98,7 +186,7 @@ void WiFiEvent(WiFiEvent_t event)
 
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(9600);
 
   // Initialize Ethernet
   WiFi.onEvent(WiFiEvent);
@@ -118,14 +206,27 @@ void setup()
   setupGPIO();
   setupModbus();
 
+  // Timer initialisation
+  for (int i=0; i<3; i++)
+  {
+    timers[i] = timerBegin(i, 80, true); // Timer number, prescaler (80MHz), count up
+    if (timers[i]){ Serial.printf("Timer %d started successfully.", timers[i]); }
+  }
+
+  timerAttachInterrupt(timers[0], &onTimer0, true);
+  timerAttachInterrupt(timers[1], &onTimer1, true);
+  timerAttachInterrupt(timers[2], &onTimer2, true);
+
   // Create tasks on separate cores
-  xTaskCreatePinnedToCore(fastLoopTask, "Fast Loop Task", 4096, NULL, 5, &fastLoopTaskHandle, 0);
+  // xTaskCreatePinnedToCore(fastLoopTask, "Fast Loop Task", 4096, NULL, 5, &fastLoopTaskHandle, 0);
   xTaskCreatePinnedToCore(modbusTask, "Modbus Task", 4096, NULL, 5, &modbusTaskHandle, 1);
 }
 
 void loop()
 {
-  // The main loop is empty as we're using FreeRTOS tasks
+  // Tasks handle everything
+  Serial.printf("%d, ", counter);
+  vTaskDelay(1000);
 }
 
 void setupGPIO()
@@ -145,100 +246,61 @@ void setupModbus()
   modbusTCPServer.configureCoils(TRIG_ENABLE_COIL, TRIG_NUM_COIL);
 }
 
-// Start timers and set relevant global attributes
-void startTimer(int timerIndex)
+int updateTimer(int index)
 {
-  if (timerIndex >= 0 && timerIndex < 3)
+  uint32_t period = 1000000 / (frequency[index] * 2); // Period in us. 1/f * 1/2
+  activePulseCount[index] = pulseCount[index];
+  // Timer alarm toggling pin at period interval gives frequency equal to register value (50%)
+  timerAlarmWrite(timers[index], period, true);
+
+  return period;
+}
+
+void startTimer(int index)
+{
+  // Check valid timer
+  if (index >= 0 && index <3 && frequency[index] >0 )
   {
-    enablePWM[timerIndex] = true; // Array of enables
-    timerPulseCount[timerIndex] = pulseCount[timerIndex]; // Array of pulse counts
-    cycleCounters[timerIndex] = 0; // Array of cycles required from loop to trigger pwm
-    pinStates[timerIndex] = true; // Array of pin output states - setting that index to true
-    digitalWrite(pwmPins[timerIndex], HIGH); // Write pins to HIGH for synchronisation
-    DEBUG_PRINT("Timer " + String(timerIndex + 1) + " started");
+    int period = updateTimer(index);
+    enablePWM[index] = true;
+    timerAlarmEnable(timers[index]);
+
+    // Acknowledge that timer is running now
+    timersRunning[index] = true;
+    modbusTCPServer.coilWrite(addrRunning[index], timersRunning[index]);
+
+    Serial.printf("Started timer %d with frequency/period %d/%d\n", index, frequency[index], period);
   }
 }
 
-// Stop all timers and write LOW
+void startAllTimers()
+{
+  Serial.println("Starting all timers.");
+  for (int i=0; i<3; i++)
+  {
+    startTimer(i);
+  }
+}
+
+// Stop a single timer. enable flag is false, disable, write low, and target becomes 0
+void stopTimer(int index)
+{
+  Serial.printf("Stopping timer %d\n", index);
+  enablePWM[index] = false;
+  timerAlarmDisable(timers[index]);
+  digitalWrite(pwmPins[index], LOW);
+  pulseCount[index] = 0;
+  // Acknowledge that timer is no longer running
+  timersRunning[index] = false;
+  modbusTCPServer.coilWrite(addrRunning[index], timersRunning[index]);
+}
+
 void stopAllTimers()
 {
-  for (int i = 0; i < 3; i++)
+  Serial.println("Stopping all timers.");
+  for (int i=0; i<3; i++)
   {
-    enablePWM[i] = false;
-    digitalWrite(pwmPins[i], LOW);
-    timerPulseCount[i] = 0; // Reset pulse count
-  }
-  DEBUG_PRINT("All timers stopped");
-}
-
-// Task that repeatedly checks timers and writes pin values accordingly
-void fastLoopTask(void *pvParameters)
-{
-  TickType_t xLastWakeTime; // Time function is awoken
-  const TickType_t xPeriod = pdMS_TO_TICKS(1); // 1000Hz = 1ms period
-  xLastWakeTime = xTaskGetTickCount();
-
-  while (1)
-  {
-    // Exclusive register access
-    xSemaphoreTake(pwmMutex, portMAX_DELAY);
-
-    // Start all if requested
-    if (startAll)
-    {
-      DEBUG_PRINT("Starting all PWM channels simultaneously");
-      for (int i = 0; i < 3; i++) {
-        if (frequency[i] > 0) {
-          startTimer(i);
-        }
-      }
-      startAll = false;
-    }
-
-    // Stop all if requested
-    if (stopAll)
-    {
-      stopAllTimers();
-      stopAll = false;
-    }
-
-    // Always: increase cycles, if cycle meets half period (for rise+fall), toggle pin
-    // then increase count on falling edge. At target pulse count, disable pin.
-    for (int i = 0; i < 3; i++)
-    {
-      if (enablePWM[i]) // Check if given trigger is enabled
-      {
-        cycleCounters[i]++;
-
-        // Toggle pin at twice the frequency
-        if (cycleCounters[i] >= halfPeriods[i])
-        { // Toggle state, write that state, reset cycle counter
-          pinStates[i] = !pinStates[i];
-          digitalWrite(pwmPins[i], pinStates[i]);
-          cycleCounters[i] = 0;
-
-          if (timerPulseCount[i] > 0)
-          {
-            if (!pinStates[i])
-            { // Count (down) on falling edge
-              timerPulseCount[i]--;
-              if (timerPulseCount[i] == 0)
-              {
-                enablePWM[i] = false;
-                digitalWrite(pwmPins[i], LOW);
-                DEBUG_PRINT("PWM " + String(i) + " stopped (pulse count reached zero)");
-              }
-            }
-          }
-        }
-      } else // If it's not enabled, write LOW
-      {
-        digitalWrite(pwmPins[i], LOW);
-      }
-    }
-    // Return access and delay task by period
-    xSemaphoreGive(pwmMutex);
-    vTaskDelayUntil(&xLastWakeTime, xPeriod);
+    stopTimer(i);
   }
 }
 
@@ -264,50 +326,62 @@ void modbusTask(void *pvParameters)
         {
           int ret = modbusTCPServer.poll();
 
-          if (ret) {
-
-          }
           // Ensure registers are not accessed while being written to
           xSemaphoreTake(pwmMutex, portMAX_DELAY);
 
-          // Update frequency registers
-          for (int i = 0; i < 3; i++)
+          // Update frequency registers and pulse targets
+          for (int i=0; i<3; i++)
           {
-            uint32_t newFreq = combineHoldingRegisters(&modbusTCPServer, TRIG_FURNACE_INTVL_HOLD+ (i * 2));
-            if (newFreq > 0)
+            bool isRunning = timersRunning[i];
+            uint32_t newFreq = combineHoldingRegisters(&modbusTCPServer, addrIntvl[i]);
+            if (newFreq > 0 && newFreq != frequency[i]) // Avoiding division by 0 errors when calculating period
             {
+              // Avoid unexpected results by stopping timer before updating parameters
+              if (isRunning) { stopTimer(i); }
               frequency[i] = newFreq;
-              halfPeriods[i] = 500 / frequency[i];
+              // Start timer calls updateTimer
+              if (isRunning) { startTimer(i); }
+            }
+
+            uint32_t newPulse = combineHoldingRegisters(&modbusTCPServer, addrTarget[i]);
+            if (newPulse != pulseCount[i])
+            {
+              if (isRunning) { stopTimer(i); }
+              pulseCount[i] = newPulse;
+              if (isRunning) { startTimer(i); }
             }
           }
 
-          // Update pulse count registers
-          for (int i = 0; i < 3; i++)
+          // Check coils and reset after reading them
+          if (modbusTCPServer.coilRead(TRIG_ENABLE_COIL))
           {
-            pulseCount[i] = combineHoldingRegisters(&modbusTCPServer, TRIG_FURNACE_TARGET_HOLD + (i * 2))
-            DEBUG_PRINT("Pulse count " + String(i) + " updated to " + String(pulseCount[i]));
+            startAllTimers();
+            modbusTCPServer.coilWrite(TRIG_ENABLE_COIL, false);
+          }
+          else if (modbusTCPServer.coilRead(TRIG_DISABLE_COIL))
+          {
+            stopAllTimers();
+            modbusTCPServer.coilWrite(TRIG_DISABLE_COIL, false);
           }
 
-          // Check coils and reset after reading them
-          startAll = modbusTCPServer.coilRead(TRIG_ENABLE_COIL);
-          modbusTCPServer.coilWrite(TRIG_ENABLE_COIL, false);
-
-          stopAll = modbusTCPServer.coilRead(TRIG_DISABLE_COIL);
-          modbusTCPServer.coilWrite(TRIG_DISABLE_COIL, false);
-
-          // Enable for individual timers
+          // Enable or disable for individual timers
           for (int i = 0; i < 3; i++)
           {
-            if (modbusTCPServer.coilRead(TRIG_FURNACE_ENABLE_COIL + i))
+            if (modbusTCPServer.coilRead(addrEnable[i]))
             {
               startTimer(i);
-              modbusTCPServer.coilWrite(TRIG_FURNACE_ENABLE_COIL + i, false);
+              modbusTCPServer.coilWrite(addrEnable[i], false);
+            }
+            else if (modbusTCPServer.coilRead(addrDisable[i]))
+            {
+              stopTimer(i);
+              modbusTCPServer.coilWrite(addrDisable[i], false);
             }
           }
           // Return access for fast loop
           xSemaphoreGive(pwmMutex);
 
-          vTaskDelay(1);
+          vTaskDelay(10);
         }
         DEBUG_PRINT("Client disconnected");
       }
