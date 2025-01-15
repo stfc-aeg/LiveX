@@ -1,5 +1,5 @@
 from odin.adapters.parameter_tree import ParameterTree
-from livex.util import read_decode_input_reg, read_decode_holding_reg, write_modbus_float, write_coil
+from livex.util import read_decode_holding_reg, write_modbus_float, write_coil, read_coil
 import logging
 
 class Trigger():
@@ -14,11 +14,13 @@ class Trigger():
         self.enable = None
         self.frequency = None
         self.target = None
+        self.running = False
 
         self.client = None
 
         self.tree = ParameterTree({
             'enable': (lambda: self.enable, self.set_enable),
+            'running': (lambda: self.running, None),
             'frequency': (lambda: self.frequency, self.set_frequency),
             'target': (lambda: self.target, self.set_target)
         })
@@ -36,8 +38,7 @@ class Trigger():
         ret = self.client.read_coils(self.addr['enable_coil'], 1, slave=1)
         self.enable = ret.bits[0]
 
-        # Frequencies = 1_000_000 / intvl*2
-        # Interval = (1_000_000 / freq) // 2
+        self.running = read_coil(self.client, self.addr['running_coil'])
         self.frequency = read_decode_holding_reg(self.client, self.addr['freq_hold'])
         self.target = int(read_decode_holding_reg(self.client, self.addr['target_hold']))
 
@@ -48,7 +49,11 @@ class Trigger():
     def set_enable(self, value):
         """Toggle the enable for the timer."""
         self.enable = bool(value)
-        write_coil(self.client, self.addr['enable_coil'], bool(self.enable))
+        # Both writes are True as these are flags handled by hardware
+        if self.enable:
+            write_coil(self.client, self.addr['enable_coil'], True)
+        elif not self.enable:
+            write_coil(self.client, self.addr['disable_coil'], True)
 
     def set_frequency(self, value):
         """Set the frequency of the timer, then calculate the interval and send that value."""

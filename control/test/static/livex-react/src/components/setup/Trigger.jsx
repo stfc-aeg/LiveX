@@ -166,6 +166,18 @@ function Trigger(props) {
                         )}
                       </InputGroup>
                     </Row>
+                    <Row>
+                      <EndPointButton
+                        endpoint={triggerEndPoint}
+                        fullpath={`triggers/${key}/enable`}
+                        value={triggerEndPoint?.data.triggers[key]?.running ? false : true}
+                        disabled={!triggerEndPoint?.data?.modbus?.connected}
+                        event_type="click"
+                        variant={triggerEndPoint?.data.triggers[key]?.running ? "danger" : "primary"}
+                      >
+                          {triggerEndPoint?.data.triggers[key]?.running ? "Stop": "Start"}
+                      </EndPointButton>
+                    </Row>
                   </TitleCard>
                 </Col>
               ))}

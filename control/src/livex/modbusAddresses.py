@@ -126,21 +126,33 @@ class modAddr():
     trig_furnace_enable_coil = 2
     trig_widefov_enable_coil = 3
     trig_narrowfov_enable_coil = 4
+    trig_furnace_disable_coil = 5
+    trig_widefov_disable_coil = 6
+    trig_narrowfov_disable_coil = 7
+    trig_furnace_running_coil = 8
+    trig_widefov_running_coil = 9
+    trig_narrowfov_running_coil = 10
 
     trigger_furnace = {
-        'enable_coil':   trig_furnace_enable_coil,
+        'enable_coil': trig_furnace_enable_coil,
+        'disable_coil': trig_furnace_disable_coil,
+        'running_coil': trig_furnace_running_coil,
         'freq_hold': trig_furnace_intvl_hold,
-        'target_hold':   trig_furnace_target_hold
+        'target_hold': trig_furnace_target_hold,
     }
 
     trigger_widefov = {
-        'enable_coil':   trig_widefov_enable_coil,
+        'enable_coil': trig_widefov_enable_coil,
+        'disable_coil': trig_widefov_disable_coil,
+        'running_coil': trig_widefov_running_coil,
         'freq_hold': trig_widefov_intvl_hold,
-        'target_hold':   trig_widefov_target_hold
+        'target_hold': trig_widefov_target_hold
     }
 
     trigger_narrowfov = {
-        'enable_coil':   trig_narrowfov_enable_coil,
+        'enable_coil': trig_narrowfov_enable_coil,
+        'disable_coil': trig_narrowfov_disable_coil,
+        'running_coil': trig_narrowfov_running_coil,
         'freq_hold': trig_narrowfov_intvl_hold,
-        'target_hold':   trig_narrowfov_target_hold
+        'target_hold': trig_narrowfov_target_hold
     }

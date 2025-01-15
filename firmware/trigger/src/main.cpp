@@ -225,7 +225,7 @@ void setup()
 void loop()
 {
   // Tasks handle everything
-  Serial.printf("%d, ", counter);
+  // Serial.printf("%d, ", counter);
   vTaskDelay(1000);
 }
 
@@ -278,6 +278,7 @@ void startAllTimers()
   Serial.println("Starting all timers.");
   for (int i=0; i<3; i++)
   {
+    Serial.printf("Starting timer %d, ", i);
     startTimer(i);
   }
 }
