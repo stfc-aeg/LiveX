@@ -61,7 +61,7 @@ const int pwmPins[3] = {PIN_TRIGGER_1, PIN_TRIGGER_2, PIN_TRIGGER_3};
 volatile bool pinStates[3] = {false, false, false};
 hw_timer_t *timers[3] = {nullptr, nullptr, nullptr};
 
-// For readable address referencing
+// For more readable address referencing
 int addrEnable[3] = {TRIG_FURNACE_ENABLE_COIL, TRIG_WIDEFOV_ENABLE_COIL, TRIG_NARROWFOV_ENABLE_COIL};
 int addrDisable[3] = {TRIG_FURNACE_DISABLE_COIL, TRIG_WIDEFOV_DISABLE_COIL, TRIG_NARROWFOV_DISABLE_COIL};
 int addrRunning[3] = {TRIG_FURNACE_RUNNING_COIL, TRIG_WIDEFOV_RUNNING_COIL, TRIG_NARROWFOV_RUNNING_COIL};
@@ -73,8 +73,10 @@ volatile int counter = 0;
 // Debug logging macro
 #ifdef DEBUG_MODE
 #define DEBUG_PRINT(x) Serial.println(x)
+#define DEBUG_PRINTF(...) Serial.printf(__VA_ARGS__)
 #else
 #define DEBUG_PRINT(x)
+#define DEBUG_PRINTF(...)
 #endif
 
 // Timer interrupt handlers
@@ -111,7 +113,6 @@ void IRAM_ATTR onTimer1(){
       timerAlarmDisable(timers[1]);
   }}
 }
-
 void IRAM_ATTR onTimer2(){
   counter++;
   pinStates[2] = !pinStates[2];
@@ -125,27 +126,7 @@ void IRAM_ATTR onTimer2(){
   }}
 }
 
-void IRAM_ATTR handleInterrupt(int index)
-{
-
-  // Always toggle state and count down
-  pinStates[index] = !pinStates[index]; // toggle state
-  digitalWrite(pwmPins[index], pinStates[index]); // write state to pin
-
-  // Count down on falling edge provided the target is higher than 0
-  if (!pinStates[index] && pulseCount[index] > 0)
-  {
-    pulseCount[index]--;
-    // at 0, disable PWM
-    if (pulseCount[index] == 0)
-    {
-      enablePWM[index] = false;
-      digitalWrite(pwmPins[index], LOW);
-      timerAlarmDisable(timers[index]);
-    }
-  }
-}
-
+// Establish connection details
 void WiFiEvent(WiFiEvent_t event)
 {
   switch (event)
@@ -184,6 +165,7 @@ void WiFiEvent(WiFiEvent_t event)
   }
 }
 
+// Setup function, begin ethernet, gpio pins, modbus, and timers
 void setup()
 {
   Serial.begin(9600);
@@ -210,7 +192,7 @@ void setup()
   for (int i=0; i<3; i++)
   {
     timers[i] = timerBegin(i, 80, true); // Timer number, prescaler (80MHz), count up
-    if (timers[i]){ Serial.printf("Timer %d started successfully.", timers[i]); }
+    if (timers[i]){ DEBUG_PRINTF("Timer %d started successfully.", timers[i]); }
   }
 
   timerAttachInterrupt(timers[0], &onTimer0, true);
@@ -222,13 +204,15 @@ void setup()
   xTaskCreatePinnedToCore(modbusTask, "Modbus Task", 4096, NULL, 5, &modbusTaskHandle, 1);
 }
 
+// Main loop, tasks are delegated to core 1 for this application
 void loop()
 {
   // Tasks handle everything
-  // Serial.printf("%d, ", counter);
+  DEBUG_PRINTF("%d, ", counter);
   vTaskDelay(1000);
 }
 
+// Set GPIO pins
 void setupGPIO()
 {
   for (int i = 0; i < 3; i++)
@@ -246,6 +230,7 @@ void setupModbus()
   modbusTCPServer.configureCoils(TRIG_ENABLE_COIL, TRIG_NUM_COIL);
 }
 
+// Calculate and write timer period, update pulseCount for running timer
 int updateTimer(int index)
 {
   uint32_t period = 1000000 / (frequency[index] * 2); // Period in us. 1/f * 1/2
@@ -256,6 +241,7 @@ int updateTimer(int index)
   return period;
 }
 
+// Begin specified timer, ensuring it is updated
 void startTimer(int index)
 {
   // Check valid timer
@@ -269,16 +255,16 @@ void startTimer(int index)
     timersRunning[index] = true;
     modbusTCPServer.coilWrite(addrRunning[index], timersRunning[index]);
 
-    Serial.printf("Started timer %d with frequency/period %d/%d\n", index, frequency[index], period);
+    DEBUG_PRINTF("Started timer %d with frequency/period %d/%d\n", index, frequency[index], period);
   }
 }
 
+// Call startTimer for each of 3 timers
 void startAllTimers()
 {
-  Serial.println("Starting all timers.");
+  DEBUG_PRINT("Starting all timers.");
   for (int i=0; i<3; i++)
   {
-    Serial.printf("Starting timer %d, ", i);
     startTimer(i);
   }
 }
@@ -286,7 +272,7 @@ void startAllTimers()
 // Stop a single timer. enable flag is false, disable, write low, and target becomes 0
 void stopTimer(int index)
 {
-  Serial.printf("Stopping timer %d\n", index);
+  DEBUG_PRINTF("Stopping timer %d\n", index);
   enablePWM[index] = false;
   timerAlarmDisable(timers[index]);
   digitalWrite(pwmPins[index], LOW);
@@ -294,17 +280,20 @@ void stopTimer(int index)
   // Acknowledge that timer is no longer running
   timersRunning[index] = false;
   modbusTCPServer.coilWrite(addrRunning[index], timersRunning[index]);
+  pinStates[index] = false; // Reset pin state for future runs
 }
 
+// Call stopTimer for all of 3 timers
 void stopAllTimers()
 {
-  Serial.println("Stopping all timers.");
+  DEBUG_PRINT("Stopping all timers.");
   for (int i=0; i<3; i++)
   {
     stopTimer(i);
   }
 }
 
+// Establish modbus client connection, check registers for updates to values or start/stop flags
 void modbusTask(void *pvParameters)
 {
   WiFiServer server(MODBUS_TCP_PORT);
