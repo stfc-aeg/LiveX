@@ -113,46 +113,63 @@ class modAddr():
 
     # Trigger adapter addresses
 
-    trig_furnace_intvl_hold   = 40001
-    trig_widefov_intvl_hold   = 40003
-    trig_narrowfov_intvl_hold = 40005
+    trig_0_intvl_hold = 40001
+    trig_1_intvl_hold = 40003
+    trig_2_intvl_hold = 40005
+    trig_3_intvl_hold = 40007
 
-    trig_furnace_target_hold   = 40007
-    trig_widefov_target_hold   = 40009
-    trig_narrowfov_target_hold = 40011
+    trig_0_target_hold = 40009
+    trig_1_target_hold = 40011
+    trig_2_target_hold = 40013
+    trig_3_target_hold = 40015
 
+    # Write True to enable/disable all triggers
     trig_enable_coil = 0
     trig_disable_coil = 1
-    trig_furnace_enable_coil = 2
-    trig_widefov_enable_coil = 3
-    trig_narrowfov_enable_coil = 4
-    trig_furnace_disable_coil = 5
-    trig_widefov_disable_coil = 6
-    trig_narrowfov_disable_coil = 7
-    trig_furnace_running_coil = 8
-    trig_widefov_running_coil = 9
-    trig_narrowfov_running_coil = 10
+    # Write True to enable trigger
+    trig_0_enable_coil = 2
+    trig_1_enable_coil = 3
+    trig_2_enable_coil = 4
+    trig_3_enable_coil = 5
+    # Write True to disable trigger
+    trig_0_disable_coil = 6
+    trig_1_disable_coil = 7
+    trig_2_disable_coil = 8
+    trig_3_disable_coil = 9
+    # Read to see if related timer is running
+    trig_0_running_coil = 10
+    trig_1_running_coil = 11
+    trig_2_running_coil = 12
+    trig_3_running_coil = 13
 
-    trigger_furnace = {
-        'enable_coil': trig_furnace_enable_coil,
-        'disable_coil': trig_furnace_disable_coil,
-        'running_coil': trig_furnace_running_coil,
-        'freq_hold': trig_furnace_intvl_hold,
-        'target_hold': trig_furnace_target_hold,
+    trigger_0 = {
+        'enable_coil': trig_0_enable_coil,
+        'disable_coil': trig_0_disable_coil,
+        'running_coil': trig_0_running_coil,
+        'freq_hold': trig_0_intvl_hold,
+        'target_hold': trig_0_target_hold,
     }
 
-    trigger_widefov = {
-        'enable_coil': trig_widefov_enable_coil,
-        'disable_coil': trig_widefov_disable_coil,
-        'running_coil': trig_widefov_running_coil,
-        'freq_hold': trig_widefov_intvl_hold,
-        'target_hold': trig_widefov_target_hold
+    trigger_1 = {
+        'enable_coil': trig_1_enable_coil,
+        'disable_coil': trig_1_disable_coil,
+        'running_coil': trig_1_running_coil,
+        'freq_hold': trig_1_intvl_hold,
+        'target_hold': trig_1_target_hold
     }
 
-    trigger_narrowfov = {
-        'enable_coil': trig_narrowfov_enable_coil,
-        'disable_coil': trig_narrowfov_disable_coil,
-        'running_coil': trig_narrowfov_running_coil,
-        'freq_hold': trig_narrowfov_intvl_hold,
-        'target_hold': trig_narrowfov_target_hold
+    trigger_2 = {
+        'enable_coil': trig_2_enable_coil,
+        'disable_coil': trig_2_disable_coil,
+        'running_coil': trig_2_running_coil,
+        'freq_hold': trig_2_intvl_hold,
+        'target_hold': trig_2_target_hold
+    }
+
+    trigger_3 = {
+        'enable_coil': trig_3_enable_coil,
+        'disable_coil': trig_3_disable_coil,
+        'running_coil': trig_3_running_coil,
+        'freq_hold': trig_3_intvl_hold,
+        'target_hold': trig_3_target_hold
     }

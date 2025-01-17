@@ -30,17 +30,19 @@ class Trigger():
         self.client = client
         try:
             self._get_parameters()
-        except:
-            logging.debug("Error when attempting to get trigger parameters after client registry.")
+        except Exception as e:
+            logging.debug(f"Error {e} when attempting to get trigger parameters after client registry.")
 
     def _get_parameters(self):
         """Read modbus registers to get the most recent values for the trigger."""
+        logging.debug(f"trigger {self.name}")
         ret = self.client.read_coils(self.addr['enable_coil'], 1, slave=1)
         self.enable = ret.bits[0]
 
         self.running = read_coil(self.client, self.addr['running_coil'])
         self.frequency = read_decode_holding_reg(self.client, self.addr['freq_hold'])
         self.target = int(read_decode_holding_reg(self.client, self.addr['target_hold']))
+        logging.debug("got all needed values")
 
     def update_hold_value(self, address, value):
         """Write a value to a given holding register(s) and mark the 'value updated' coil."""

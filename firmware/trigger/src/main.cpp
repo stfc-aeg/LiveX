@@ -31,11 +31,12 @@ void startTimer(int index);
 void stopTimer(int index);
 void startAllTimers();
 void stopAllTimers();
-int updateTimer(int index);
+void updateTimer(int index);
 
 void IRAM_ATTR onTimer0();
 void IRAM_ATTR onTimer1();
 void IRAM_ATTR onTimer2();
+void IRAM_ATTR onTimer3();
 void IRAM_ATTR handleInterrupt(int index);
 
 // Global variables
@@ -46,27 +47,27 @@ TaskHandle_t modbusTaskHandle;
 SemaphoreHandle_t pwmMutex;
 
 // PWM parameters
-uint32_t frequency[3] = {0, 0, 0};
-uint32_t pulseCount[3] = {0, 0, 0}; // Target # of instances
-volatile uint32_t activePulseCount[3] = {0, 0, 0}; // For use in interrupts, enables restart logic
-volatile bool enablePWM[3] = {false, false, false};
-bool timersRunning[3] = {false, false, false};
+uint32_t frequency[4] = {0, 0, 0, 0};
+uint32_t pulseCount[4] = {0, 0, 0, 0}; // Target # of instances
+volatile uint32_t activePulseCount[4] = {0, 0, 0, 0}; // For use in interrupts, enables restart logic
+volatile bool enablePWM[4] = {false, false, false, false};
+bool timersRunning[4] = {false, false, false, false};
 
 static bool eth_connected = false;
 bool startAll = false;
 bool stopAll = false;
 
 // GPIO and timer variables
-const int pwmPins[3] = {PIN_TRIGGER_1, PIN_TRIGGER_2, PIN_TRIGGER_3};
-volatile bool pinStates[3] = {false, false, false};
-hw_timer_t *timers[3] = {nullptr, nullptr, nullptr};
+const int pwmPins[4] = {PIN_TRIGGER_0, PIN_TRIGGER_1, PIN_TRIGGER_2, PIN_TRIGGER_3};
+volatile bool pinStates[4] = {false, false, false, false};
+hw_timer_t *timers[4] = {nullptr, nullptr, nullptr, nullptr};
 
 // For more readable address referencing
-int addrEnable[3] = {TRIG_FURNACE_ENABLE_COIL, TRIG_WIDEFOV_ENABLE_COIL, TRIG_NARROWFOV_ENABLE_COIL};
-int addrDisable[3] = {TRIG_FURNACE_DISABLE_COIL, TRIG_WIDEFOV_DISABLE_COIL, TRIG_NARROWFOV_DISABLE_COIL};
-int addrRunning[3] = {TRIG_FURNACE_RUNNING_COIL, TRIG_WIDEFOV_RUNNING_COIL, TRIG_NARROWFOV_RUNNING_COIL};
-int addrIntvl[3] = {TRIG_FURNACE_INTVL_HOLD, TRIG_WIDEFOV_INTVL_HOLD, TRIG_NARROWFOV_INTVL_HOLD};
-int addrTarget[3] = {TRIG_FURNACE_TARGET_HOLD, TRIG_WIDEFOV_TARGET_HOLD, TRIG_NARROWFOV_TARGET_HOLD};
+int addrEnable[4] = {TRIG_0_ENABLE_COIL, TRIG_1_ENABLE_COIL, TRIG_2_ENABLE_COIL, TRIG_3_ENABLE_COIL};
+int addrDisable[4] = {TRIG_0_DISABLE_COIL, TRIG_1_DISABLE_COIL, TRIG_2_DISABLE_COIL, TRIG_3_DISABLE_COIL};
+int addrRunning[4] = {TRIG_0_RUNNING_COIL, TRIG_1_RUNNING_COIL, TRIG_2_RUNNING_COIL, TRIG_3_RUNNING_COIL};
+int addrIntvl[4] = {TRIG_0_INTVL_HOLD, TRIG_1_INTVL_HOLD, TRIG_2_INTVL_HOLD, TRIG_3_INTVL_HOLD};
+int addrTarget[4] = {TRIG_0_TARGET_HOLD, TRIG_1_TARGET_HOLD, TRIG_2_TARGET_HOLD, TRIG_3_TARGET_HOLD};
 
 volatile int counter = 0;
 
@@ -125,7 +126,18 @@ void IRAM_ATTR onTimer2(){
       timerAlarmDisable(timers[2]);
   }}
 }
-
+void IRAM_ATTR onTimer3(){
+  counter++;
+  pinStates[3] = !pinStates[3];
+  digitalWrite(pwmPins[3], pinStates[1]);
+  if (!pinStates[3] && activePulseCount[3] > 0){
+    activePulseCount[3]--;
+    if (activePulseCount[3] == 0){
+      enablePWM[3] = false;
+      digitalWrite(pwmPins[3], LOW);
+      timerAlarmDisable(timers[3]);
+  }}
+}
 // Establish connection details
 void WiFiEvent(WiFiEvent_t event)
 {
@@ -189,15 +201,27 @@ void setup()
   setupModbus();
 
   // Timer initialisation
-  for (int i=0; i<3; i++)
+  for (int i=0; i<NUM_TRIGGERS; i++)
   {
     timers[i] = timerBegin(i, 80, true); // Timer number, prescaler (80MHz), count up
     if (timers[i]){ DEBUG_PRINTF("Timer %d started successfully.", timers[i]); }
+    switch (i)
+    {
+    case 0:
+      timerAttachInterrupt(timers[0], &onTimer0, true);
+      break;
+    case 1:
+      timerAttachInterrupt(timers[1], &onTimer1, true);
+      break;
+    case 2:
+      timerAttachInterrupt(timers[2], &onTimer2, true);
+      break;
+    case 3:
+      timerAttachInterrupt(timers[3], &onTimer3, true);
+    default:
+      break;
+    }
   }
-
-  timerAttachInterrupt(timers[0], &onTimer0, true);
-  timerAttachInterrupt(timers[1], &onTimer1, true);
-  timerAttachInterrupt(timers[2], &onTimer2, true);
 
   // Create tasks on separate cores
   // xTaskCreatePinnedToCore(fastLoopTask, "Fast Loop Task", 4096, NULL, 5, &fastLoopTaskHandle, 0);
@@ -215,7 +239,7 @@ void loop()
 // Set GPIO pins
 void setupGPIO()
 {
-  for (int i = 0; i < 3; i++)
+  for (int i=0; i<NUM_TRIGGERS; i++)
   {
     pinMode(pwmPins[i], OUTPUT);
     digitalWrite(pwmPins[i], LOW);
@@ -226,28 +250,27 @@ void setupGPIO()
 void setupModbus()
 {
   modbusTCPServer.begin();
-  modbusTCPServer.configureHoldingRegisters(TRIG_FURNACE_INTVL_HOLD, TRIG_NUM_HOLD);
+  modbusTCPServer.configureHoldingRegisters(TRIG_0_INTVL_HOLD, TRIG_NUM_HOLD);
   modbusTCPServer.configureCoils(TRIG_ENABLE_COIL, TRIG_NUM_COIL);
 }
 
 // Calculate and write timer period, update pulseCount for running timer
-int updateTimer(int index)
+void updateTimer(int index)
 {
   uint32_t period = 1000000 / (frequency[index] * 2); // Period in us. 1/f * 1/2
   activePulseCount[index] = pulseCount[index];
   // Timer alarm toggling pin at period interval gives frequency equal to register value (50%)
   timerAlarmWrite(timers[index], period, true);
 
-  return period;
+  DEBUG_PRINTF("Timer %d set to frequency/period %d/%d with target %d.\n", index, frequency[index], period, activePulseCount[index]);
 }
 
 // Begin specified timer, ensuring it is updated
 void startTimer(int index)
 {
   // Check valid timer
-  if (index >= 0 && index <3 && frequency[index] >0 )
+  if (index >= 0 && index <NUM_TRIGGERS && frequency[index] >0 )
   {
-    int period = updateTimer(index);
     enablePWM[index] = true;
     timerAlarmEnable(timers[index]);
 
@@ -263,9 +286,17 @@ void startTimer(int index)
 void startAllTimers()
 {
   DEBUG_PRINT("Starting all timers.");
-  for (int i=0; i<3; i++)
+  // Not calling startTimer for each to optimise synchronisation
+  for (int i=0; i<NUM_TRIGGERS; i++)
   {
-    startTimer(i);
+    enablePWM[i] = true;
+    timerAlarmEnable(timers[i]);
+  }
+  // Write to all coils afterwards for maximum synchronicity
+  for (int i=0; i<NUM_TRIGGERS; i++)
+  {
+    timersRunning[i] = true;
+    modbusTCPServer.coilWrite(addrRunning[i], timersRunning[i]);
   }
 }
 
@@ -287,8 +318,9 @@ void stopTimer(int index)
 void stopAllTimers()
 {
   DEBUG_PRINT("Stopping all timers.");
-  for (int i=0; i<3; i++)
+  for (int i=0; i<NUM_TRIGGERS; i++)
   {
+    // Not as concerned about synchronising the stopping of triggers, this is fine
     stopTimer(i);
   }
 }
@@ -320,7 +352,7 @@ void modbusTask(void *pvParameters)
           xSemaphoreTake(pwmMutex, portMAX_DELAY);
 
           // Update frequency registers and pulse targets
-          for (int i=0; i<3; i++)
+          for (int i=0; i<NUM_TRIGGERS; i++)
           {
             bool isRunning = timersRunning[i];
             uint32_t newFreq = combineHoldingRegisters(&modbusTCPServer, addrIntvl[i]);
@@ -329,7 +361,7 @@ void modbusTask(void *pvParameters)
               // Avoid unexpected results by stopping timer before updating parameters
               if (isRunning) { stopTimer(i); }
               frequency[i] = newFreq;
-              // Start timer calls updateTimer
+              updateTimer(i);
               if (isRunning) { startTimer(i); }
             }
 
@@ -338,6 +370,7 @@ void modbusTask(void *pvParameters)
             {
               if (isRunning) { stopTimer(i); }
               pulseCount[i] = newPulse;
+              updateTimer(i);
               if (isRunning) { startTimer(i); }
             }
           }
@@ -355,7 +388,7 @@ void modbusTask(void *pvParameters)
           }
 
           // Enable or disable for individual timers
-          for (int i = 0; i < 3; i++)
+          for (int i=0; i<NUM_TRIGGERS; i++)
           {
             if (modbusTCPServer.coilRead(addrEnable[i]))
             {
