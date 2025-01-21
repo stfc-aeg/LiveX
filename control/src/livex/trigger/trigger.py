@@ -35,14 +35,12 @@ class Trigger():
 
     def _get_parameters(self):
         """Read modbus registers to get the most recent values for the trigger."""
-        logging.debug(f"trigger {self.name}")
         ret = self.client.read_coils(self.addr['enable_coil'], 1, slave=1)
         self.enable = ret.bits[0]
 
         self.running = read_coil(self.client, self.addr['running_coil'])
         self.frequency = read_decode_holding_reg(self.client, self.addr['freq_hold'])
         self.target = int(read_decode_holding_reg(self.client, self.addr['target_hold']))
-        logging.debug("got all needed values")
 
     def update_hold_value(self, address, value):
         """Write a value to a given holding register(s) and mark the 'value updated' coil."""
@@ -60,10 +58,9 @@ class Trigger():
     def set_frequency(self, value):
         """Set the frequency of the timer, then calculate the interval and send that value."""
         self.frequency = value
-        logging.debug(f"trigger {self.name} with frequency {self.frequency}")
+        logging.debug(f"Set trigger {self.name} to frequency {self.frequency}.")
         # interval = (1_000_000 / self.frequency) // 2
         self.update_hold_value(self.addr['freq_hold'], self.frequency)
-        logging.debug("updated hold value")
 
     def set_target(self, value):
         """Set the target framecount of the timer."""

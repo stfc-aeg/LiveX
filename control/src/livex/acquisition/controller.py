@@ -294,9 +294,7 @@ class LiveXController(BaseController):
         """Useful function to inform the furnace PLC of its trigger frequency.
         This helps with SampleTime and the Auto Set Point Control.
         """
-        logging.debug(f"Writing freq {frequency} to register {modAddr.furnace_freq_hold}")
         write_modbus_float(self.furnace.mod_client, frequency, modAddr.furnace_freq_hold)
-        logging.debug(f"Writing {True} to coil {modAddr.freq_aspc_update_coil}")
         write_coil(self.furnace.mod_client, modAddr.freq_aspc_update_coil, True)  
 
     def set_acq_time(self, value):

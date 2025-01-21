@@ -100,8 +100,8 @@ function Trigger(props) {
                   </InputGroup>
                 </Row>
                 <Row>
-                  <InputGroup className="mt-3">
-                    Timer toggles (no acquisition)
+                  <label className="mt-3">Timer control:</label>
+                  <InputGroup>
                     <EndPointButton
                         endpoint={triggerEndPoint}
                         fullpath={"all_timers_enable"}
@@ -146,7 +146,7 @@ function Trigger(props) {
                     </Row>
                     <Row>
                       <InputGroup>
-                        <InputGroup.Text>Frame #</InputGroup.Text>  
+                        <InputGroup.Text>Frame #</InputGroup.Text>
                         {timeFrameValue==='frame' && key===ref_trigger ? (
                           <EndPointFormControl
                             endpoint={liveXEndPoint}
@@ -166,8 +166,9 @@ function Trigger(props) {
                         )}
                       </InputGroup>
                     </Row>
-                    <Row>
+                    <Row className="ms-1 me-1">
                       <EndPointButton
+                        className="display-inline-block"
                         endpoint={triggerEndPoint}
                         fullpath={`triggers/${key}/enable`}
                         value={triggerEndPoint?.data.triggers[key]?.running ? false : true}
