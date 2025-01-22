@@ -73,25 +73,11 @@ void manageComms()
     char c = streamClient.read();
     // Serial.print(".");
 
-    // Dequeue object, if its not a nullptr, write its data out
-    if (PID_DEBUG)
+    BufferObject* dequeued = buffer.dequeue();
+    if (dequeued != nullptr)
     {
-      
-      DebugBufferObject* dequeued = debugbuffer.dequeue();
-      if (dequeued != nullptr)
-      {
-        tcpEthServer.write((uint8_t*)dequeued, sizeof(DebugBufferObject));
-      }
+      tcpEthServer.write((uint8_t*)dequeued, sizeof(BufferObject));
     }
-    else
-    {
-      BufferObject* dequeued = buffer.dequeue();
-      if (dequeued != nullptr)
-      {
-        tcpEthServer.write((uint8_t*)dequeued, sizeof(BufferObject));
-      }
-    }
-
   }
   else
   {

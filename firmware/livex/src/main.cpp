@@ -13,11 +13,8 @@ EthernetServer modbusEthServer(502);
 EthernetServer tcpEthServer(4444);
 ModbusServerController modbus_server;
 ExpandedGpio gpio;
-#if PID_DEBUG
-FifoBuffer<DebugBufferObject> debugbuffer(256);
-#else
+
 FifoBuffer<BufferObject> buffer(256);
-#endif
 
 SemaphoreHandle_t gradientAspcMutex;
 

@@ -6,13 +6,6 @@
 struct BufferObject
 {
     float counter;
-    float temperatureA;
-    float temperatureB;
-};
-
-struct DebugBufferObject
-{
-    float counter;
     // PID A attributes
     float temperature_a;
     float output_a;

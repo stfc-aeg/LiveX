@@ -76,10 +76,11 @@ class FurnaceController():
 
         # Create packet decoder and stream buffer for TCP values sent by PLC
         # If pid_debug is true (and set in the PLC as well), this is a range of PID behaviour data
-        pid_debug = bool(int(options.get('pid_debug', False)))
-        self.packet_decoder = LiveXPacketDecoder(pid_debug)
+        data_groupname = str(options.get('data_groupname', 'readings'))
+
+        self.packet_decoder = LiveXPacketDecoder()
         self.stream_buffer = {key: [] for key in self.packet_decoder.data.keys()}  # Same data structure
-        self.data_groupname = "debug readings"
+        self.data_groupname = data_groupname
 
         self.start_acquisition = False
 
@@ -225,7 +226,7 @@ class FurnaceController():
             # If ending an acquisition, clear the buffer
             self.file_writer.write_hdf5(
                 self.stream_buffer,
-                'temperature_readings'
+                self.data_groupname
             )
             for key in self.stream_buffer:
                 self.stream_buffer[key].clear()
@@ -296,6 +297,9 @@ class FurnaceController():
                 # Add decoded data to the stream buffer
                 for attr in self.packet_decoder.data.keys():
                     self.stream_buffer[attr].append(self.packet_decoder.data[attr])
+
+                if len(self.stream_buffer['counter']) == 9:
+                    logging.debug(f"data content:\n{self.stream_buffer}")
 
                 # After a certain number of data reads, write data to the file
                 if len(self.stream_buffer['counter']) == 10:

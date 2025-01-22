@@ -4,7 +4,7 @@
 // void thermalGradient();
 // void autoSetPointControl();
 void runPID(String pid);
-void fillPidDebugBuffer(DebugBufferObject& obj);
+void fillPidBuffer(BufferObject& obj);
 
 // Task to be run on core 0 to control devices.
 // This includes the PID operation, motor driving, and calculation of thermal gradient and auto set point control.
@@ -52,29 +52,14 @@ void Core0PIDTask(void * pvParameters)
           counter = 1;
           acquiringFlag = true;
         }
-        if (PID_DEBUG)
-        {
-          // DEBUG object
-          float error = PID_A.setPoint - PID_A.input;
-          DebugBufferObject obj;
-          fillPidDebugBuffer(obj); // Convenience/readability function
-          // Queue only if there is room in the buffer
-          if (debugbuffer.isFull()) { /* Serial.print("."); */ }
-          else { debugbuffer.enqueue(&obj); }
-        }
-        else // The default case
-        {
-          // Data object for 
-          BufferObject obj;
-          obj.counter = counter;
-          obj.temperatureA = PID_A.input;
-          obj.temperatureB = PID_B.input;
-          
-          // Queue only if there is room in the buffer
-          if (buffer.isFull()) { /* Serial.print("."); */ }
-          else { buffer.enqueue(&obj); }
-        }
 
+        // buffer object
+        float error = PID_A.setPoint - PID_A.input;
+        BufferObject obj;
+        fillPidBuffer(obj); // Convenience/readability function
+        // Queue only if there is room in the buffer
+        if (buffer.isFull()) { /* Serial.print("."); */ }
+        else { buffer.enqueue(&obj); }
       }
       else
       {
@@ -195,8 +180,8 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
   }
 }
 
-// Take a DebugBufferObject and populate it with PID attributes.
-void fillPidDebugBuffer(DebugBufferObject& obj)
+// Take a BufferObject and populate it with PID attributes.
+void fillPidBuffer(BufferObject& obj)
 {
     obj.counter = counter;
     // PID_A calculations
