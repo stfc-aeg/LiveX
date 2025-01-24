@@ -131,11 +131,10 @@ class GraphAdapter(ApiAdapter):
     def initialize(self, adapters):
         self.adapters = dict((k, v) for k, v in adapters.items() if v is not self)
 
-        logging.debug("Received following dict of Adapters: %s", self.adapters)
+        # logging.debug("Received following dict of Adapters: %s", self.adapters)
         # logging.debug("Getting adapter %s", self.target_adapter)
 
         for name, dataset in self.datasets.items():
-            logging.debug(name)
             dataset.get_adapter(self.adapters)
             dataset.data_loop.start()
 

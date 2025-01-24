@@ -17,7 +17,7 @@ from livex.furnace.controls.motor import Motor
 from livex.modbusAddresses import modAddr
 from livex.filewriter import FileWriter
 from livex.util import LiveXError
-from livex.util import read_decode_input_reg, read_decode_holding_reg
+from livex.util import read_decode_input_reg, read_decode_holding_reg, iac_get, iac_set
 from livex.packet_decoder import LiveXPacketDecoder
 
 class FurnaceController():
@@ -82,7 +82,7 @@ class FurnaceController():
         self.stream_buffer = {key: [] for key in self.packet_decoder.data.keys()}  # Same data structure
         self.data_groupname = data_groupname
 
-        self.start_acquisition = False
+        self.acquiring = False
 
         self.pid_a = PID(modAddr.addresses_pid_a, pid_defaults)
         self.pid_b = PID(modAddr.addresses_pid_b, pid_defaults)
@@ -112,7 +112,7 @@ class FurnaceController():
 
         tcp = ParameterTree({
             'tcp_reading': (lambda: self.tcp_reading, None),
-            'acquire': (lambda: self.start_acquisition, self.set_acquisition)
+            'acquire': (lambda: self.acquiring, self.solo_acquisition)
         })
 
         # Store all information in a parameter tree
@@ -147,9 +147,13 @@ class FurnaceController():
         :param adapters: dictionary of adapter instances
         """
         self.adapters = adapters
+        if 'metadata' in self.adapters:
+            self.metadata = self.adapters['metadata']
         if 'sequencer' in self.adapters:
             logging.debug("Furnace controller registering context with sequencer")
             self.adapters['sequencer'].add_context('furnace', self)
+        if 'livex' in self.adapters:
+            self.livex = self.adapters['livex'].controller
 
     def cleanup(self):
         """Clean up the FurnaceController instance.
@@ -210,31 +214,45 @@ class FurnaceController():
 
     # Data acquiring tasks
 
-    def set_acquisition(self, value):
-        """Toggle whether the system is acquiring data."""
+    def solo_acquisition(self, value):
+        """Call up to the livex adapter to start or stop a furnace-only acquisition"""
+        """Toggle whether the system is acquiring data.
+        :param value: boolean, setting acquisition to stop or start.
+        """
         value = bool(value)
-        logging.debug("Toggled acquisition")
+        logging.debug(f"Toggled furnace acquisition to {value}.")
 
         if value:
-            # Send signal to
-            self.mod_client.write_coil(modAddr.acquisition_coil, 1, slave=1)
-            self.file_writer.open_file()
-            self.file_open_flag = True
+            self.livex.start_acquisition(acquisitions={'furnace':True})
         else:
-            self.mod_client.write_coil(modAddr.acquisition_coil, 0, slave=1)
+            self.livex.stop_acquisition()
 
-            # If ending an acquisition, clear the buffer
-            self.file_writer.write_hdf5(
-                self.stream_buffer,
-                self.data_groupname
-            )
-            for key in self.stream_buffer:
-                self.stream_buffer[key].clear()
+    def start_acquisition(self):
+        """Start the acquisition process for the furnace control."""
+        # Send signal to modbus to start writing data
+        self.mod_client.write_coil(modAddr.acquisition_coil, 1, slave=1)
+        self.file_writer.open_file()
+        self.file_open_flag = True
 
-            self.file_writer.close_file()
-            self.file_open_flag = False
+        self.acquiring = True
 
-        self.start_acquisition = value
+    def stop_acquisition(self):
+        """End the acquisition process for the furnace control, writing out any remaining data."""
+        # Tell PLC to stop sending data
+        self.mod_client.write_coil(modAddr.acquisition_coil, 0, slave=1)
+
+        # Clear the buffer
+        self.file_writer.write_hdf5(
+            self.stream_buffer,
+            self.data_groupname
+        )
+        for key in self.stream_buffer:
+            self.stream_buffer[key].clear()
+
+        self.file_writer.close_file()
+        self.file_open_flag = False
+
+        self.acquiring = False
 
     def initialise_clients(self, value):
         """Instantiate a ModbusTcpClient and provide it to the PID controllers."""
@@ -277,7 +295,7 @@ class FurnaceController():
         in the parameter tree.
         """
         while self.bg_stream_task_enable:
-            if self.start_acquisition:
+            if self.acquiring:
                 try:
                     reading = self.tcp_client.recv(self.packet_decoder.size)
                     logging.debug(self.packet_decoder.data['counter'])
@@ -297,9 +315,6 @@ class FurnaceController():
                 # Add decoded data to the stream buffer
                 for attr in self.packet_decoder.data.keys():
                     self.stream_buffer[attr].append(self.packet_decoder.data[attr])
-
-                if len(self.stream_buffer['counter']) == 9:
-                    logging.debug(f"data content:\n{self.stream_buffer}")
 
                 # After a certain number of data reads, write data to the file
                 if len(self.stream_buffer['counter']) == 10:

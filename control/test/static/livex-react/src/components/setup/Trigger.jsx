@@ -32,6 +32,14 @@ function Trigger(props) {
       { name: 'Freerun', value: 'free'}
     ];
 
+    const handleTimeFrameValueChange = (newValue) => {
+      setTimeFrameValue(newValue); // update state
+      // Put value to endpoint
+      let freerunBool = newValue === 'free' ? true : false;
+      const sendVal = {['freerun']: freerunBool};
+      liveXEndPoint.put(sendVal, 'acquisition');
+    }
+
     const triggers = triggerEndPoint.data?.triggers;
     const ref_trigger = liveXEndPoint.data.acquisition?.reference_trigger;
 
@@ -71,7 +79,7 @@ function Trigger(props) {
                         name="timeFrameRadio"
                         value={radio.value}
                         checked={timeFrameValue === radio.value}
-                        onChange={(e) => setTimeFrameValue(e.currentTarget.value)}>
+                        onChange={(e) => handleTimeFrameValueChange(e.currentTarget.value)}>
                           {radio.name}
                         </ToggleButton>
                     ))}
@@ -213,7 +221,7 @@ function Trigger(props) {
               <EndPointButton style={{}}
                 endpoint={liveXEndPoint}
                 fullpath={liveXEndPoint.data.acquisition?.acquiring ? "acquisition/stop" : "acquisition/start"}
-                value={timeFrameValue==='free' ? true : false}
+                value={['furnace', 'widefov', 'narrowfov']}
                 event_type="click"
                 variant={liveXEndPoint.data.acquisition?.acquiring ? "danger" : "success" }>
                   {liveXEndPoint.data.acquisition?.acquiring ? "Stop acquisition" : "Start acquisition"}

@@ -34,7 +34,6 @@ class TriggerController(BaseController):
             name = names[i].strip()
             addr = "trigger_" + str(i)
             addresses = getattr(modAddr, addr)
-            logging.debug(f"addresses for trigger {name}: {addresses}")
             self.triggers[name] = Trigger(name, addresses)
 
         self.frequencies = [

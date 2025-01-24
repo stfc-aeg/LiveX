@@ -6,6 +6,7 @@ Mika Shearwood, STFC Detector Systems Software Group
 from pymodbus.payload import BinaryPayloadDecoder
 from pymodbus.payload import BinaryPayloadBuilder
 from pymodbus.constants import Endian
+from odin.adapters.adapter import ApiAdapterRequest
 
 import logging
 import math
@@ -77,3 +78,18 @@ def write_modbus_float(client, value, address, byteorder=Endian.BIG, wordorder=E
     )
 
     return response
+
+def iac_get(adapter, path, **kwargs):
+    """Generic IAC get method for synchronous adapters."""
+    request = ApiAdapterRequest(None, accept="application/json")
+    response = adapter.get(path, request)
+    if response.status_code != 200:
+        logging.debug(f"IAC GET failed for adapter {adapter}, path {path}: {response.data}")
+    return response.data.get(kwargs['param']) if 'param' in kwargs else response.data
+
+def iac_set(adapter, path, param, data):
+    """Generic IAC set method for synchronous adapters."""
+    request = ApiAdapterRequest({param: data}, content_type="application/vnd.odin-native")
+    response = adapter.put(path, request)
+    if response.status_code != 200:
+        logging.debug(f"IAC SET failed for adapter {adapter}, path {path}: {response.data}")
