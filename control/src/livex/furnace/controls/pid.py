@@ -23,6 +23,7 @@ class PID():
         self.ki = None
         self.kd = None
         self.output = None
+        self.outputsum = None
         self.thermocouple = None
 
         self.tree = ParameterTree({
@@ -32,7 +33,8 @@ class PID():
             'integral': (lambda: self.ki, self.set_integral),
             'derivative': (lambda: self.kd, self.set_derivative),
             'temperature': (lambda: self.thermocouple, None),
-            'output': (lambda: self.output, None)
+            'output': (lambda: self.output, None),
+            'outputsum': (lambda: self.outputsum, None)
         })
 
     def register_modbus_client(self, client):
@@ -53,6 +55,7 @@ class PID():
         self.ki = round(read_decode_holding_reg(self.client, self.addresses['ki']), 4)
         self.kd = round(read_decode_holding_reg(self.client, self.addresses['kd']), 4)
         self.output = read_decode_input_reg(self.client, self.addresses['output'])
+        self.outputsum = read_decode_input_reg(self.client, self.addresses['outputsum'])
         self.thermocouple = read_decode_input_reg(self.client, self.addresses['thermocouple'])
 
     def _write_pid_defaults(self):

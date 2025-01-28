@@ -40,9 +40,9 @@ function PidControl(props) {
           </Row>
         }>
         <Row>
-          <Col xs={6} sm={8} md={8} lg={8} xl={8} xxl={8}>
+          <Col xs={6} sm={12}>
             <Row>
-              <Col xs={12} md={6}>
+              <Col xs={12} sm={6}>
                 <Row>
                   <InputGroup>
                     <InputGroup.Text style={{width:pidLabelWidth}}>
@@ -82,7 +82,7 @@ function PidControl(props) {
                   </InputGroup>
                 </Row>
               </Col>
-              <Col xs={12} md={6}>
+              <Col xs={12} sm={6}>
                 <Row>
                   <InputGroup>
                     <InputGroup.Text style={{width:labelWidth}}>
@@ -109,55 +109,22 @@ function PidControl(props) {
                     </InputGroup.Text>
                   </InputGroup>
                 </Row>
-              </Col>
-
-            </Row>
-          </Col>
-          <Col xs={4}>
-            <Row>
-                <InputGroup>
-                  <InputGroup.Text style={{width:labelWidth}}>
-                    PID %.:
-                  </InputGroup.Text>
-                  <InputGroup.Text
-                    style={{
-                      width: labelWidth,
-                      border: '1px solid lightblue',
-                      backgroundColor: '#e0f7ff'
-                    }}>
-                      {checkNull(furnaceEndPoint.data[pid]?.output)}
-                  </InputGroup.Text>
-                </InputGroup>
+                <Row>
+                  <InputGroup>
+                    <InputGroup.Text style={{width:labelWidth}}>
+                      Temp.:
+                    </InputGroup.Text>
+                    <InputGroup.Text
+                      style={{
+                        width: labelWidth,
+                        border: '1px solid lightblue',
+                        backgroundColor: '#e0f7ff'
+                      }}>
+                        {checkNull((furnaceEndPoint.data[pid]?.temperature))}
+                    </InputGroup.Text>
+                  </InputGroup>
               </Row>
-            <Row>
-              <InputGroup>
-                <InputGroup.Text style={{width:labelWidth}}>
-                  PLC volt.:
-                </InputGroup.Text>
-                <InputGroup.Text
-                  style={{
-                    width: labelWidth,
-                    border: '1px solid lightblue',
-                    backgroundColor: '#e0f7ff'
-                  }}>
-                    {checkNull((furnaceEndPoint.data[pid]?.output) * 0.1 * 0.8)}
-                </InputGroup.Text>
-              </InputGroup>
-            </Row>
-            <Row>
-              <InputGroup>
-                <InputGroup.Text style={{width:labelWidth}}>
-                  Temp.:
-                </InputGroup.Text>
-                <InputGroup.Text
-                  style={{
-                    width: labelWidth,
-                    border: '1px solid lightblue',
-                    backgroundColor: '#e0f7ff'
-                  }}>
-                    {checkNull((furnaceEndPoint.data[pid]?.temperature))}
-                </InputGroup.Text>
-              </InputGroup>
+              </Col>
             </Row>
           </Col>
         </Row>

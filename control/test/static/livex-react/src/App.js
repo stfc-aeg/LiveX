@@ -20,6 +20,7 @@ import Metadata from './components/setup/Metadata';
 import Cameras from './components/cameras/Cameras';
 import Trigger from './components/setup/Trigger';
 import MonitorGraph from './components/furnace/MonitorGraph';
+import InfoPanel from './components/furnace/InfoPanel';
 
 const EndPointButton = WithEndpoint(Button);
 
@@ -114,6 +115,11 @@ function App(props) {
             furnaceEndPoint={furnaceEndPoint}
             connectedPuttingDisable={connectedPuttingDisable}>
           </Motor>
+
+          <InfoPanel
+            furnaceEndPoint={furnaceEndPoint}
+            connectedPuttingDisable={connectedPuttingDisable}>
+          </InfoPanel>
         </Col>
       </Row>
       <Row>

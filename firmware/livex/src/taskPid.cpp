@@ -158,6 +158,7 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
 
     // Write PID output. When PID is not enabled, 
     modbus_server.floatToInputRegisters(addr.modPidOutputInp, PID->output);
+    modbus_server.floatToInputRegisters(addr.modPidOutputSumInp, PID->myPID_.GetOutputSum());
 
     if (INVERT_OUTPUT_SIGNAL)
     {

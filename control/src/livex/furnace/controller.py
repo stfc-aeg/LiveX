@@ -365,6 +365,9 @@ class FurnaceController():
                     self.pid_a.output    = read_decode_input_reg(self.mod_client, modAddr.pid_output_a_inp)
                     self.pid_b.output    = read_decode_input_reg(self.mod_client, modAddr.pid_output_b_inp)
 
+                    self.pid_a.outputsum = read_decode_input_reg(self.mod_client, modAddr.pid_outputsum_a_inp)
+                    self.pid_b.outputsum = read_decode_input_reg(self.mod_client, modAddr.pid_outputsum_b_inp)
+
                     self.gradient.actual      = read_decode_input_reg(self.mod_client, modAddr.gradient_actual_inp)
                     self.gradient.theoretical = read_decode_input_reg(self.mod_client, modAddr.gradient_theory_inp)
 

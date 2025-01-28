@@ -26,15 +26,17 @@ class modAddr():
     counter_inp      = 30001
     pid_output_a_inp = 30003
     pid_output_b_inp = 30005
+    pid_outputsum_a_inp = 30007
+    pid_outputsum_b_inp = 30009
 
-    thermocouple_a_inp = 30007
-    thermocouple_b_inp = 30009
-    thermocouple_c_inp = 30011
-    thermocouple_d_inp = 30013
+    thermocouple_a_inp = 30011
+    thermocouple_b_inp = 30013
+    thermocouple_c_inp = 30015
+    thermocouple_d_inp = 30017
 
-    gradient_actual_inp     = 30015
-    gradient_theory_inp     = 30017
-    autosp_midpt_inp        = 30019
+    gradient_actual_inp     = 30019
+    gradient_theory_inp     = 30021
+    autosp_midpt_inp        = 30023
 
     motor_lvdt_inp = 30027
 
@@ -68,6 +70,7 @@ class modAddr():
         'ki': pid_ki_a_hold,
         'kd': pid_kd_a_hold,
         'output': pid_output_a_inp,
+        'outputsum': pid_outputsum_a_inp,
         'thermocouple': thermocouple_a_inp,
         'setpoint_update': setpoint_update_coil
     }
@@ -79,6 +82,7 @@ class modAddr():
         'ki': pid_ki_b_hold,
         'kd': pid_kd_b_hold,
         'output': pid_output_b_inp,
+        'output_sum': pid_outputsum_b_inp,
         'thermocouple': thermocouple_b_inp,
         'setpoint_update': setpoint_update_coil
     }
