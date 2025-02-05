@@ -1,10 +1,8 @@
 import logging
 import time
-import datetime
 import socket
 from concurrent import futures
 
-from tornado.ioloop import PeriodicCallback
 from tornado.concurrent import run_on_executor
 
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
@@ -19,7 +17,7 @@ from livex.furnace.controls.motor import Motor
 from livex.modbusAddresses import modAddr
 from livex.filewriter import FileWriter
 from livex.util import LiveXError
-from livex.util import read_decode_input_reg, read_decode_holding_reg
+from livex.util import read_decode_input_reg, read_decode_holding_reg, iac_get, iac_set
 from livex.packet_decoder import LiveXPacketDecoder
 
 class FurnaceController():
@@ -48,8 +46,6 @@ class FurnaceController():
         # File name and directory is a default that is later overwritten by metadata
         self.log_directory = options.get('log_directory', 'logs')
         self.log_filename = options.get('log_filename', 'default.hdf5')
-
-        self.monitor_retention = int(options.get('monitor_retention', 60))
 
         # Get default values for PIDs
         pid_defaults = {
@@ -80,12 +76,13 @@ class FurnaceController():
 
         # Create packet decoder and stream buffer for TCP values sent by PLC
         # If pid_debug is true (and set in the PLC as well), this is a range of PID behaviour data
-        pid_debug = bool(int(options.get('pid_debug', False)))
-        self.packet_decoder = LiveXPacketDecoder(pid_debug)
-        self.stream_buffer = {key: [] for key in self.packet_decoder.data.keys()}  # Same data structure
-        self.data_groupname = "debug readings"
+        data_groupname = str(options.get('data_groupname', 'readings'))
 
-        self.start_acquisition = False
+        self.packet_decoder = LiveXPacketDecoder()
+        self.stream_buffer = {key: [] for key in self.packet_decoder.data.keys()}  # Same data structure
+        self.data_groupname = data_groupname
+
+        self.acquiring = False
 
         self.pid_a = PID(modAddr.addresses_pid_a, pid_defaults)
         self.pid_b = PID(modAddr.addresses_pid_b, pid_defaults)
@@ -101,24 +98,6 @@ class FurnaceController():
         self.lifetime_counter = 0
         self.reconnect = False
 
-        # For monitoring/graphing
-        self.monitor_graphs = {
-            'timestamp': [],
-            'temperature': {
-                'temperature_a': [],
-                'temperature_b': [],
-                'temperature_c': []
-            },
-            'output': {
-                'output_a': [],
-                'output_b': []
-            },
-            'setpoint': {
-                'setpoint_a': [],
-                'setpoint_b': []
-            }
-        }
-
         bg_task = ParameterTree({
             'thread_count': (lambda: self.background_thread_counter, None),
             'enable': (lambda: self.bg_read_task_enable, self.set_task_enable),
@@ -133,7 +112,7 @@ class FurnaceController():
 
         tcp = ParameterTree({
             'tcp_reading': (lambda: self.tcp_reading, None),
-            'acquire': (lambda: self.start_acquisition, self.set_acquisition)
+            'acquire': (lambda: self.acquiring, self.solo_acquisition)
         })
 
         # Store all information in a parameter tree
@@ -149,7 +128,6 @@ class FurnaceController():
             'gradient': self.gradient.tree,
             'motor': self.motor.tree,
             'tcp': tcp,
-            'monitor': (lambda: self.monitor_graphs, None),
             'filewriter': {
                 'filepath': (lambda: self.file_writer.filepath, self.set_filepath),
                 'filename': (lambda: self.file_writer.filename, self.set_filename)
@@ -169,9 +147,13 @@ class FurnaceController():
         :param adapters: dictionary of adapter instances
         """
         self.adapters = adapters
+        if 'metadata' in self.adapters:
+            self.metadata = self.adapters['metadata']
         if 'sequencer' in self.adapters:
             logging.debug("Furnace controller registering context with sequencer")
             self.adapters['sequencer'].add_context('furnace', self)
+        if 'livex' in self.adapters:
+            self.livex = self.adapters['livex'].controller
 
     def cleanup(self):
         """Clean up the FurnaceController instance.
@@ -232,31 +214,45 @@ class FurnaceController():
 
     # Data acquiring tasks
 
-    def set_acquisition(self, value):
-        """Toggle whether the system is acquiring data."""
+    def solo_acquisition(self, value):
+        """Call up to the livex adapter to start or stop a furnace-only acquisition"""
+        """Toggle whether the system is acquiring data.
+        :param value: boolean, setting acquisition to stop or start.
+        """
         value = bool(value)
-        logging.debug("Toggled acquisition")
+        logging.debug(f"Toggled furnace acquisition to {value}.")
 
         if value:
-            # Send signal to
-            self.mod_client.write_coil(modAddr.acquisition_coil, 1, slave=1)
-            self.file_writer.open_file()
-            self.file_open_flag = True
+            self.livex.start_acquisition(acquisitions={'furnace':True})
         else:
-            self.mod_client.write_coil(modAddr.acquisition_coil, 0, slave=1)
+            self.livex.stop_acquisition()
 
-            # If ending an acquisition, clear the buffer
-            self.file_writer.write_hdf5(
-                self.stream_buffer,
-                'temperature_readings'
-            )
-            for key in self.stream_buffer:
-                self.stream_buffer[key].clear()
+    def start_acquisition(self):
+        """Start the acquisition process for the furnace control."""
+        # Send signal to modbus to start writing data
+        self.mod_client.write_coil(modAddr.acquisition_coil, 1, slave=1)
+        self.file_writer.open_file()
+        self.file_open_flag = True
 
-            self.file_writer.close_file()
-            self.file_open_flag = False
+        self.acquiring = True
 
-        self.start_acquisition = value
+    def stop_acquisition(self):
+        """End the acquisition process for the furnace control, writing out any remaining data."""
+        # Tell PLC to stop sending data
+        self.mod_client.write_coil(modAddr.acquisition_coil, 0, slave=1)
+
+        # Clear the buffer
+        self.file_writer.write_hdf5(
+            self.stream_buffer,
+            self.data_groupname
+        )
+        for key in self.stream_buffer:
+            self.stream_buffer[key].clear()
+
+        self.file_writer.close_file()
+        self.file_open_flag = False
+
+        self.acquiring = False
 
     def initialise_clients(self, value):
         """Instantiate a ModbusTcpClient and provide it to the PID controllers."""
@@ -293,47 +289,13 @@ class FurnaceController():
         """Safely end the TCP connection."""
         self.tcp_client.close()
 
-    def _trim_dict_to_retention(self, toTrim):
-        """Iterate through a dictionary and trim its lists down to the retention length.
-        Purpose-made for the self.monitor_graphs dictionary. Could be edited to use a given target.
-        """
-        for key, value in toTrim.items():
-            if isinstance(value, dict):
-                self._trim_dict_to_retention(value)
-            elif isinstance(value, list):
-                while (len(value) > self.monitor_retention):
-                    value.pop(0)
-
-    def background_ioloop_callback(self):
-        """Ioloop callback function to populate the monitor graph variables."""
-        # Add data
-        cur_time = datetime.datetime.now()
-        cur_time = cur_time.strftime("%H:%M:%S")
-
-        self.monitor_graphs['timestamp'].append(cur_time)
-
-        self.monitor_graphs['temperature']['temperature_a'].append(self.pid_a.thermocouple)
-        self.monitor_graphs['temperature']['temperature_b'].append(self.pid_b.thermocouple)
-        self.monitor_graphs['temperature']['temperature_c'].append(self.thermocouple_c)
-
-        self.monitor_graphs['output']['output_a'].append(self.pid_a.output)
-        self.monitor_graphs['output']['output_b'].append(self.pid_b.output)
-
-        self.monitor_graphs['setpoint']['setpoint_a'].append(self.pid_a.setpoint)
-        self.monitor_graphs['setpoint']['setpoint_b'].append(self.pid_b.setpoint)
-
-        # Trim arrays down after data is added
-        self._trim_dict_to_retention(self.monitor_graphs)
-
-        # self.background_ioloop_counter += 1
-
     @run_on_executor
     def background_stream_task(self):
         """Instruct the packet decoder to receive an object, then put that object
         in the parameter tree.
         """
         while self.bg_stream_task_enable:
-            if self.start_acquisition:
+            if self.acquiring:
                 try:
                     reading = self.tcp_client.recv(self.packet_decoder.size)
                     logging.debug(self.packet_decoder.data['counter'])
@@ -403,11 +365,11 @@ class FurnaceController():
                     self.pid_a.output    = read_decode_input_reg(self.mod_client, modAddr.pid_output_a_inp)
                     self.pid_b.output    = read_decode_input_reg(self.mod_client, modAddr.pid_output_b_inp)
 
+                    self.pid_a.outputsum = read_decode_input_reg(self.mod_client, modAddr.pid_outputsum_a_inp)
+                    self.pid_b.outputsum = read_decode_input_reg(self.mod_client, modAddr.pid_outputsum_b_inp)
+
                     self.gradient.actual      = read_decode_input_reg(self.mod_client, modAddr.gradient_actual_inp)
                     self.gradient.theoretical = read_decode_input_reg(self.mod_client, modAddr.gradient_theory_inp)
-
-                    self.pid_a.gradient_setpoint = read_decode_input_reg(self.mod_client, modAddr.gradient_setpoint_a_inp)
-                    self.pid_b.gradient_setpoint = read_decode_input_reg(self.mod_client, modAddr.gradient_setpoint_b_inp)
 
                     self.aspc.midpt = read_decode_input_reg(self.mod_client, modAddr.autosp_midpt_inp)
 
@@ -457,11 +419,6 @@ class FurnaceController():
         )
         self.bg_read_task_enable = True
         self.bg_stream_task_enable = True
-
-        self.background_ioloop_task = PeriodicCallback(
-            self.background_ioloop_callback, 1000
-        )  # Hardcode interval for now
-        self.background_ioloop_task.start()
 
         # Run the background thread task in the thread execution pool
         self.background_stream_task()

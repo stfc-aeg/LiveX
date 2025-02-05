@@ -1,5 +1,5 @@
 from odin.adapters.parameter_tree import ParameterTree
-from livex.util import read_decode_input_reg, read_decode_holding_reg, write_modbus_float, write_coil
+from livex.util import read_decode_holding_reg, write_modbus_float, write_coil, read_coil
 import logging
 
 class Trigger():
@@ -14,11 +14,13 @@ class Trigger():
         self.enable = None
         self.frequency = None
         self.target = None
+        self.running = False
 
         self.client = None
 
         self.tree = ParameterTree({
             'enable': (lambda: self.enable, self.set_enable),
+            'running': (lambda: self.running, None),
             'frequency': (lambda: self.frequency, self.set_frequency),
             'target': (lambda: self.target, self.set_target)
         })
@@ -28,16 +30,15 @@ class Trigger():
         self.client = client
         try:
             self._get_parameters()
-        except:
-            logging.debug("Error when attempting to get trigger parameters after client registry.")
+        except Exception as e:
+            logging.debug(f"Error {e} when attempting to get trigger parameters after client registry.")
 
     def _get_parameters(self):
         """Read modbus registers to get the most recent values for the trigger."""
         ret = self.client.read_coils(self.addr['enable_coil'], 1, slave=1)
         self.enable = ret.bits[0]
 
-        # Frequencies = 1_000_000 / intvl*2
-        # Interval = (1_000_000 / freq) // 2
+        self.running = read_coil(self.client, self.addr['running_coil'])
         self.frequency = read_decode_holding_reg(self.client, self.addr['freq_hold'])
         self.target = int(read_decode_holding_reg(self.client, self.addr['target_hold']))
 
@@ -48,15 +49,18 @@ class Trigger():
     def set_enable(self, value):
         """Toggle the enable for the timer."""
         self.enable = bool(value)
-        write_coil(self.client, self.addr['enable_coil'], bool(self.enable))
+        # Both writes are True as these are flags handled by hardware
+        if self.enable:
+            write_coil(self.client, self.addr['enable_coil'], True)
+        elif not self.enable:
+            write_coil(self.client, self.addr['disable_coil'], True)
 
     def set_frequency(self, value):
         """Set the frequency of the timer, then calculate the interval and send that value."""
         self.frequency = value
-        logging.debug(f"trigger {self.name} with frequency {self.frequency}")
+        logging.debug(f"Set trigger {self.name} to frequency {self.frequency}.")
         # interval = (1_000_000 / self.frequency) // 2
         self.update_hold_value(self.addr['freq_hold'], self.frequency)
-        logging.debug("updated hold value")
 
     def set_target(self, value):
         """Set the target framecount of the timer."""

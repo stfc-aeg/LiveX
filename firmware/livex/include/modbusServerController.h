@@ -17,6 +17,7 @@ class ModbusServerController : public ModbusTCPServer
     void initialiseModbus();
 
     float combineHoldingRegisters(int address);
+    float combineInputRegisters(int address);
 
     int writeBool(int address, int value);
     int readBool(int address);

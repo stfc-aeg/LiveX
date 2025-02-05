@@ -25,11 +25,14 @@ function MonitorGraph(props) {
 
     useEffect(() => {
       // Map props data out to be returned in array form
-      const allData = seriesData.map(({dataPath, param, seriesName}) => {
-        const dataA = endpoint.data?.monitor?.[dataPath]?.[param];
-        return [dataA];
+      const allData = seriesData.map(({dataPath, param}) => {
+        let keys = dataPath.split("/");
+        let dataA = keys.reduce((accum,key) => accum?.[key], endpoint?.data);
+
+        // Ensure dataA[param] exists to avoid errors
+        return dataA?.[param] !== undefined ? [dataA?.[param]] : [];
       });
-      const legendData = seriesData.map(({dataPath, param, seriesName}) => {
+      const legendData = seriesData.map(({seriesName}) => {
         return seriesName;
       })
 
@@ -50,38 +53,33 @@ function MonitorGraph(props) {
     const filteredSeriesNames = seriesNames.filter((_, index) => enabledTraces[index]);
 
     return (
-        <Container>
-          <Col>
-            <TitleCard title={title}>
-              <Container>
-                <Row>
-                  <Col style={{flexDirection: 'row', justifyContent: 'flex-end'}}>
-                    <InputGroup>
-                      <InputGroup.Text>
-                        Toggle Traces
-                      </InputGroup.Text>
-                      {seriesNames.map((name, index) => (
-                        <Button
-                          key={index}
-                          variant={enabledTraces[index] ? 'outline-secondary' : 'outline-primary'}
-                          onClick={() => toggleTrace(index)}>
-                            {enabledTraces[index] ? `Disable ${name}` : `Enable ${name}`}
-                        </Button>
-                      ))}
-                    </InputGroup>
-                  </Col>
-                </Row>
-                <Row>
-                  <OdinGraph
-                    prop_data={filteredData}
-                    series_names={filteredSeriesNames}>
-                  </OdinGraph>
-                </Row>
-
-              </Container>
-            </TitleCard>
-          </Col>
-        </Container>
+      <TitleCard title={title}>
+        <Col>
+          <Row>
+            <Col style={{flexDirection: 'row', justifyContent: 'flex-end'}}>
+              <InputGroup>
+                <InputGroup.Text>
+                  Toggle Traces
+                </InputGroup.Text>
+                {seriesNames.map((name, index) => (
+                  <Button
+                    key={index}
+                    variant={enabledTraces[index] ? 'outline-primary' : 'outline-secondary'}
+                    onClick={() => toggleTrace(index)}>
+                      {enabledTraces[index] ? `Disable ${name}` : `Enable ${name}`}
+                  </Button>
+                ))}
+              </InputGroup>
+            </Col>
+          </Row>
+          <Row>
+            <OdinGraph
+              prop_data={filteredData}
+              series_names={filteredSeriesNames}>
+            </OdinGraph>
+          </Row>
+        </Col>
+      </TitleCard>
     )
 }
 

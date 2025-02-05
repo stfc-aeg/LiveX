@@ -28,10 +28,11 @@ class TriggerController(BaseController):
         self.status_bg_task_interval = int(options.get('status_bg_task_interval', 10))
 
         self.triggers = {}
-        for name in options.get('triggers', None).split(","):
-            name = name.strip()
-            # Name scheme for trigger addresses is trigger_<name>
-            addr = "trigger_" + name
+        names = options.get('triggers', None).split(",")
+
+        for i in range(len(names)):
+            name = names[i].strip()
+            addr = "trigger_" + str(i)
             addresses = getattr(modAddr, addr)
             self.triggers[name] = Trigger(name, addresses)
 

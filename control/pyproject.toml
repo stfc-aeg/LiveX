@@ -14,7 +14,7 @@ classifiers = [
 description = "LiveX furnace control system"
 dependencies = [
     "odin-control @ git+https://git@github.com/odin-detector/odin-control.git@1.5.0",
-    "pymodbus",
+    "pymodbus===3.7.0",
     "h5py",
     "Jinja2",
     "opencv-python",

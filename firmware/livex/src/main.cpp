@@ -13,11 +13,8 @@ EthernetServer modbusEthServer(502);
 EthernetServer tcpEthServer(4444);
 ModbusServerController modbus_server;
 ExpandedGpio gpio;
-#if PID_DEBUG
-FifoBuffer<DebugBufferObject> debugbuffer(256);
-#else
+
 FifoBuffer<BufferObject> buffer(256);
-#endif
 
 SemaphoreHandle_t gradientAspcMutex;
 
@@ -25,8 +22,8 @@ SemaphoreHandle_t gradientAspcMutex;
 PIDAddresses pidA_addr = {
   PIN_PWM_A,
   MOD_SETPOINT_A_HOLD,
-  MOD_GRADIENT_SETPOINT_A_INP,
   MOD_PID_OUTPUT_A_INP,
+  MOD_PID_OUTPUTSUM_A_INP,
   MOD_PID_ENABLE_A_COIL,
   MOD_THERMOCOUPLE_A_INP,
   MOD_KP_A_HOLD,
@@ -37,8 +34,8 @@ PIDAddresses pidA_addr = {
 PIDAddresses pidB_addr = {
   PIN_PWM_B,
   MOD_SETPOINT_B_HOLD,
-  MOD_GRADIENT_SETPOINT_B_INP,
   MOD_PID_OUTPUT_B_INP,
+  MOD_PID_OUTPUTSUM_B_INP,
   MOD_PID_ENABLE_B_COIL,
   MOD_THERMOCOUPLE_B_INP,
   MOD_KP_B_HOLD,

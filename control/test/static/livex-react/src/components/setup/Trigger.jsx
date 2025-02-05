@@ -32,6 +32,14 @@ function Trigger(props) {
       { name: 'Freerun', value: 'free'}
     ];
 
+    const handleTimeFrameValueChange = (newValue) => {
+      setTimeFrameValue(newValue); // update state
+      // Put value to endpoint
+      let freerunBool = newValue === 'free' ? true : false;
+      const sendVal = {['freerun']: freerunBool};
+      liveXEndPoint.put(sendVal, 'acquisition');
+    }
+
     const triggers = triggerEndPoint.data?.triggers;
     const ref_trigger = liveXEndPoint.data.acquisition?.reference_trigger;
 
@@ -71,7 +79,7 @@ function Trigger(props) {
                         name="timeFrameRadio"
                         value={radio.value}
                         checked={timeFrameValue === radio.value}
-                        onChange={(e) => setTimeFrameValue(e.currentTarget.value)}>
+                        onChange={(e) => handleTimeFrameValueChange(e.currentTarget.value)}>
                           {radio.name}
                         </ToggleButton>
                     ))}
@@ -100,8 +108,8 @@ function Trigger(props) {
                   </InputGroup>
                 </Row>
                 <Row>
-                  <InputGroup className="mt-3">
-                    Timer toggles (no acquisition)
+                  <label className="mt-3">Timer control:</label>
+                  <InputGroup>
                     <EndPointButton
                         endpoint={triggerEndPoint}
                         fullpath={"all_timers_enable"}
@@ -146,7 +154,7 @@ function Trigger(props) {
                     </Row>
                     <Row>
                       <InputGroup>
-                        <InputGroup.Text>Frame #</InputGroup.Text>  
+                        <InputGroup.Text>Frame #</InputGroup.Text>
                         {timeFrameValue==='frame' && key===ref_trigger ? (
                           <EndPointFormControl
                             endpoint={liveXEndPoint}
@@ -165,6 +173,19 @@ function Trigger(props) {
                           </InputGroup.Text>
                         )}
                       </InputGroup>
+                    </Row>
+                    <Row className="ms-1 me-1">
+                      <EndPointButton
+                        className="display-inline-block"
+                        endpoint={triggerEndPoint}
+                        fullpath={`triggers/${key}/enable`}
+                        value={triggerEndPoint?.data.triggers[key]?.running ? false : true}
+                        disabled={!triggerEndPoint?.data?.modbus?.connected}
+                        event_type="click"
+                        variant={triggerEndPoint?.data.triggers[key]?.running ? "danger" : "primary"}
+                      >
+                          {triggerEndPoint?.data.triggers[key]?.running ? "Stop": "Start"}
+                      </EndPointButton>
                     </Row>
                   </TitleCard>
                 </Col>
@@ -200,7 +221,7 @@ function Trigger(props) {
               <EndPointButton style={{}}
                 endpoint={liveXEndPoint}
                 fullpath={liveXEndPoint.data.acquisition?.acquiring ? "acquisition/stop" : "acquisition/start"}
-                value={timeFrameValue==='free' ? true : false}
+                value={['furnace', 'widefov', 'narrowfov']}
                 event_type="click"
                 variant={liveXEndPoint.data.acquisition?.acquiring ? "danger" : "success" }>
                   {liveXEndPoint.data.acquisition?.acquiring ? "Stop acquisition" : "Start acquisition"}

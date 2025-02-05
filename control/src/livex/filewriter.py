@@ -22,9 +22,6 @@ class FileWriter():
         :param filename: name of file
         :param dtypes: optional dict detailing not-float object type of specific datasets
         """
-        if not filename.endswith('.hdf5'):
-            filename += '.hdf5'
-
         self.filepath = filepath
         self.filename = filename
         self.set_fullpath()
@@ -35,6 +32,8 @@ class FileWriter():
 
     def set_fullpath(self):
         """Set the full path of the filewriter."""
+        if not self.filename.endswith('.hdf5'):
+            self.filename += '.hdf5'
         self.full_path = os.path.join(self.filepath, self.filename)
 
     def open_file(self, mode="a"):
@@ -76,7 +75,7 @@ class FileWriter():
                 maxshape = (None,) + new_data.shape[1:]
                 group.create_dataset(key, data=new_data, maxshape=maxshape, dtype=new_data.dtype)
 
-        logging.debug("file written")
+        logging.debug(f"File written to {self.full_path}")
 
     def create_notes_file(filepath, filename, filetype='md'):
         """Create a notes file in the specified location, with specified name and filetype.

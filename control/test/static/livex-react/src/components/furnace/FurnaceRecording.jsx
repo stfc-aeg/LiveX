@@ -59,23 +59,6 @@ function FurnaceRecording(props) {
         </Col>
       </Row>
       <Row className="mt-3">
-        <Col xs={6}>
-          <InputGroup>
-            <InputGroup.Text style={{width: labelWidth}}>
-              Filename:
-            </InputGroup.Text>
-            <EndPointFormControl
-              endpoint={furnaceEndPoint}
-              type="text"
-              fullpath={"filewriter/filename"}
-              event_type="enter"
-              disabled={connectedPuttingDisable}
-              placeholder="testLog">
-            </EndPointFormControl>
-          </InputGroup>
-        </Col>
-      </Row>
-      <Row className="mt-3">
         <EndPointButton
           endpoint={furnaceEndPoint}
           fullpath={"tcp/acquire"}

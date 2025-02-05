@@ -23,18 +23,18 @@ class PID():
         self.ki = None
         self.kd = None
         self.output = None
-        self.gradient_setpoint = None
+        self.outputsum = None
         self.thermocouple = None
 
         self.tree = ParameterTree({
             'enable': (lambda: self.enable, self.set_enable),
             'setpoint': (lambda: self.setpoint, self.set_setpoint),
-            'gradient_setpoint': (lambda: self.gradient_setpoint, None),
             'proportional': (lambda: self.kp, self.set_proportional),
             'integral': (lambda: self.ki, self.set_integral),
             'derivative': (lambda: self.kd, self.set_derivative),
             'temperature': (lambda: self.thermocouple, None),
-            'output': (lambda: self.output, None)
+            'output': (lambda: self.output, None),
+            'outputsum': (lambda: self.outputsum, None)
         })
 
     def register_modbus_client(self, client):
@@ -55,7 +55,7 @@ class PID():
         self.ki = round(read_decode_holding_reg(self.client, self.addresses['ki']), 4)
         self.kd = round(read_decode_holding_reg(self.client, self.addresses['kd']), 4)
         self.output = read_decode_input_reg(self.client, self.addresses['output'])
-        self.gradient_setpoint = read_decode_input_reg(self.client, self.addresses['gradient_setpoint'])
+        self.outputsum = read_decode_input_reg(self.client, self.addresses['outputsum'])
         self.thermocouple = read_decode_input_reg(self.client, self.addresses['thermocouple'])
 
     def _write_pid_defaults(self):
@@ -74,6 +74,9 @@ class PID():
         self.setpoint = value
         write_modbus_float(
             self.client, value, self.addresses['setpoint']
+        )
+        write_coil(
+            self.client, self.addresses['setpoint_update'], True
         )
 
     def set_proportional(self, value):
