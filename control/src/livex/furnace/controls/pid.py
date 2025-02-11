@@ -24,7 +24,7 @@ class PID():
         self.kd = None
         self.output = None
         self.outputsum = None
-        self.thermocouple = None
+        self.temperature = None
 
         self.tree = ParameterTree({
             'enable': (lambda: self.enable, self.set_enable),
@@ -32,7 +32,7 @@ class PID():
             'proportional': (lambda: self.kp, self.set_proportional),
             'integral': (lambda: self.ki, self.set_integral),
             'derivative': (lambda: self.kd, self.set_derivative),
-            'temperature': (lambda: self.thermocouple, None),
+            'temperature': (lambda: self.temperature, None),
             'output': (lambda: self.output, None),
             'outputsum': (lambda: self.outputsum, None)
         })
@@ -56,7 +56,7 @@ class PID():
         self.kd = round(read_decode_holding_reg(self.client, self.addresses['kd']), 4)
         self.output = read_decode_input_reg(self.client, self.addresses['output'])
         self.outputsum = read_decode_input_reg(self.client, self.addresses['outputsum'])
-        self.thermocouple = read_decode_input_reg(self.client, self.addresses['thermocouple'])
+        self.temperature = read_decode_input_reg(self.client, self.addresses['thermocouple'])
 
     def _write_pid_defaults(self):
         """Write the setpoint and PID terms of the controller.

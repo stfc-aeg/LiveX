@@ -20,6 +20,9 @@ from livex.util import LiveXError
 from livex.util import read_decode_input_reg, read_decode_holding_reg, iac_get, iac_set
 from livex.packet_decoder import LiveXPacketDecoder
 
+from livex.mockModbusClient import MockModbusClient
+from livex.mockModbusClient import MockPLC
+
 class FurnaceController():
     """FurnaceController - class that communicates with a modbus server on a PLC to drive a furnace."""
 
@@ -42,6 +45,8 @@ class FurnaceController():
 
         self.ip = options.get('ip', '192.168.0.159')
         self.port = int(options.get('port', '4444'))
+
+        self.mocking = bool(int(options.get('use_mock_client', 0)))
 
         # File name and directory is a default that is later overwritten by metadata
         self.log_directory = options.get('log_directory', 'logs')
@@ -259,7 +264,11 @@ class FurnaceController():
         logging.debug("Attempting to establish modbus connection")
 
         try:
-            self.mod_client = ModbusTcpClient(self.ip)
+            if self.mocking:
+                self.mod_client = MockModbusClient(self.ip)
+                self.mockClient = MockPLC(self.mod_client)
+            else:
+                self.mod_client = ModbusTcpClient(self.ip)
             self.mod_client.connect()
             # With connection established, populate trees and provide correct connection
             self.pid_a.register_modbus_client(self.mod_client)
@@ -352,11 +361,13 @@ class FurnaceController():
         while self.bg_read_task_enable:
 
             if self.connected:
+                if self.mocking:
+                    self.mockClient.bg_temp_task()
                 # Get any value updated by the device
                 # Mostly input registers, except for setpoints which can change automatically
                 try:
-                    self.pid_a.thermocouple = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp)
-                    self.pid_b.thermocouple = read_decode_input_reg(self.mod_client, modAddr.thermocouple_b_inp)
+                    self.pid_a.temperature = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp)
+                    self.pid_b.temperature = read_decode_input_reg(self.mod_client, modAddr.thermocouple_b_inp)
 
                     self.thermocouple_c = read_decode_input_reg(self.mod_client, modAddr.thermocouple_c_inp)
 

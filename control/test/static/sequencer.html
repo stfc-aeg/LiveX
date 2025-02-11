@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+  <title>Command Sequencer</title>
+
+  <!-- Bootstrap -->
+  <link href="js/bootstrap-5.1.1-dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="js/fontawesome-free-5.15.1-web/css/all.min.css" rel="stylesheet">
+  <link href="css/command-sequencer.css" rel="stylesheet">
+</head>
+
+<body>
+  <div class="container">
+    <div class="row">
+      <div class="col-md-1"></div>
+      <div class="col-md-10">
+        <div class="text-center">
+          <h4>Log Messages</h4>
+        </div>
+        <pre class="pre-scrollable" id="log-messages"></pre>
+      </div>
+      <div class="col-md-1"></div>
+    </div>
+    <div class="row">
+      <div class="col-md-1"></div>
+      <div class="col-md-10">
+        <div class="row mb-2">
+          <div class="col-md-12">
+            <div class="alert alert-info mb-1 d-none" role="alert" id="command-sequencer-info-alert"></div>
+            <div class="alert alert-danger mb-1 d-none" role="alert" id="command-sequencer-error-alert"></div>
+          </div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-8">
+            <div class="row">
+              <div class="col-md-12">
+                <div class="spinner-border spinner-border-sm text-primary d-none" role="status" id="execution-status-spinner">
+                  <span class="visually-hidden">Executing...</span>
+                </div>
+                <span id="execution-status-text" align="left"></span>
+                <span id="execution-status-progress" align="left"></span>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-12">
+                <div class="progress d-none" id="execution-progress" style="height: 12px;">
+                  <div class="progress-bar progress-bar-striped progress-bar-animated"
+                    id="execution-progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-1">
+            <button type="submit" class="btn btn-primary" onclick="abort_sequence()" id="abort-btn">Abort</button>
+          </div>
+          <div class="col-md-1">
+            <button type="submit" class="btn btn-primary" onclick="reload_modules()" id="reload-btn">Reload</button>
+          </div>
+          <div class="col-md-2" align="center">
+            <div class="form-check form-switch" align="center">
+              <input class="form-check-input" type="checkbox" id="detect-module-changes-toggle">
+              <label class="form-check-label" for="detect-module-changes-toggle"><b>Detect&nbsp;Changes</b></label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-1"></div>
+    </div>
+    <div class="row mb-5">
+      <div class="col-md-1"></div>
+      <div class="col-md-10" id="sequence-modules-layout"></div>
+      <div class="col-md-1"></div>
+    </div>
+  </div>
+  <script src="js/bootstrap-5.1.1-dist/js/bootstrap.min.js"></script>
+  <script src="js/odin_control.js"></script>
+  <script src="js/command_sequencer.js"></script>
+</body>
+
+</html>

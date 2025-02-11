@@ -156,6 +156,7 @@ class MockPLC:
         self.room = 25
         self.heat_coeff = 9.001
         self.cool_coeff = 0.004
+        self.added_gradient = False
 
     def calculate_temp_change(self):
         # Temperature handling
@@ -195,11 +196,18 @@ class MockPLC:
             self.outputSum = 0
             self.calculate_temp_change()
         else:
-            # If gradient...
-            if self.client.registers[modAddr.gradient_enable_coil]:
-                pid_sp = pid_base_sp + gradientModifier
-            else:
-                pid_sp = pid_base_sp
+            # If gradient is on and not been added yet, add it
+            if self.client.registers[modAddr.gradient_enable_coil] and not self.added_gradient:
+                logging.warning(f"Adding gradient modifer to setpoint base")
+                pid_base_sp += + gradientModifier
+                self.added_gradient = True
+            # If gradient is off and has been added, remove it
+            elif not self.client.registers[modAddr.gradient_enable_coil] and self.added_gradient:
+                logging.warning(f"Removing gradient modifer from setpoint base")
+                pid_base_sp -= gradientModifier
+                self.added_gradient = False
+            # If gradient is on and has been added or if it's off and hasn't been added, do nothing
+            pid_sp = pid_base_sp
 
             self.calculate_temp_change()
 
@@ -233,5 +241,5 @@ class MockPLC:
             # If ASPC
             if self.client.registers[modAddr.autosp_enable_coil]:
                 pid_base_sp += autosp_rate
-                # 'Write' new setpoint back to register
-                self.client.registers[modAddr.pid_setpoint_a_hold] = pid_base_sp
+            # 'Write' new setpoint back to register
+            self.client.registers[modAddr.pid_setpoint_a_hold] = pid_base_sp
