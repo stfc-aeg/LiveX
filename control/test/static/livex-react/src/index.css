@@ -303,3 +303,7 @@ body {
   padding: inherit;
   box-sizing: border-box;
 }
+
+.rmsc.multi-select {
+  z-index: 1050;
+}
