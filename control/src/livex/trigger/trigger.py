@@ -25,8 +25,7 @@ class Trigger():
             'target': (lambda: self.target, self.set_target)
         })
 
-
-    def register_modbus_client(self, client):
+    def _register_modbus_client(self, client):
         self.client = client
         try:
             self._get_parameters()
@@ -42,7 +41,7 @@ class Trigger():
         self.frequency = read_decode_holding_reg(self.client, self.addr['freq_hold'])
         self.target = int(read_decode_holding_reg(self.client, self.addr['target_hold']))
 
-    def update_hold_value(self, address, value):
+    def _update_hold_value(self, address, value):
         """Write a value to a given holding register(s) and mark the 'value updated' coil."""
         write_modbus_float(self.client, float(value), address)
 
@@ -60,9 +59,9 @@ class Trigger():
         self.frequency = value
         logging.debug(f"Set trigger {self.name} to frequency {self.frequency}.")
         # interval = (1_000_000 / self.frequency) // 2
-        self.update_hold_value(self.addr['freq_hold'], self.frequency)
+        self._update_hold_value(self.addr['freq_hold'], self.frequency)
 
     def set_target(self, value):
         """Set the target framecount of the timer."""
         self.target = int(value)  # Could be int or float but int is better
-        self.update_hold_value(self.addr['target_hold'], self.target)
+        self._update_hold_value(self.addr['target_hold'], self.target)

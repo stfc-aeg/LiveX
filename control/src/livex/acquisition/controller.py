@@ -24,7 +24,6 @@ class LiveXController(BaseController):
         This constructor initialises the LiveXController, building the parameter tree and getting
         system info.
         """
-
         # Parse options
         self.ref_trigger = options.get('reference_trigger', 'furnace')
         self.filepath = options.get('filepath', '/tmp')
@@ -95,7 +94,7 @@ class LiveXController(BaseController):
             self.adapters['sequencer'].add_context('livex', self)
 
         # With adapters initialised, IAC can be used to get any more needed info
-        self.get_timer_frequencies()
+        self._get_timer_frequencies()
 
         # Write furnace timer to go for readings
         self.trigger.triggers['furnace'].set_frequency(10)
@@ -123,7 +122,7 @@ class LiveXController(BaseController):
             }
         })
 
-    def generate_experiment_filenames(self):
+    def _generate_experiment_filenames(self):
         """Generate the file names and paths for an acquisition.
         """
         # Experiment id is campaign name plus incrementing acquisition number value
@@ -165,7 +164,7 @@ class LiveXController(BaseController):
         self.current_acquisition = acquisitions
 
         # Get self.filepaths set to
-        self.generate_experiment_filenames()
+        self._generate_experiment_filenames()
 
         # Stop all timers while processing
         self.trigger.set_all_timers(
@@ -288,7 +287,7 @@ class LiveXController(BaseController):
              'freerun': self.freerun}
         )
 
-    def get_timer_frequencies(self):
+    def _get_timer_frequencies(self):
         """Update the timer frequency variables."""
         for name, trigger in self.trigger.triggers.items():
             self.frequencies[name] = trigger.frequency
@@ -299,7 +298,7 @@ class LiveXController(BaseController):
             )
 
     def set_freerun(self, value):
-        """Set the freerun boolean. If True, frame targetsa re ignored when running an acquisition.
+        """Set the freerun boolean. If True, frame targets are ignored when running an acquisition.
         :param value: bool, determines if freerun is True or False.
         """
         self.freerun = bool(value)
@@ -309,20 +308,22 @@ class LiveXController(BaseController):
         :param value: integer represening the new time
         :param timer: string representing the trigger parameter tree path of the timer to edit
         """
-        if timer:
+        if timer and timer in self.trigger.triggers.keys():
             self.trigger.triggers[timer].set_frequency(int(value))
             self.frequencies[timer] = int(value)
             logging.debug(f"self.frequencies: {self.frequencies}")
 
             # Ensure furnace frequency is updated
-            self.update_furnace_frequency(self.frequencies[self.ref_trigger])
+            self._update_furnace_frequency(self.frequencies[self.ref_trigger])
 
             # We can recalculate duration and frame targets for the new frequency by calling this
             # function with the current ref target, instead of duplicating code.
             ref_target = self.trigger.triggers[self.ref_trigger].target
             self.set_acq_frame_target(ref_target)
+        else:
+            logging.debug("Timer not updated; not found or timer not in list of triggers.")
 
-    def update_furnace_frequency(self, frequency):
+    def _update_furnace_frequency(self, frequency):
         """Useful function to inform the furnace PLC of its trigger frequency.
         This helps with SampleTime and the Auto Set Point Control.
         """
@@ -332,7 +333,7 @@ class LiveXController(BaseController):
     def set_acq_time(self, value):
         """Set the duration of the acquisition. Used to calculate targets from frequencies."""
         self.acq_time = int(value)
-        self.get_timer_frequencies()
+        self._get_timer_frequencies()
 
         # Frame target = time (in s) * frequency
         for name, trigger in self.trigger.triggers.items():
@@ -343,7 +344,7 @@ class LiveXController(BaseController):
     def set_acq_frame_target(self, value):
         """Set the frame target(s) of the acquisition."""
         # Furnace is the 'source of truth' for frame targets. Others are derived from it
-        self.get_timer_frequencies()
+        self._get_timer_frequencies()
 
         # New furnace target as provided
         ref_target = int(value)

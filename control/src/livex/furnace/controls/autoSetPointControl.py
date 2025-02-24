@@ -22,11 +22,10 @@ class AutoSetPointControl():
             'heating': (lambda: self.heating, self.set_heating),
             'heating_options': (lambda: self.heating_options, None), 
             'rate': (lambda: self.rate, self.set_rate),
-            'img_per_degree': (lambda: self.imgdegree, self.set_imgdegree),
             'midpt_temp': (lambda: self.midpt, None)
         })
 
-    def register_modbus_client(self, client):
+    def _register_modbus_client(self, client):
         """Keep internal reference to the Modbus client and attempt to use it to get parameters."""
         self.client = client
         try:
@@ -67,10 +66,4 @@ class AutoSetPointControl():
         """Set the rate value for the auto set point control."""
         self.rate = value
         write_modbus_float(self.client, value, self.addresses['rate'])
-        write_coil(self.client, self.addresses['update'], 1)
-
-    def set_imgdegree(self, value):
-        """Set the image acquisition per degree for the auto set point control."""
-        self.imgdegree = value
-        write_modbus_float(self.client, value, self.addresses['imgdegree'])
         write_coil(self.client, self.addresses['update'], 1)

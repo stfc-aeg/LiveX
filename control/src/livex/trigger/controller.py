@@ -42,7 +42,7 @@ class TriggerController(BaseController):
 
         # Initialise the modbus client and get all register values
         self.initialise_client(value=None)
-        self.get_all_registers()
+        self._get_all_registers()
 
         if self.status_bg_task_enable:
             self.start_background_tasks()
@@ -124,13 +124,13 @@ class TriggerController(BaseController):
             self.connected = True
             # With connection established, update any registers
             for name, trigger in self.triggers.items():
-                trigger.register_modbus_client(self.mod_client)
-            self.get_all_registers()
+                trigger._register_modbus_client(self.mod_client)
+            self._get_all_registers()
         except:
             logging.debug("Connection to trigger modbus client did not succeed.")
             self.connected = False
 
-    def get_all_registers(self):
+    def _get_all_registers(self):
         """Read the value of all registers to update the tree."""
         if self.connected:
             for name, trigger in self.triggers.items():
@@ -140,8 +140,16 @@ class TriggerController(BaseController):
         """Enable or disable all timers.
         :param values: dict/obj of needed values. (bool) enable, (bool) freerun
         """
-        enable = values['enable']
-        freerun = values['freerun']
+        if 'enable' in values.keys():
+            enable = values['enable']
+        else:
+            logging.debug("Set_all_timers call missing enable in argument keys.")
+            return
+        if 'freerun' in values.keys():
+            freerun = values['freerun']
+        else:
+            logging.debug("Set_all_timers call missing freerun in argument keys.")
+
         self.all_triggers_enable = bool(enable)
 
         # If freerun, write the target as 0 to the trigger without setting the target count.
@@ -167,7 +175,7 @@ class TriggerController(BaseController):
         """Start the background tasks and reset the continuous error counter."""
         logging.debug(f"Launching trigger status update task with interval {self.status_bg_task_interval}.")
         self.status_ioloop_task = PeriodicCallback(
-            self.get_all_registers, (self.status_bg_task_interval * 1000)
+            self._get_all_registers, (self.status_bg_task_interval * 1000)
         )
         self.status_ioloop_task.start()
 

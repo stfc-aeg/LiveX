@@ -37,7 +37,7 @@ class PID():
             'outputsum': (lambda: self.outputsum, None)
         })
 
-    def register_modbus_client(self, client):
+    def _register_modbus_client(self, client):
         """Keep internal reference to the Modbus client and attempt to use it to get parameters."""
         self.client = client
         try:
@@ -107,4 +107,4 @@ class PID():
         if value:
             write_coil(self.client, self.addresses['enable'], 1)
         else:
-            write_coil(self.client, self.addresses['enable'], 0,)
+            write_coil(self.client, self.addresses['enable'], 0)
