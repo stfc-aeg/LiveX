@@ -178,13 +178,13 @@ class LiveXController(BaseController):
 
         # Check which acquisitions are being run and call the relevant function
         if 'furnace' in self.current_acquisition:
-            self.furnace.set_filepath(
+            self.furnace._set_filepath(
                 self.filepaths['furnace']['filepath']
             )
-            self.furnace.set_filename(
+            self.furnace._set_filename(
                 self.filepaths['furnace']['filename']
             )
-            self.furnace.start_acquisition()
+            self.furnace._start_acquisition()
 
         for camera in self.orca.cameras:
             if camera.name in self.current_acquisition:
@@ -251,7 +251,7 @@ class LiveXController(BaseController):
         # Furnace
         if 'furnace' in self.current_acquisition:
             # Turn off acquisition coil
-            self.furnace.stop_acquisition()
+            self.furnace._stop_acquisition()
 
         # Cams stop capturing, num-frames to 0, start again
         # Move camera(s) to capture state
