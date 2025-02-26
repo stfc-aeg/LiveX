@@ -47,6 +47,7 @@ class FurnaceController():
         self.port = int(options.get('port', '4444'))
 
         self.mocking = bool(int(options.get('use_mock_client', 0)))
+        pid_debug = bool(int(options.get('pid_debug', 0)))
 
         # File name and directory is a default that is later overwritten by metadata
         self.log_directory = options.get('log_directory', 'logs')
@@ -83,7 +84,7 @@ class FurnaceController():
         # If pid_debug is true (and set in the PLC as well), this is a range of PID behaviour data
         data_groupname = str(options.get('data_groupname', 'readings'))
 
-        self.packet_decoder = LiveXPacketDecoder()
+        self.packet_decoder = LiveXPacketDecoder(pid_debug=pid_debug)
         self.stream_buffer = {key: [] for key in self.packet_decoder.data.keys()}  # Same data structure
         self.data_groupname = data_groupname
 
