@@ -43,8 +43,8 @@ class PID():
         try:
             self._get_parameters()
             self._write_pid_defaults()
-        except:
-            logging.debug("Error when attempting to get PID parameters after client connection.")
+        except Exception as e:
+            logging.warning(f"Error when attempting to get PID parameters after client connection: {repr(e)}")
 
     def _get_parameters(self):
         """Get parameters for the parameter tree using a modbus connection."""

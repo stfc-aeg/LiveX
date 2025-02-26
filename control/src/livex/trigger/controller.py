@@ -36,10 +36,6 @@ class TriggerController(BaseController):
             addresses = getattr(modAddr, addr)
             self.triggers[name] = Trigger(name, addresses)
 
-        self.frequencies = [
-            item.strip() for item in options.get('frequencies', None).split(",")
-        ]
-
         # Initialise the modbus client and get all register values
         self.initialise_client(value=None)
         self._get_all_registers()

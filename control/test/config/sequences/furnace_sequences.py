@@ -1,4 +1,4 @@
-provides = ['configure_pids', 'stabilise_at_temperature_a', 'furnace_acquisition_full', 'set_uniform_trigger_details']
+provides = ['configure_pids', 'stabilise_at_temperature_a', 'furnace_acquisition_full']
 
 import time
 
@@ -78,13 +78,3 @@ def furnace_acquisition_full(setpoint=300, stability_threshold=0.25, cooling_rat
     furnace.pid_a.set_enable(False)
     # furnace.solo_acquisition(False)
     print(f"Furnace acquisition finished, disabling PID and acquisition.")
-
-def set_uniform_trigger_details(frequency=50, target=10000):
-    """Set all triggers to have a uniform frequency and target."""
-    livex = get_context('livex')
-    trigger = get_context('trigger')
-
-    for name, trig in trigger.triggers.items():
-        print(f"Setting timer {name} frequency")
-        livex.set_timer_frequency(frequency, timer=name)
-    livex.set_acq_frame_target(target)

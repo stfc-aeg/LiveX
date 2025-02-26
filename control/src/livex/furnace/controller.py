@@ -17,7 +17,7 @@ from livex.furnace.controls.motor import Motor
 from livex.modbusAddresses import modAddr
 from livex.filewriter import FileWriter
 from livex.util import LiveXError
-from livex.util import read_decode_input_reg, read_decode_holding_reg, iac_get, iac_set
+from livex.util import read_decode_input_reg, read_decode_holding_reg, write_modbus_float, write_coil
 from livex.packet_decoder import LiveXPacketDecoder
 
 from livex.mockModbusClient import MockModbusClient
@@ -101,7 +101,6 @@ class FurnaceController():
         self.thermocouple_c = None
 
         self.lifetime_counter = 0
-        self.reconnect = False
 
         bg_task = ParameterTree({
             'thread_count': (lambda: self.background_thread_counter, None),
@@ -111,7 +110,7 @@ class FurnaceController():
 
         status = ParameterTree({
             'connected': (lambda: self.connected, None),
-            'reconnect': (lambda: self.reconnect, self._initialise_clients),
+            'reconnect': (lambda: None, self._initialise_clients),
             'full_stop': (lambda: None, self.stop_all_pid)
         })
 
@@ -298,6 +297,22 @@ class FurnaceController():
         """Safely end the TCP connection."""
         self.tcp_client.close()
 
+    def update_furnace_frequency(self, freq):
+        """Update the PID's frequency, including adapter references to it.
+        This should only be called if the trigger is also being updated to fire at that frequency.
+        Otherwise, results may be inconsistent.
+        :param freq: new frequency as integer
+        """
+        self.pid_frequency = freq
+
+        # Update buffer size to remain 1/s
+        self.buffer_size = self.pid_frequency
+        # Update task period
+        self.bg_stream_task_interval = (1/self.pid_frequency)/2
+
+        write_modbus_float(self.mod_client, freq, modAddr.furnace_freq_hold)
+        write_coil(self.mod_client, modAddr.freq_aspc_update_coil, True)
+
     @run_on_executor
     def background_stream_task(self):
         """Instruct the packet decoder to receive an object, then put that object
@@ -326,7 +341,7 @@ class FurnaceController():
                     self.stream_buffer[attr].append(self.packet_decoder.data[attr])
 
                 # After a certain number of data reads, write data to the file
-                if len(self.stream_buffer['counter']) == 10:
+                if len(self.stream_buffer['counter']) >= self.pid_frequency:
                     self.file_writer.write_hdf5(
                         data=self.stream_buffer,
                         groupname=self.data_groupname
