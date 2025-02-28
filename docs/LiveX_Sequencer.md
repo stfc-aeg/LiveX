@@ -5,7 +5,7 @@ A function prefixed with ‘_’ is generally not one you will need to access, s
 
 To use the sequencer, there are code examples and a README in the [odin-sequencer GitHub repository](https://github.com/stfc-aeg/odin-sequencer). Alternatively, there are some examples [in the LiveX repository](https://github.com/stfc-aeg/LiveX) too (see `/control/test/config/sequences`).
 
-
+In short, you define functions in sequences files ( `control/test/config/sequences`). You then provide these functions in a list (`provides=['<name_of_function>']`) and these become visible in the user interface, with function arguments interpreted. Sequences can rely on other sequences; if those sequences are in another file, they can be used following `requires=['<name_of_file>']` (accessing all sequences in that file).
 
 # Furnace
 

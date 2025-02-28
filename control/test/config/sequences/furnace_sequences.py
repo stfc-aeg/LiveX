@@ -1,4 +1,5 @@
-provides = ['configure_pids', 'stabilise_at_temperature_a', 'furnace_acquisition_full']
+provides = ['configure_pids', 'furnace_acquisition_full']
+requires = ['example_sequences']
 
 import time
 
@@ -16,43 +17,8 @@ def configure_pids(setpoint_a=200, kp_a=0.3, ki_a=0.02, kd_a=0 , setpoint_b=200,
     furnace.pid_b.set_derivative(kd_b)
     print(f"Setpoint now equal to {furnace.pid_a.setpoint}")
 
-def stabilise_at_temperature_a(setpoint=300, stability_threshold=0.25, do_gradient=False, gradient_temp_per_mm=2, distance=5, grad_high_towards_a=True):
-    """Set PID A to reach and maintain a target temperature."""
-    furnace = get_context('furnace')
-    trigger = get_context('trigger')
-
-    furnace.pid_a.set_setpoint(setpoint)
-    interval = furnace.bg_read_task_interval
-
-    freq = trigger.triggers['furnace'].frequency
-    duration = 10*freq
-
-    if do_gradient:
-        furnace.gradient.set_distance(distance)
-        furnace.gradient.set_wanted(gradient_temp_per_mm)
-        furnace.gradient.set_high(grad_high_towards_a)
-        furnace.gradient.set_enable(do_gradient)
-
-    furnace.pid_a.set_enable(True)
-
-    def mean(errors):
-        if len(errors) == 0:
-            return -1
-        return (sum(abs(err) for err in errors) / len(errors))
-    # Need to determine that temperature is stable
-    # Seeing that magnitude error of last 50 readings is below a certain amount should suffice
-    # When testing, this is 10 seconds. Should be based off of frequency
-    errors = []
-    # Checking
-    while (len(errors)<duration) or (mean(errors) >= stability_threshold):
-        errors.append((furnace.pid_a.temperature - furnace.pid_a.setpoint))
-        if len(errors) > duration:
-            errors.pop(0)
-        time.sleep(interval)
-
-    print(f"temperature stabilised at {furnace.pid_a.temperature} for setpoint {furnace.pid_a.setpoint}")
-
 def furnace_acquisition_full(setpoint=300, stability_threshold=0.25, cooling_rate=1.5, final_setpoint=40, do_gradient=False, gradient_temp_per_mm=2, distance=5, grad_high_towards_a=True):
+    """Sequence to run a full acquisition"""
 
     furnace = get_context('furnace')
     interval = furnace.bg_read_task_interval
