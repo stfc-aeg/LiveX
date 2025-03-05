@@ -52,7 +52,7 @@ function Metadata(props) {
     const renderForm = () => {
         return Object.keys(metaJson).map((key) => {
             const field = metaJson[key];
-            const {label, choices, default: multi_choice, user_input, multi_line} = field;
+            const {label, choices, user_input, multi_line, multi_choice=false} = field;
 
             const currentValue = metadataEndPoint?.data?.fields?.[key]?.value;
 
@@ -101,32 +101,7 @@ function Metadata(props) {
                 return null; // Skip non-user-input fields
             }
 
-            if (choices && !multi_choice)
-            { // Dropdown
-              return (
-                <InputGroup>
-                  <InputGroup.Text style={{width:labelWidth}}>
-                    {label}:
-                  </InputGroup.Text>
-                  <EndpointDropdown
-                    endpoint={metadataEndPoint}
-                    event_type="select"
-                    fullpath={"fields/"+key+"/value"}
-                    variant="outline-secondary"
-                    buttonText={currentValue}>
-                      {choices.map(
-                      (selection, index) => (
-                        <Dropdown.Item
-                          eventKey={selection}
-                          key={index}>
-                            {selection}
-                        </Dropdown.Item>
-                      ))}
-                  </EndpointDropdown>
-                </InputGroup>
-                )
-            }
-            else if (choices && multi_choice)
+            if (choices && multi_choice === true)
             { // Tags
               return (
                 <TagInput
@@ -139,6 +114,31 @@ function Metadata(props) {
                 />
               )
             }
+            else if (choices)
+              { // Dropdown
+                return (
+                  <InputGroup>
+                    <InputGroup.Text style={{width:labelWidth}}>
+                      {label}:
+                    </InputGroup.Text>
+                    <EndpointDropdown
+                      endpoint={metadataEndPoint}
+                      event_type="select"
+                      fullpath={"fields/"+key+"/value"}
+                      variant="outline-secondary"
+                      buttonText={currentValue}>
+                        {choices.map(
+                        (selection, index) => (
+                          <Dropdown.Item
+                            eventKey={selection}
+                            key={index}>
+                              {selection}
+                          </Dropdown.Item>
+                        ))}
+                    </EndpointDropdown>
+                  </InputGroup>
+                  )
+              }
             else if (multi_line)
             {  // not dropdown or tags, so text. but multi_line, not regular
               return (

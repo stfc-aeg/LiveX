@@ -304,6 +304,6 @@ body {
   box-sizing: border-box;
 }
 
-.rmsc.multi-select {
-  z-index: 1050;
+.dropdown-content {
+  z-index: 1050 !important;
 }
