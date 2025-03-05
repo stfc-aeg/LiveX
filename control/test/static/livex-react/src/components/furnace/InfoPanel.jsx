@@ -6,13 +6,9 @@ import Button from 'react-bootstrap/Button';
 import { TitleCard, WithEndpoint } from 'odin-react';
 import { checkNull, usePrevious } from '../../utils';
 
-const EndPointButton = WithEndpoint(Button);
 
 function InfoPanel(props) {
     const {furnaceEndPoint} = props;
-    const {connectedPuttingDisable} = props;
-    const {title} = props;
-    const {pid} = props;
 
     const lastInput_a = usePrevious(furnaceEndPoint.data?.pid_a?.temperature);
     const lastInput_b = usePrevious(furnaceEndPoint.data?.pid_b?.temperature);
@@ -164,7 +160,7 @@ function InfoPanel(props) {
               <InputGroup.Text style={labelStyling}>
               {checkNull(
                   furnaceEndPoint.data.pid_b?.derivative
-                  * (furnaceEndPoint.data.pid_b?.temperature - lastInput_a))}
+                  * (furnaceEndPoint.data.pid_b?.temperature - lastInput_b))}
               </InputGroup.Text>
             </InputGroup>
           </Row>

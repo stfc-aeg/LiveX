@@ -6,7 +6,7 @@ import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/esm/Col';
 import { Container } from 'react-bootstrap';
 import { useState, useEffect } from 'react';
-import { TitleCard, WithEndpoint, useAdapterEndpoint, DropdownSelector, StatusBox } from 'odin-react';
+import { TitleCard, WithEndpoint, useAdapterEndpoint, DropdownSelector } from 'odin-react';
 import TagInput from "./TagInput";
 
 const EndPointFormControl = WithEndpoint(Form.Control);
@@ -52,7 +52,7 @@ function Metadata(props) {
     const renderForm = () => {
         return Object.keys(metaJson).map((key) => {
             const field = metaJson[key];
-            const {label, choices, default: defaultValue, multi_choice, user_input, multi_line, enabled} = field;
+            const {label, choices, default: multi_choice, user_input, multi_line} = field;
 
             const currentValue = metadataEndPoint?.data?.fields?.[key]?.value;
 

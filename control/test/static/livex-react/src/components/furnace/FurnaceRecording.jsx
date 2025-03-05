@@ -1,22 +1,16 @@
 import React from 'react';
 import Col from 'react-bootstrap/Col';
-import { Container, Stack } from 'react-bootstrap';
-import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Button from 'react-bootstrap/Button';
-import { TitleCard, WithEndpoint, ToggleSwitch, StatusBox } from 'odin-react';
-import Card from 'react-bootstrap/Card';
+import { TitleCard, WithEndpoint } from 'odin-react';
 import { checkNullNoDp  } from '../../utils';
 
-const EndPointFormControl = WithEndpoint(Form.Control);
 const EndPointButton = WithEndpoint(Button);
 
 function FurnaceRecording(props) {
     const {furnaceEndPoint} = props;
     const {connectedPuttingDisable} = props;
-    const {title} = props;
-    const {pid} = props;
 
     // Fixing the label width of the display labels so that they're consistent
     // ~6px per character. 
