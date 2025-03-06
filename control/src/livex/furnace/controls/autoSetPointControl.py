@@ -15,18 +15,16 @@ class AutoSetPointControl():
         self.heating_options = self.addresses['heating_options']
         self.rate = None
         self.midpt = None
-        self.imgdegree = None
 
         self.tree = ParameterTree({
             'enable': (lambda: self.enable, self.set_enable),
             'heating': (lambda: self.heating, self.set_heating),
             'heating_options': (lambda: self.heating_options, None), 
             'rate': (lambda: self.rate, self.set_rate),
-            'img_per_degree': (lambda: self.imgdegree, self.set_imgdegree),
             'midpt_temp': (lambda: self.midpt, None)
         })
 
-    def register_modbus_client(self, client):
+    def _register_modbus_client(self, client):
         """Keep internal reference to the Modbus client and attempt to use it to get parameters."""
         self.client = client
         try:
@@ -41,7 +39,6 @@ class AutoSetPointControl():
         self.heating_options = self.addresses['heating_options']
         self.rate = read_decode_holding_reg(self.client, self.addresses['rate'])
         self.midpt = read_decode_input_reg(self.client, self.addresses['midpt'])
-        self.imgdegree = read_decode_holding_reg(self.client, self.addresses['imgdegree'])
 
     def set_enable(self, value):
         """Set the enable boolean for the auto set point control."""
@@ -67,10 +64,4 @@ class AutoSetPointControl():
         """Set the rate value for the auto set point control."""
         self.rate = value
         write_modbus_float(self.client, value, self.addresses['rate'])
-        write_coil(self.client, self.addresses['update'], 1)
-
-    def set_imgdegree(self, value):
-        """Set the image acquisition per degree for the auto set point control."""
-        self.imgdegree = value
-        write_modbus_float(self.client, value, self.addresses['imgdegree'])
         write_coil(self.client, self.addresses['update'], 1)

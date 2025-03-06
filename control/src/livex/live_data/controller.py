@@ -134,7 +134,7 @@ class LiveDataController(BaseController):
             logging.error(error)
             raise LiveXError(error)
 
-    def update_render_info(self, processor):
+    def _update_render_info(self, processor):
         """Pipe updated parameters to processor thread.
         :param processor: LiveDataProcessor object to reference.
         """
@@ -155,7 +155,7 @@ class LiveDataController(BaseController):
         :param processor: LiveDataProcessor object to reference
         """
         processor.size_x = int(value)
-        self.update_render_info(processor)
+        self._update_render_info(processor)
 
     def set_img_y(self, value, processor):
         """Set the height of the image in pixels.
@@ -163,7 +163,7 @@ class LiveDataController(BaseController):
         :param processor: LiveDataProcessor object to reference
         """
         processor.size_y = int(value)
-        self.update_render_info(processor)
+        self._update_render_info(processor)
 
     def set_img_dims(self, value, processor):
         """Set both image dimensions, width and height (x and y).
@@ -184,7 +184,7 @@ class LiveDataController(BaseController):
         processor.roi['y_upper'] = int(
             (processor.roi['percent']['y_upper'] / 100) * processor.size_y)
 
-        self.update_render_info(processor)
+        self._update_render_info(processor)
 
     def set_img_colour(self, value, processor):
         """Set the colour of the image in the parameter tree, used to determine the colour map.
@@ -192,9 +192,9 @@ class LiveDataController(BaseController):
         :param processor: LiveDataProcessor object to reference
         """
         processor.colour = str(value)
-        self.update_render_info(processor)
+        self._update_render_info(processor)
 
-    def scale_percent_to_selection(self, new_percentages, current_percentages):
+    def _scale_percent_to_selection(self, new_percentages, current_percentages):
         """Scale selected percentages to fit an existing selection.
         e.g.: specifying a further region of interest within an already-specified one.
         :param new_percentages: array of upper and lower boundaries selected. [min, max]
@@ -230,7 +230,7 @@ class LiveDataController(BaseController):
         processor.clipping['percent']['min'] = round(processor.clipping['percent']['min'], 2)
         processor.clipping['percent']['max'] = round(processor.clipping['percent']['max'], 2)
 
-        self.update_render_info(processor)
+        self._update_render_info(processor)
 
     def set_img_clip_percent(self, value, processor):
         """Set the image clipping range proportionally.
@@ -243,7 +243,7 @@ class LiveDataController(BaseController):
         cur_min = processor.clipping['percent']['min']
         cur_max = processor.clipping['percent']['max']
 
-        new_min, new_max = self.scale_percent_to_selection(
+        new_min, new_max = self._scale_percent_to_selection(
             [select_min, select_max],
             [cur_min, cur_max]
         )
@@ -255,7 +255,7 @@ class LiveDataController(BaseController):
         processor.clipping['min'] = int(processor.clipping['percent']['min']/100 * processor.cam_pixel_max)
         processor.clipping['max'] = int(processor.clipping['percent']['max']/100 * processor.cam_pixel_max)
 
-        self.update_render_info(processor)
+        self._update_render_info(processor)
 
     def set_resolution(self, value, processor):
         """Set the resolution of the image.
@@ -296,11 +296,11 @@ class LiveDataController(BaseController):
             cur_y_low = processor.roi['percent']['y_lower']
             cur_y_high = processor.roi['percent']['y_upper']
 
-        new_x_low, new_x_high = self.scale_percent_to_selection(
+        new_x_low, new_x_high = self._scale_percent_to_selection(
             [x_low, x_high],
             [cur_x_low, cur_x_high]
         )
-        new_y_low, new_y_high = self.scale_percent_to_selection(
+        new_y_low, new_y_high = self._scale_percent_to_selection(
             [y_low, y_high],
             [cur_y_low, cur_y_high]
         )
@@ -316,4 +316,4 @@ class LiveDataController(BaseController):
         processor.roi['percent']['y_lower'] = new_y_low
         processor.roi['percent']['y_upper'] = new_y_high
 
-        self.update_render_info(processor)
+        self._update_render_info(processor)

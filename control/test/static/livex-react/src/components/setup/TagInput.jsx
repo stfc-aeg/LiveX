@@ -20,13 +20,15 @@ function TagInput(props) {
 
     // Default state should be the current values. Those values are an array of the tag text,
     // so they need to be converted to the right format (label, value, disabled).
-    const [selected, setSelected] = useState(
-      currentValue.map(value => ({
-        label: value,
-        value: value,
-        disabled: false
-      }))
-    );
+    const [selected, setSelected] = useState(() => {
+      return Array.isArray(currentValue)
+        ? currentValue.map(value => ({
+            label: value,
+            value: value,
+            disabled: false
+          }))
+        : [];
+    });
 
     // This onchange function essentially duplicates the functionality of the WithEndpoint
     // sendRequest function. That cannot be used for the MultiSelect normally, as the 'value' it

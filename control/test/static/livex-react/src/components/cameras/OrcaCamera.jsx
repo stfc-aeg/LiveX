@@ -4,9 +4,9 @@ import Row from 'react-bootstrap/Row';
 import { Container, Stack } from 'react-bootstrap';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
-import { useAdapterEndpoint, WithEndpoint, StatusBox, TitleCard, DropdownSelector, OdinDoubleSlider } from 'odin-react';
+import { useAdapterEndpoint, WithEndpoint, TitleCard, DropdownSelector, OdinDoubleSlider } from 'odin-react';
 import Button from 'react-bootstrap/Button';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Dropdown } from 'react-bootstrap';
 
 import { checkNullNoDp } from '../../utils';
@@ -49,13 +49,12 @@ function OrcaCamera(props) {
         10, 25, 50, 75, 100
     ];
 
-    const labelWidth = 64;
+    const labelWidth = 80;
 
     // Handle image data
     const [width, setWidth] = useState('');
     const [height, setHeight] = useState('');
     const [dimensions, setDimensions] = useState('');
-    const [rotation, setRotation] = useState(0);
 
     const heightChange = (e) => {
         let newHeight = e.target.value;
@@ -185,10 +184,7 @@ function OrcaCamera(props) {
                     imgSrc={liveViewData?.image?.data}
                     fullpath="image"
                     paramToUpdate="roi"
-                    valuesAsPercentages={true}
-                    style={{
-                      transform: `rotate(${rotation}deg)`
-                    }}>
+                    valuesAsPercentages={true}>
                   </ClickableImage>
                   </Row>
                   <Row>

@@ -5,7 +5,7 @@ import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Button from 'react-bootstrap/Button';
-import { TitleCard, WithEndpoint, useAdapterEndpoint, StatusBox } from 'odin-react';
+import { TitleCard, WithEndpoint, useAdapterEndpoint } from 'odin-react';
 
 import { checkNullNoDp } from '../../utils';
 
@@ -35,7 +35,7 @@ function Trigger(props) {
     const handleTimeFrameValueChange = (newValue) => {
       setTimeFrameValue(newValue); // update state
       // Put value to endpoint
-      let freerunBool = newValue === 'free' ? true : false;
+      let freerunBool = newValue === 'free';
       const sendVal = {['freerun']: freerunBool};
       liveXEndPoint.put(sendVal, 'acquisition');
     }
@@ -115,7 +115,7 @@ function Trigger(props) {
                         fullpath={"all_timers_enable"}
                         value={{
                           'enable': true,
-                          'freerun': timeFrameValue==='free' ? true : false
+                          'freerun': timeFrameValue==='free'
                         }}
                         event_type="click"
                       >
@@ -126,7 +126,7 @@ function Trigger(props) {
                         fullpath={"all_timers_enable"}
                         value={{
                           'enable': false,
-                          'freerun': timeFrameValue==='free' ? true : false
+                          'freerun': timeFrameValue==='free'
                         }}
                         event_type="click"
                         variant='danger'

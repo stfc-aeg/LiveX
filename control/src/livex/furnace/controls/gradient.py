@@ -29,7 +29,7 @@ class Gradient():
             'high_heater_options': (lambda: self.high_options, None)
         })
 
-    def register_modbus_client(self, client):
+    def _register_modbus_client(self, client):
         """Keep internal reference to the Modbus client and attempt to use it to get parameters."""
         self.client = client
         try:

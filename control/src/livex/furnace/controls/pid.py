@@ -24,7 +24,7 @@ class PID():
         self.kd = None
         self.output = None
         self.outputsum = None
-        self.thermocouple = None
+        self.temperature = None
 
         self.tree = ParameterTree({
             'enable': (lambda: self.enable, self.set_enable),
@@ -32,19 +32,19 @@ class PID():
             'proportional': (lambda: self.kp, self.set_proportional),
             'integral': (lambda: self.ki, self.set_integral),
             'derivative': (lambda: self.kd, self.set_derivative),
-            'temperature': (lambda: self.thermocouple, None),
+            'temperature': (lambda: self.temperature, None),
             'output': (lambda: self.output, None),
             'outputsum': (lambda: self.outputsum, None)
         })
 
-    def register_modbus_client(self, client):
+    def _register_modbus_client(self, client):
         """Keep internal reference to the Modbus client and attempt to use it to get parameters."""
         self.client = client
         try:
             self._get_parameters()
             self._write_pid_defaults()
-        except:
-            logging.debug("Error when attempting to get PID parameters after client connection.")
+        except Exception as e:
+            logging.warning(f"Error when attempting to get PID parameters after client connection: {repr(e)}")
 
     def _get_parameters(self):
         """Get parameters for the parameter tree using a modbus connection."""
@@ -56,7 +56,7 @@ class PID():
         self.kd = round(read_decode_holding_reg(self.client, self.addresses['kd']), 4)
         self.output = read_decode_input_reg(self.client, self.addresses['output'])
         self.outputsum = read_decode_input_reg(self.client, self.addresses['outputsum'])
-        self.thermocouple = read_decode_input_reg(self.client, self.addresses['thermocouple'])
+        self.temperature = read_decode_input_reg(self.client, self.addresses['thermocouple'])
 
     def _write_pid_defaults(self):
         """Write the setpoint and PID terms of the controller.
@@ -107,4 +107,4 @@ class PID():
         if value:
             write_coil(self.client, self.addresses['enable'], 1)
         else:
-            write_coil(self.client, self.addresses['enable'], 0,)
+            write_coil(self.client, self.addresses['enable'], 0)

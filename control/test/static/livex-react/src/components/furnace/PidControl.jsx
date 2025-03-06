@@ -1,11 +1,9 @@
 import React from 'react';
 import Col from 'react-bootstrap/Col';
-import { Container, Stack } from 'react-bootstrap';
 import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
-import { TitleCard, WithEndpoint, ToggleSwitch, StatusBox } from 'odin-react';
-import Card from 'react-bootstrap/Card';
+import { TitleCard, WithEndpoint, ToggleSwitch } from 'odin-react';
 import { checkNull  } from '../../utils';
 
 const EndPointFormControl = WithEndpoint(Form.Control);

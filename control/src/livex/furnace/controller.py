@@ -17,8 +17,11 @@ from livex.furnace.controls.motor import Motor
 from livex.modbusAddresses import modAddr
 from livex.filewriter import FileWriter
 from livex.util import LiveXError
-from livex.util import read_decode_input_reg, read_decode_holding_reg, iac_get, iac_set
+from livex.util import read_decode_input_reg, read_decode_holding_reg, write_modbus_float, write_coil
 from livex.packet_decoder import LiveXPacketDecoder
+
+from livex.mockModbusClient import MockModbusClient
+from livex.mockModbusClient import MockPLC
 
 class FurnaceController():
     """FurnaceController - class that communicates with a modbus server on a PLC to drive a furnace."""
@@ -42,6 +45,9 @@ class FurnaceController():
 
         self.ip = options.get('ip', '192.168.0.159')
         self.port = int(options.get('port', '4444'))
+
+        self.mocking = bool(int(options.get('use_mock_client', 0)))
+        pid_debug = bool(int(options.get('pid_debug', 0)))
 
         # File name and directory is a default that is later overwritten by metadata
         self.log_directory = options.get('log_directory', 'logs')
@@ -78,7 +84,7 @@ class FurnaceController():
         # If pid_debug is true (and set in the PLC as well), this is a range of PID behaviour data
         data_groupname = str(options.get('data_groupname', 'readings'))
 
-        self.packet_decoder = LiveXPacketDecoder()
+        self.packet_decoder = LiveXPacketDecoder(pid_debug=pid_debug)
         self.stream_buffer = {key: [] for key in self.packet_decoder.data.keys()}  # Same data structure
         self.data_groupname = data_groupname
 
@@ -90,13 +96,12 @@ class FurnaceController():
         self.aspc = AutoSetPointControl(modAddr.aspc_addresses)
         self.motor = Motor(modAddr.motor_addresses)
 
-        self.initialise_clients(value=None)
+        self._initialise_clients(value=None)
 
         # Third thermocouple will get its value from the background task
         self.thermocouple_c = None
 
         self.lifetime_counter = 0
-        self.reconnect = False
 
         bg_task = ParameterTree({
             'thread_count': (lambda: self.background_thread_counter, None),
@@ -106,7 +111,7 @@ class FurnaceController():
 
         status = ParameterTree({
             'connected': (lambda: self.connected, None),
-            'reconnect': (lambda: self.reconnect, self.initialise_clients),
+            'reconnect': (lambda: None, self._initialise_clients),
             'full_stop': (lambda: None, self.stop_all_pid)
         })
 
@@ -129,14 +134,14 @@ class FurnaceController():
             'motor': self.motor.tree,
             'tcp': tcp,
             'filewriter': {
-                'filepath': (lambda: self.file_writer.filepath, self.set_filepath),
-                'filename': (lambda: self.file_writer.filename, self.set_filename)
+                'filepath': (lambda: self.file_writer.filepath, self._set_filepath),
+                'filename': (lambda: self.file_writer.filename, self._set_filename)
             }
         })
 
         # Launch the background task if enabled in options
         if self.bg_read_task_enable:
-            self.start_background_tasks()
+            self._start_background_tasks()
 
     def initialize(self, adapters) -> None:
         """Initialize the controller.
@@ -163,7 +168,7 @@ class FurnaceController():
         """
         self.mod_client.close()
         self.tcp_client.close()
-        self.stop_background_tasks()
+        self._stop_background_tasks()
 
     def get(self, path, with_metadata=False):
         """Get parameter data from controller.
@@ -195,19 +200,19 @@ class FurnaceController():
         except ParameterTreeError as error:
             logging.error(error)
 
-    def set_filename(self, value):
+    def _set_filename(self, value):
         """Set the filewriter's filename and update its path."""
         if not value.endswith('.hdf5'):
             value += '.hdf5'
         self.file_writer.filename = value
         self.file_writer.set_fullpath()
 
-    def set_filepath(self, value):
+    def _set_filepath(self, value):
         """Set the filewriter's filename and update its path."""
         self.file_writer.filepath = value
         self.file_writer.set_fullpath()
 
-    def stop_all_pid(self, value):
+    def stop_all_pid(self, value=None):
         """Disable all/both PIDs, setting their gpio output to 0. Acts as an 'emergency stop'."""
         self.pid_a.set_enable(False)
         self.pid_b.set_enable(False)
@@ -227,7 +232,7 @@ class FurnaceController():
         else:
             self.livex.stop_acquisition()
 
-    def start_acquisition(self):
+    def _start_acquisition(self):
         """Start the acquisition process for the furnace control."""
         # Send signal to modbus to start writing data
         self.mod_client.write_coil(modAddr.acquisition_coil, 1, slave=1)
@@ -236,7 +241,7 @@ class FurnaceController():
 
         self.acquiring = True
 
-    def stop_acquisition(self):
+    def _stop_acquisition(self):
         """End the acquisition process for the furnace control, writing out any remaining data."""
         # Tell PLC to stop sending data
         self.mod_client.write_coil(modAddr.acquisition_coil, 0, slave=1)
@@ -254,28 +259,32 @@ class FurnaceController():
 
         self.acquiring = False
 
-    def initialise_clients(self, value):
+    def _initialise_clients(self, value):
         """Instantiate a ModbusTcpClient and provide it to the PID controllers."""
         logging.debug("Attempting to establish modbus connection")
 
         try:
-            self.mod_client = ModbusTcpClient(self.ip)
+            if self.mocking:
+                self.mod_client = MockModbusClient(self.ip)
+                self.mockClient = MockPLC(self.mod_client)
+            else:
+                self.mod_client = ModbusTcpClient(self.ip)
             self.mod_client.connect()
             # With connection established, populate trees and provide correct connection
-            self.pid_a.register_modbus_client(self.mod_client)
-            self.pid_b.register_modbus_client(self.mod_client)
-            self.gradient.register_modbus_client(self.mod_client)
-            self.aspc.register_modbus_client(self.mod_client)
-            self.motor.register_modbus_client(self.mod_client)
+            self.pid_a._register_modbus_client(self.mod_client)
+            self.pid_b._register_modbus_client(self.mod_client)
+            self.gradient._register_modbus_client(self.mod_client)
+            self.aspc._register_modbus_client(self.mod_client)
+            self.motor._register_modbus_client(self.mod_client)
 
             self.connected = True
         except:
             logging.debug("Connection to modbus client did not succeed.")
             self.connected = False
 
-        self.initialise_tcp_client()
+        self._initialise_tcp_client()
 
-    def initialise_tcp_client(self):
+    def _initialise_tcp_client(self):
         """Initialise the tcp client."""
 
         self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -285,9 +294,25 @@ class FurnaceController():
         activate = '1'
         self.tcp_client.send(activate.encode())
 
-    def close_tcp_client(self):
+    def _close_tcp_client(self):
         """Safely end the TCP connection."""
         self.tcp_client.close()
+
+    def update_furnace_frequency(self, freq):
+        """Update the PID's frequency, including adapter references to it.
+        This should only be called if the trigger is also being updated to fire at that frequency.
+        Otherwise, results may be inconsistent.
+        :param freq: new frequency as integer
+        """
+        self.pid_frequency = freq
+
+        # Update buffer size to remain 1/s
+        self.buffer_size = self.pid_frequency
+        # Update task period
+        self.bg_stream_task_interval = (1/self.pid_frequency)/2
+
+        write_modbus_float(self.mod_client, freq, modAddr.furnace_freq_hold)
+        write_coil(self.mod_client, modAddr.freq_aspc_update_coil, True)
 
     @run_on_executor
     def background_stream_task(self):
@@ -307,7 +332,7 @@ class FurnaceController():
                 except Exception as e:
                     logging.debug(f"Other TCP error: {str(e)}")
                     logging.debug("Halting background tasks")
-                    self.stop_background_tasks()
+                    self._stop_background_tasks()
                     break
 
                 self.tcp_reading = self.packet_decoder.data
@@ -317,7 +342,7 @@ class FurnaceController():
                     self.stream_buffer[attr].append(self.packet_decoder.data[attr])
 
                 # After a certain number of data reads, write data to the file
-                if len(self.stream_buffer['counter']) == 10:
+                if len(self.stream_buffer['counter']) >= self.pid_frequency:
                     self.file_writer.write_hdf5(
                         data=self.stream_buffer,
                         groupname=self.data_groupname
@@ -352,11 +377,13 @@ class FurnaceController():
         while self.bg_read_task_enable:
 
             if self.connected:
+                if self.mocking:
+                    self.mockClient.bg_temp_task()
                 # Get any value updated by the device
                 # Mostly input registers, except for setpoints which can change automatically
                 try:
-                    self.pid_a.thermocouple = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp)
-                    self.pid_b.thermocouple = read_decode_input_reg(self.mod_client, modAddr.thermocouple_b_inp)
+                    self.pid_a.temperature = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp)
+                    self.pid_b.temperature = read_decode_input_reg(self.mod_client, modAddr.thermocouple_b_inp)
 
                     self.thermocouple_c = read_decode_input_reg(self.mod_client, modAddr.thermocouple_c_inp)
 
@@ -403,16 +430,16 @@ class FurnaceController():
 
         if enable != self.bg_read_task_enable:
             if enable:
-                self.start_background_tasks()
+                self._start_background_tasks()
             else:
-                self.stop_background_tasks()
+                self._stop_background_tasks()
 
     def set_task_interval(self, interval):
         """Set the background task interval."""
         logging.debug("Setting background task interval to %f", interval)
         self.bg_read_task_interval = float(interval)
 
-    def start_background_tasks(self):
+    def _start_background_tasks(self):
         """Start the background tasks."""
         logging.debug(
             "Launching background tasks with interval %.2f secs", self.bg_read_task_interval
@@ -424,11 +451,10 @@ class FurnaceController():
         self.background_stream_task()
         self.background_read_task()
 
-    def stop_background_tasks(self):
+    def _stop_background_tasks(self):
         """Stop the background tasks."""
         if self.file_open_flag:  # Ensure file is closed properly
             self.file_writer.close_file()
 
         self.bg_read_task_enable = False
         self.bg_stream_task_enable = False
-        self.background_ioloop_task.stop()

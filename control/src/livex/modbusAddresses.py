@@ -82,7 +82,7 @@ class modAddr():
         'ki': pid_ki_b_hold,
         'kd': pid_kd_b_hold,
         'output': pid_output_b_inp,
-        'output_sum': pid_outputsum_b_inp,
+        'outputsum': pid_outputsum_b_inp,
         'thermocouple': thermocouple_b_inp,
         'setpoint_update': setpoint_update_coil
     }

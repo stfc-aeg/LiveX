@@ -303,3 +303,7 @@ body {
   padding: inherit;
   box-sizing: border-box;
 }
+
+.dropdown-content {
+  z-index: 1050 !important;
+}
