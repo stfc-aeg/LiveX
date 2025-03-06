@@ -265,7 +265,7 @@ class FurnaceController():
 
         try:
             if self.mocking:
-                self.mod_client = MockModbusClient(self.ip)
+                self.mod_client = MockModbusClient(self.ip, self.port, registers=MockModbusClient.furnace_registers)
                 self.mockClient = MockPLC(self.mod_client)
             else:
                 self.mod_client = ModbusTcpClient(self.ip)

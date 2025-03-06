@@ -13,6 +13,7 @@ from livex.util import (
     write_coil,
     write_modbus_float,
 )
+from livex.mockModbusClient import MockModbusClient
 
 from .trigger import Trigger
 
@@ -24,8 +25,10 @@ class TriggerController(BaseController):
 
         # Parse options and build trigger objects
         self.ip = options.get('ip', None)
+        self.port = int(options.get('port', '4444'))
         self.status_bg_task_enable = int(options.get('status_bg_task_enable', 1))
         self.status_bg_task_interval = int(options.get('status_bg_task_interval', 10))
+        self.mocking = bool(int(options.get('use_mock_client', 0)))
 
         self.triggers = {}
         names = options.get('triggers', None).split(",")
@@ -113,9 +116,12 @@ class TriggerController(BaseController):
     def initialise_client(self, value):
         """Initialise the modbus client."""
         try:
-            log = logging.getLogger('pymodbus')
-            log.setLevel(logging.ERROR)
-            self.mod_client = ModbusTcpClient(self.ip)
+            if self.mocking:
+                self.mod_client = MockModbusClient(self.ip, port=self.port, registers=MockModbusClient.trigger_registers)
+            else:
+                log = logging.getLogger('pymodbus')
+                log.setLevel(logging.ERROR)
+                self.mod_client = ModbusTcpClient(self.ip)
             self.mod_client.connect()
             self.connected = True
             # With connection established, update any registers

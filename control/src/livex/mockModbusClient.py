@@ -10,69 +10,95 @@ from pymodbus.constants import Endian
 import logging
 import struct
 
-from concurrent import futures
-
-from tornado.concurrent import run_on_executor
 from livex.modbusAddresses import modAddr
 
 class MockModbusClient:
 
-    def __init__(self, ip='192.168.0.159', port=4444):
+    furnace_registers = {
+        # Coils (00001-09999)
+        1: 0,   # pid_enable_a_coil
+        2: 0,   # pid_enable_b_coil
+        3: 0,   # gradient_enable_coil
+        4: 0,   # autosp_enable_coil
+        5: 0,   # autosp_heating_coil
+        6: 0,   # motor_enable_coil
+        7: 0,   # motor_direction_coil
+        8: 0,   # gradient_high_coil
+        9: 0,   # acquisition_coil
+        10: 0,  # gradient_update_coil
+        11: 0,  # freq_aspc_update_coil
+        12: 0,  # setpoint_update_coil
+
+        # Input Registers (30001-39999)
+        30001: 0,   # counter_inp
+        30003: 0,    # pid_output_a_inp
+        30005: 0,    # pid_output_b_inp
+        30007: 0,   # pid_outputsum_a_inp
+        30009: 0,   # pid_outputsum_b_inp
+
+        30011: 21,   # thermocouple_a_inp
+        30013: 20,   # thermocouple_b_inp
+        30015: 20,   # thermocouple_c_inp
+        30017: 20,   # thermocouple_d_inp
+
+        30019: 0,     # gradient_actual_inp
+        30021: 0,     # gradient_theory_inp
+        30023: 0,  # autosp_midpt_inp
+
+        30027: 0,   # motor_lvdt_inp
+
+        # Holding Registers (40001-49999)
+        40001: 30,   # pid_setpoint_a_hold
+        40003: 0.3,    # pid_kp_a_hold
+        40005: 0.02,     # pid_ki_a_hold
+        40007: 0,     # pid_kd_a_hold
+
+        40009: 30,   # pid_setpoint_b_hold
+        40011: 0.3,    # pid_kp_b_hold
+        40013: 0.02,     # pid_ki_b_hold
+        40015: 0,     # pid_kd_b_hold
+
+        40017: 10,    # furnace_freq_hold
+        40019: 7,     # gradient_wanted_hold
+        40021: 25,    # gradient_distance_hold
+        40023: 2,     # autosp_rate_hold
+        40025: 0,    # autosp_imgdegree_hold
+        40027: 0,   # motor_speed_hold
+    }
+    trigger_registers = {
+        # Coils (0-13)
+        0: 0,   # trig_enable_coil
+        1: 0,   # trig_disable_coil
+        2: 0,   # trig_0_enable_coil
+        3: 0,   # trig_1_enable_coil
+        4: 0,   # trig_2_enable_coil
+        5: 0,   # trig_3_enable_coil
+        6: 0,   # trig_0_disable_coil
+        7: 0,   # trig_1_disable_coil
+        8: 0,   # trig_2_disable_coil
+        9: 0,   # trig_3_disable_coil
+        10: 0,  # trig_0_running_coil
+        11: 0,  # trig_1_running_coil
+        12: 0,  # trig_2_running_coil
+        13: 0,  # trig_3_running_coil
+
+        # Holding Registers (40001-49999)
+        40001: 0,  # trig_0_intvl_hold
+        40003: 0,  # trig_1_intvl_hold
+        40005: 0,  # trig_2_intvl_hold
+        40007: 0,  # trig_3_intvl_hold
+        40009: 0,  # trig_0_target_hold
+        40011: 0,  # trig_1_target_hold
+        40013: 0,  # trig_2_target_hold
+        40015: 0,  # trig_3_target_hold
+    }
+
+    def __init__(self, ip='192.168.0.159', port=4444, registers=furnace_registers):
         self.ip = ip
         self.port = port
         self.connected = False
 
-        self.registers = {
-            # Coils (00001-09999)
-            1: 0,   # pid_enable_a_coil
-            2: 0,   # pid_enable_b_coil
-            3: 0,   # gradient_enable_coil
-            4: 0,   # autosp_enable_coil
-            5: 0,   # autosp_heating_coil
-            6: 0,   # motor_enable_coil
-            7: 0,   # motor_direction_coil
-            8: 0,   # gradient_high_coil
-            9: 0,   # acquisition_coil
-            10: 0,  # gradient_update_coil
-            11: 0,  # freq_aspc_update_coil
-            12: 0,  # setpoint_update_coil
-
-            # Input Registers (30001-39999)
-            30001: 0,   # counter_inp
-            30003: 0,    # pid_output_a_inp
-            30005: 0,    # pid_output_b_inp
-            30007: 0,   # pid_outputsum_a_inp
-            30009: 0,   # pid_outputsum_b_inp
-
-            30011: 21,   # thermocouple_a_inp
-            30013: 20,   # thermocouple_b_inp
-            30015: 20,   # thermocouple_c_inp
-            30017: 20,   # thermocouple_d_inp
-
-            30019: 0,     # gradient_actual_inp
-            30021: 0,     # gradient_theory_inp
-            30023: 0,  # autosp_midpt_inp
-
-            30027: 0,   # motor_lvdt_inp
-
-            # Holding Registers (40001-49999)
-            40001: 30,   # pid_setpoint_a_hold
-            40003: 0.3,    # pid_kp_a_hold
-            40005: 0.02,     # pid_ki_a_hold
-            40007: 0,     # pid_kd_a_hold
-
-            40009: 30,   # pid_setpoint_b_hold
-            40011: 0.3,    # pid_kp_b_hold
-            40013: 0.02,     # pid_ki_b_hold
-            40015: 0,     # pid_kd_b_hold
-
-            40017: 10,    # furnace_freq_hold
-            40019: 7,     # gradient_wanted_hold
-            40021: 25,    # gradient_distance_hold
-            40023: 2,     # autosp_rate_hold
-            40025: 0,    # autosp_imgdegree_hold
-            40027: 0,   # motor_speed_hold
-        }
+        self.registers = registers
 
     def connect(self):
         """Simulate the modbus server connection."""
