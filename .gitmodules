@@ -1,0 +1,10 @@
+[submodule "munir"]
+	path = munir
+	url = https://github.com/stfc-aeg/munir.git
+	branch = odin-data_refactored
+[submodule "odin-sequencer"]
+	path = odin-sequencer
+	url = https://github.com/stfc-aeg/odin-sequencer.git
+[submodule "odin-orca-quest"]
+	path = odin-orca-quest
+	url = https://github.com/stfc-aeg/odin-orca-quest.git
