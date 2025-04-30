@@ -22,6 +22,7 @@ from livex.packet_decoder import LiveXPacketDecoder
 
 from livex.mockModbusClient import MockModbusClient
 from livex.mockModbusClient import MockPLC
+from livex.mockModbusClient import MockTCPClient
 
 class FurnaceController():
     """FurnaceController - class that communicates with a modbus server on a PLC to drive a furnace."""
@@ -69,6 +70,8 @@ class FurnaceController():
 
         # Interval is smaller than period so that tcp stream can be cleared and not maintained
         self.bg_stream_task_interval = (1/self.pid_frequency)/2
+
+        logging.debug(f"#####################\npid_freq:{self.pid_frequency}, stream interval: {self.bg_stream_task_interval}")
 
         # Set the background task counters to zero
         self.background_thread_counter = 0
@@ -287,12 +290,16 @@ class FurnaceController():
     def _initialise_tcp_client(self):
         """Initialise the tcp client."""
 
-        self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.tcp_client.connect((self.ip, self.port))
+        if self.mocking:
+            # This class does almost nothing but does return some 
+            self.tcp_client = MockTCPClient(self.mockClient)
+        else:
+            self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.tcp_client.connect((self.ip, self.port))
 
-        self.tcp_client.settimeout(0.2)
-        activate = '1'
-        self.tcp_client.send(activate.encode())
+            self.tcp_client.settimeout(0.2)
+            activate = '1'
+            self.tcp_client.send(activate.encode())
 
     def _close_tcp_client(self):
         """Safely end the TCP connection."""
@@ -320,52 +327,65 @@ class FurnaceController():
         in the parameter tree.
         """
         while self.bg_stream_task_enable:
-            if self.acquiring:
-                try:
-                    reading = self.tcp_client.recv(self.packet_decoder.size)
-                    logging.debug(self.packet_decoder.data['counter'])
-                    self.tcp_reading = self.packet_decoder.unpack(reading)
+            if self.mocking:
+                if self.acquiring:
+                    try:
+                        counter, temp = self.tcp_client.recv(self.packet_decoder.size)
 
-                except socket.timeout:
-                    logging.debug("TCP Socket timeout: read no data")
-                    continue  # If no data received, do not use the packet_decoding logic
-                except Exception as e:
-                    logging.debug(f"Other TCP error: {str(e)}")
-                    logging.debug("Halting background tasks")
-                    self._stop_background_tasks()
-                    break
+                        logging.debug(f"Mock acquisition data: temperature {temp} at reading {counter}")
+                    except Exception as e:
+                        logging.debug(f"Mock acquisition error: {e}")
 
-                self.tcp_reading = self.packet_decoder.data
+                    # Do not need to go as fast for a fake acquisition, there is no timeout
+                    time.sleep(1/self.pid_frequency)
 
-                # Add decoded data to the stream buffer
-                for attr in self.packet_decoder.data.keys():
-                    self.stream_buffer[attr].append(self.packet_decoder.data[attr])
+            else:
+                if self.acquiring:
+                    try:
+                        reading = self.tcp_client.recv(self.packet_decoder.size)
+                        logging.debug(self.packet_decoder.data['counter'])
+                        self.tcp_reading = self.packet_decoder.unpack(reading)
 
-                # After a certain number of data reads, write data to the file
-                if len(self.stream_buffer['counter']) >= self.pid_frequency:
-                    self.file_writer.write_hdf5(
-                        data=self.stream_buffer,
-                        groupname=self.data_groupname
-                    )
-                    # Then clear the stream buffer
-                    for key in self.stream_buffer:
-                        self.stream_buffer[key].clear()
+                    except socket.timeout:
+                        logging.debug("TCP Socket timeout: read no data")
+                        continue  # If no data received, do not use the packet_decoding logic
+                    except Exception as e:
+                        logging.debug(f"Other TCP error: {str(e)}")
+                        logging.debug("Halting background tasks")
+                        self._stop_background_tasks()
+                        break
 
-                    # Additional information written at a lower frequency
-                    secondary_data = {
-                        'counter': [self.packet_decoder.data['counter']],
-                        'setpoint_a': [self.pid_a.setpoint],
-                        'setpoint_b': [self.pid_b.setpoint],
-                        'output_a': [self.pid_a.output],
-                        'output_b': [self.pid_b.output],
-                        'temperature_c' : [self.thermocouple_c]
-                    }
-                    self.file_writer.write_hdf5(
-                        data=secondary_data,
-                        groupname="secondary_readings"
-                    )
+                    self.tcp_reading = self.packet_decoder.data
 
-            time.sleep(self.bg_stream_task_interval)
+                    # Add decoded data to the stream buffer
+                    for attr in self.packet_decoder.data.keys():
+                        self.stream_buffer[attr].append(self.packet_decoder.data[attr])
+
+                    # After a certain number of data reads, write data to the file
+                    if len(self.stream_buffer['counter']) >= self.pid_frequency:
+                        self.file_writer.write_hdf5(
+                            data=self.stream_buffer,
+                            groupname=self.data_groupname
+                        )
+                        # Then clear the stream buffer
+                        for key in self.stream_buffer:
+                            self.stream_buffer[key].clear()
+
+                        # Additional information written at a lower frequency
+                        secondary_data = {
+                            'counter': [self.packet_decoder.data['counter']],
+                            'setpoint_a': [self.pid_a.setpoint],
+                            'setpoint_b': [self.pid_b.setpoint],
+                            'output_a': [self.pid_a.output],
+                            'output_b': [self.pid_b.output],
+                            'temperature_c' : [self.thermocouple_c]
+                        }
+                        self.file_writer.write_hdf5(
+                            data=secondary_data,
+                            groupname="secondary_readings"
+                        )
+
+                time.sleep(self.bg_stream_task_interval)
 
     @run_on_executor
     def background_read_task(self):

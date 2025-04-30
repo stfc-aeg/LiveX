@@ -152,7 +152,6 @@ class MockModbusClient:
 
         return MockResponse(registers=builder.to_registers())
 
-
 class MockResponse:
     """Response object to replicate common pymodbus responses."""
 
@@ -269,3 +268,28 @@ class MockPLC:
                 pid_base_sp += autosp_rate
             # 'Write' new setpoint back to register
             self.client.registers[modAddr.pid_setpoint_a_hold] = pid_base_sp
+
+
+class MockTCPClient:
+
+    def __init__(self, mockPLC):
+        self.buffer = b'\x00' * 128
+        self.plc = mockPLC
+        self.counter = 0
+
+    def connect(self, address):
+        pass
+
+    def settimeout(self, timeout):
+        pass
+
+    def send(self, data):
+        pass
+
+    def recv(self, buffersize):
+        self.counter += 1
+        temp = self.plc.temp
+        return [self.counter, temp]
+
+    def close(self):
+        pass
