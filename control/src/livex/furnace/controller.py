@@ -71,8 +71,6 @@ class FurnaceController():
         # Interval is smaller than period so that tcp stream can be cleared and not maintained
         self.bg_stream_task_interval = (1/self.pid_frequency)/2
 
-        logging.debug(f"#####################\npid_freq:{self.pid_frequency}, stream interval: {self.bg_stream_task_interval}")
-
         # Set the background task counters to zero
         self.background_thread_counter = 0
 
