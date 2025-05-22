@@ -29,17 +29,32 @@ void Core0PIDTask(void * pvParameters)
           Serial.println(interruptCounter);
         }
       }
-      // Get thermocouple readings for input
-      PID_A.input = mcp[0].readThermocouple(); // First thermocouple for A
-      PID_B.input = mcp[1].readThermocouple(); // Second thermocouple for B
+      for (int i=0; i<num_mcp; i++)
+      {
+        // Modbus registers are defined with thermocouples in order, so i*2 skips from 40023->40025
+        // MOD_HEATERTC_A_IDX_HOLD to MOD_HEATERTC_B_IDX to MOD_EXTRATC_A_IDX_HOLD etc.
+        int index = modbus_server.combineHoldingRegisters(MOD_HEATERTC_A_IDX_HOLD+i*2);
+        // If the index is valid, read the thermocouple
+        if (0<=index && index<num_mcp)
+        {
+          float result = mcp[index].readThermocouple();
 
-      // Get third thermocouple reading
-      int reading_c = mcp[2].readThermocouple();
-      modbus_server.floatToInputRegisters(MOD_THERMOCOUPLE_C_INP, reading_c);
+          // First two are heater A and B which need special handling
+          if (i==0){
+            PID_A.input = result;
+            modbus_server.floatToInputRegisters(MOD_HEATERTC_A_INP, PID_A.input);
+          }
+          if (i==1){
+            PID_B.input = result;
+            modbus_server.floatToInputRegisters(MOD_HEATERTC_B_INP, PID_B.input);
+          }
+          else {
+            modbus_server.floatToInputRegisters(MOD_HEATERTC_A_INP+i*2, result);  // Starts from heater input register
+          }
+        }
+        else { /* do nothing, tc disabled */ }
+      }
 
-      // Write thermocouple output to modbus registers
-      modbus_server.floatToInputRegisters(MOD_THERMOCOUPLE_A_INP, PID_A.input);
-      modbus_server.floatToInputRegisters(MOD_THERMOCOUPLE_B_INP, PID_B.input);
       modbus_server.floatToInputRegisters(MOD_COUNTER_INP, counter);
       counter = counter +1;
 

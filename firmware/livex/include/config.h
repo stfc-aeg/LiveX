@@ -36,13 +36,12 @@
 // PID Output is the higher end of the range for this. temporarily moved up here for convenience
 #define PID_OUTPUT_LIMIT 100
 
-
 // Modbus setup/addresses
 
 // Number of each register type
-#define MOD_NUM_HOLD 32
-#define MOD_NUM_INP 32
-#define MOD_NUM_COIL 12
+#define MOD_NUM_HOLD 48
+#define MOD_NUM_INP 48
+#define MOD_NUM_COIL 48
 
 // Register addresses
 // coils start at 00001-09999
@@ -58,6 +57,13 @@
 #define MOD_GRADIENT_UPDATE_COIL 10
 #define MOD_FREQ_ASPC_UPDATE_COIL 11
 #define MOD_SETPOINT_UPDATE_COIL 12
+// thermocouple enables/toggles
+#define MOD_TCA_ENABLE_COIL 13
+#define MOD_TCB_ENABLE_COIL 14
+#define MOD_EXTRATC_C_ENABLE_COIL 15
+#define MOD_TCD_ENABLE_COIL 16
+#define MOD_TCE_ENABLE_COIL 17
+#define MOD_TCF_ENABLE_COIL 18
 
 // input registers start at 30001-39999
 #define MOD_COUNTER_INP 30001
@@ -66,16 +72,18 @@
 #define MOD_PID_OUTPUTSUM_A_INP 30007
 #define MOD_PID_OUTPUTSUM_B_INP 30009
 
-#define MOD_THERMOCOUPLE_A_INP 30011
-#define MOD_THERMOCOUPLE_B_INP 30013
-#define MOD_THERMOCOUPLE_C_INP 30015
-#define MOD_THERMOCOUPLE_D_INP 30017
+// Thermocouple registers must stay defined sequentially
+#define MOD_HEATERTC_A_INP 30011
+#define MOD_HEATERTC_B_INP 30013
+#define MOD_EXTRATC_A_INP 30015
+#define MOD_EXTRATC_B_INP 30017
+#define MOD_EXTRATC_C_INP 30019
+#define MOD_EXTRATC_D_INP 30021
+#define MOD_NUM_MCP_INP 30023
 
-#define MOD_GRADIENT_ACTUAL_INP 30019
-#define MOD_GRADIENT_THEORY_INP 30021
-#define MOD_AUTOSP_MIDPT_INP 30023
-
-#define MOD_MOTOR_LVDT_INP 30027
+#define MOD_GRADIENT_ACTUAL_INP 30025
+#define MOD_GRADIENT_THEORY_INP 30027
+#define MOD_AUTOSP_MIDPT_INP 30029
 
 // holding registers start at 40001-49999
 #define MOD_SETPOINT_A_HOLD 40001
@@ -96,7 +104,13 @@
 #define MOD_AUTOSP_RATE_HOLD 40023
 #define MOD_AUTOSP_IMGDEGREE_HOLD 40025
 
-#define MOD_MOTOR_SPEED_HOLD 40027
+// Which thermocouples do the heaters use - thermocouple map to heater
+#define MOD_HEATERTC_A_IDX_HOLD 40027
+#define MOD_HEATERTC_B_IDX_HOLD 40029
+#define MOD_EXTRATC_A_IDX_HOLD 40031
+#define MOD_EXTRATC_B_IDX_HOLD 40033
+#define MOD_EXTRATC_C_IDX_HOLD 40035
+#define MOD_EXTRATC_D_IDX_HOLD 40037
 
 #define PIN_PWM_A A0_5
 #define PIN_PWM_B A0_6

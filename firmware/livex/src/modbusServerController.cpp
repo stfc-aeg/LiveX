@@ -7,7 +7,7 @@ ModbusServerController::ModbusServerController()
 
 void ModbusServerController::initialiseModbus()
 {
-  if (!begin()) 
+  if (!begin())
   {
     Serial.println("Failed to start Modbus TCP Server!");
     while (1);
