@@ -2,6 +2,7 @@ import logging
 import time
 import socket
 from concurrent import futures
+from functools import partial
 
 from tornado.concurrent import run_on_executor
 
@@ -12,7 +13,7 @@ from pymodbus.client import ModbusTcpClient
 from livex.furnace.controls.pid import PID
 from livex.furnace.controls.gradient import Gradient
 from livex.furnace.controls.autoSetPointControl import AutoSetPointControl
-from livex.furnace.controls.motor import Motor
+from livex.furnace.controls.thermocoupleManager import ThermocoupleManager
 
 from livex.modbusAddresses import modAddr
 from livex.filewriter import FileWriter
@@ -36,7 +37,6 @@ class FurnaceController():
         This constructor initialises the FurnaceController object, building parameter trees and
         launching the background task to make modbus requests to the PLC.
         """
-
         # Parse options
         self.bg_read_task_enable = bool(int(options.get('background_read_task_enable', False)))
         self.bg_read_task_interval = float(options.get('background_read_task_interval', 1.0))
@@ -91,58 +91,44 @@ class FurnaceController():
 
         self.acquiring = False
 
+        self.tc_manager = ThermocoupleManager()
         self.pid_a = PID(modAddr.addresses_pid_a, pid_defaults)
         self.pid_b = PID(modAddr.addresses_pid_b, pid_defaults)
         self.gradient = Gradient(modAddr.gradient_addresses)
         self.aspc = AutoSetPointControl(modAddr.aspc_addresses)
-        self.motor = Motor(modAddr.motor_addresses)
 
         self._initialise_clients(value=None)
 
-        # Third thermocouple will get its value from the background task
-        self.thermocouple_c = None
-
         self.lifetime_counter = 0
 
-        bg_task = ParameterTree({
+        self.bg_task_subtree = ParameterTree({
             'thread_count': (lambda: self.background_thread_counter, None),
             'enable': (lambda: self.bg_read_task_enable, self.set_task_enable),
             'interval': (lambda: self.bg_read_task_interval, self.set_task_interval),
         })
 
-        status = ParameterTree({
+        self.status_subtree = ParameterTree({
             'connected': (lambda: self.connected, None),
             'reconnect': (lambda: None, self._initialise_clients),
             'full_stop': (lambda: None, self.stop_all_pid)
         })
 
-        tcp = ParameterTree({
+        self.tcp_subtree = ParameterTree({
             'tcp_reading': (lambda: self.tcp_reading, None),
             'acquire': (lambda: self.acquiring, self.solo_acquisition)
         })
 
-        # Store all information in a parameter tree
-        self.param_tree = ParameterTree({
-            'status': status,
-            'background_task': bg_task,
-            'pid_a': self.pid_a.tree,
-            'pid_b': self.pid_b.tree,
-            'thermocouples': {
-                'centre': (lambda: self.thermocouple_c, None)
-            },
-            'autosp': self.aspc.tree,
-            'gradient': self.gradient.tree,
-            'motor': self.motor.tree,
-            'tcp': tcp,
-            'filewriter': {
-                'filepath': (lambda: self.file_writer.filepath, self._set_filepath),
-                'filename': (lambda: self.file_writer.filename, self._set_filename)
-            }
-        })
+        self.param_tree = {}
 
         # Launch the background task if enabled in options
         if self.bg_read_task_enable:
             self._start_background_tasks()
+
+    def set_thermocouple_index(self, index, thermocouple):
+        """Set the index of a given thermocouple. The indices are within the range of 0 to num_mcp.
+        :param int index: number between 0 and num_mcp representing hardware thermocouple.
+        """
+
 
     def initialize(self, adapters) -> None:
         """Initialize the controller.
@@ -160,6 +146,22 @@ class FurnaceController():
             self.adapters['sequencer'].add_context('furnace', self)
         if 'livex' in self.adapters:
             self.livex = self.adapters['livex'].controller
+
+        # Store all information in a parameter tree
+        self.param_tree = ParameterTree({
+            'status': self.status_subtree,
+            'background_task': self.bg_task_subtree,
+            'pid_a': self.pid_a.tree,
+            'pid_b': self.pid_b.tree,
+            'autosp': self.aspc.tree,
+            'gradient': self.gradient.tree,
+            'tcp': self.tcp_subtree,
+            'filewriter': {
+                'filepath': (lambda: self.file_writer.filepath, self._set_filepath),
+                'filename': (lambda: self.file_writer.filename, self._set_filename)
+            },
+            'thermocouples': self.tc_manager.tree
+        })
 
     def cleanup(self):
         """Clean up the FurnaceController instance.
@@ -276,11 +278,11 @@ class FurnaceController():
             self.pid_b._register_modbus_client(self.mod_client)
             self.gradient._register_modbus_client(self.mod_client)
             self.aspc._register_modbus_client(self.mod_client)
-            self.motor._register_modbus_client(self.mod_client)
+            self.tc_manager._register_modbus_client(self.mod_client)
 
             self.connected = True
-        except:
-            logging.debug("Connection to modbus client did not succeed.")
+        except Exception as e:
+            logging.debug(f"Connection to modbus client did not succeed: {e}")
             self.connected = False
 
         self._initialise_tcp_client()
@@ -289,7 +291,7 @@ class FurnaceController():
         """Initialise the tcp client."""
 
         if self.mocking:
-            # This class does almost nothing but does return some 
+            # This class does almost nothing but does return some fake data without writing it
             self.tcp_client = MockTCPClient(self.mockClient)
         else:
             self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -400,10 +402,16 @@ class FurnaceController():
                 # Get any value updated by the device
                 # Mostly input registers, except for setpoints which can change automatically
                 try:
-                    self.pid_a.temperature = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp)
-                    self.pid_b.temperature = read_decode_input_reg(self.mod_client, modAddr.thermocouple_b_inp)
+                    for i in range(self.tc_manager.num_mcp):
+                        # Get thermocouple label
+                        label = self.tc_manager.labels[i]
+                        # Floats take 2 registers. i*2 iterates over sequentially-defined registers
+                        # thermocouple_a_inp at 30011 to thermocouple_b_inp at 30013 etc.
+                        value = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp+i*2)
+                        self.tc_manager.thermocouple_values[label] = value
 
-                    self.thermocouple_c = read_decode_input_reg(self.mod_client, modAddr.thermocouple_c_inp)
+                    self.pid_a.temperature = self.tc_manager.thermocouple_values['a']
+                    self.pid_b.temperature = self.tc_manager.thermocouple_values['b']
 
                     self.lifetime_counter = read_decode_input_reg(self.mod_client, modAddr.counter_inp)
 
@@ -420,8 +428,6 @@ class FurnaceController():
 
                     self.pid_a.setpoint = read_decode_holding_reg(self.mod_client, modAddr.pid_setpoint_a_hold)
                     self.pid_b.setpoint = read_decode_holding_reg(self.mod_client, modAddr.pid_setpoint_b_hold)
-
-                    self.motor.lvdt = read_decode_input_reg(self.mod_client, modAddr.motor_lvdt_inp)
 
                 except:
                     self.mod_client.close()
