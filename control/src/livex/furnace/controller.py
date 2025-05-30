@@ -21,13 +21,10 @@ from livex.util import LiveXError
 from livex.util import read_decode_input_reg, read_decode_holding_reg, write_modbus_float, write_coil
 from livex.packet_decoder import LiveXPacketDecoder
 
-from livex.mockModbusClient import MockModbusClient
-from livex.mockModbusClient import MockPLC
-from livex.mockModbusClient import MockTCPClient
+from livex.mockModbusClient import MockModbusClient, MockPLC, MockTCPClient
 
 class FurnaceController():
     """FurnaceController - class that communicates with a modbus server on a PLC to drive a furnace."""
-
     # Thread executor used for background tasks
     executor = futures.ThreadPoolExecutor(max_workers=2)
 
@@ -47,6 +44,11 @@ class FurnaceController():
         self.ip = options.get('ip', '192.168.0.159')
         self.port = int(options.get('port', '4444'))
 
+        self.tc_indices = options.get('thermocouple_indices', '0,1,2,3,4,5')
+        self.tc_indices = [int(val) for val in self.tc_indices.strip(" ").split(",")]
+        self.tc_types = options.get('thermocouple_types', 'r,r,r,k,k,k')
+        self.tc_types = [val.upper() for val in self.tc_types.strip(" ").split(",")]
+
         self.mocking = bool(int(options.get('use_mock_client', 0)))
         pid_debug = bool(int(options.get('pid_debug', 0)))
 
@@ -63,7 +65,7 @@ class FurnaceController():
         }
 
         # Stop modbus from generating excessive logging
-        logging.getLogger("pymodbus").setLevel(logging.WARNING)  
+        logging.getLogger("pymodbus").setLevel(logging.WARNING)
 
         # Buffer will be cleared once per second
         self.buffer_size = self.pid_frequency
@@ -91,7 +93,7 @@ class FurnaceController():
 
         self.acquiring = False
 
-        self.tc_manager = ThermocoupleManager()
+        self.tc_manager = ThermocoupleManager(self.tc_indices, self.tc_types)
         self.pid_a = PID(modAddr.addresses_pid_a, pid_defaults)
         self.pid_b = PID(modAddr.addresses_pid_b, pid_defaults)
         self.gradient = Gradient(modAddr.gradient_addresses)

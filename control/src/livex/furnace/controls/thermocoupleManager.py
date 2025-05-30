@@ -9,8 +9,11 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 class ThermocoupleManager:
     """Manage the state of thermocouples: their values and the associated hardware index."""
 
-    def __init__(self):
+    def __init__(self, indices, types):
+        """Initialise the manager, creating """
         # Never more than 8 TCs
+        self.init_indices = indices
+        self.init_types = types
         self.labels = ['a', 'b', 'c', 'd', 'e', 'f']
         self.num_mcp = 6  # Should get overwritten later
 
@@ -33,17 +36,43 @@ class ThermocoupleManager:
         """Get the number of mpcs for tree building."""
         self.num_mpc = read_decode_input_reg(self.client, modAddr.number_mcp_inp)
 
-        i = 0
-        for key in self.thermocouple_indices.keys():
-            # Get current thermocouple indices. i*2 as registers are adjacent and floats take 2
-            read_decode_holding_reg(self.client, (modAddr.thermocouple_a_idx_hold+i*2))
-            self.thermocouple_indices[key] = i
-            # Get the thermocouple types
-            type = read_decode_holding_reg(self.client, modAddr.tcidx_0_type_hold+i*2)
-            type = modAddr.mcp_type_from_val[type]
-            self.thermocouple_types[key] = type
 
-            i += 1
+        # Not enough defined, inform user and pad it out
+        if len(self.init_indices) < self.num_mcp:
+            logging.warning(f"Too few thermocouple indices defined. Undefined TCs will be disabled.")
+            self.init_indices = self.init_indices + [-1] * (self.num_mcp-self.init_indices)
+        if len(self.init_types) < self.num_mcp:
+            logging.warning(f"Too few thermocouple types defined. Additional types defaulted to K.")
+            self.init_types = self.init_types + ['K']*(self.num_mcp-self.init_types)
+
+        for i in range(self.num_mcp):
+            tc = self.labels[i]
+            # Write the configured indices and types to the firmware
+            index = self.init_indices[i]
+            write_modbus_float(self.client,
+                index,
+                modAddr.thermocouple_a_idx_hold+i*2
+            )
+            self.thermocouple_indices[tc] = index
+            # i*2 for addresses: relevant registers are adjacent and floats take 2
+            tc_type = self.init_types[i]
+            write_modbus_float(self.client,
+                modAddr.mcp_val_from_type[tc_type],
+                modAddr.tcidx_0_type_hold+i*2)
+            self.thermocouple_types[tc] = tc_type
+        write_coil(self.client, modAddr.tc_type_update_coil, 1)
+
+        # i = 0
+        # for key in self.thermocouple_indices.keys():
+        #     # Get current thermocouple indices. i*2 as registers are adjacent and floats take 2
+        #     read_decode_holding_reg(self.client, (modAddr.thermocouple_a_idx_hold+i*2))
+        #     self.thermocouple_indices[key] = i
+        #     # Get the thermocouple types
+        #     type = read_decode_holding_reg(self.client, modAddr.tcidx_0_type_hold+i*2)
+        #     type = modAddr.mcp_type_from_val[type]
+        #     self.thermocouple_types[key] = type
+
+        #     i += 1
 
 
     def _build_tree(self):
