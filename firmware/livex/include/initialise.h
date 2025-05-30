@@ -14,7 +14,7 @@
 
 void initialiseInterrupts(hw_timer_t** pidFlagTimer);
 
-void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* mcp_addr);
+void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* mcp_addr, const MCP9600_ThemocoupleType* mcp_type);
 
 void initialiseEthernet(EthernetServer ethServer, byte* mac, byte* ip, int ethPin);
 

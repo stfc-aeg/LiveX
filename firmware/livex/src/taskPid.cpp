@@ -29,6 +29,8 @@ void Core0PIDTask(void * pvParameters)
           Serial.println(interruptCounter);
         }
       }
+      // Mutex required as mcp types can be changed in taskComms
+      xSemaphoreTake(gradientAspcMutex, portMAX_DELAY);
       for (int i=0; i<num_mcp; i++)
       {
         // Modbus registers are defined with thermocouples in order, so i*2 skips from 40023->40025
@@ -54,6 +56,7 @@ void Core0PIDTask(void * pvParameters)
         }
         else { /* do nothing, tc disabled */ }
       }
+      xSemaphoreGive(gradientAspcMutex);
 
       modbus_server.floatToInputRegisters(MOD_COUNTER_INP, counter);
       counter = counter +1;

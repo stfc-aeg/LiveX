@@ -66,6 +66,31 @@ void manageComms()
       autoSetPointControl();
       xSemaphoreGive(gradientAspcMutex);
     }
+    // Has the type of a thermocouple changed
+    if (modbus_server.readBool(MOD_TC_TYPE_UPDATE_COIL))
+    {
+      xSemaphoreTake(gradientAspcMutex, portMAX_DELAY);
+      // Check each thermocouple
+      for (int i=0; i<num_mcp; i++)
+      {
+        // Usual i*2 structure to iterate over sequentially-defined float holding registers
+        MCP9600_ThemocoupleType val = static_cast<MCP9600_ThemocoupleType>(modbus_server.combineHoldingRegisters(MOD_TCIDX_0_TYPE_HOLD+i*2));
+        // Compare to enum. If different, set it to register.
+        if (val != mcp[i].getThermocoupleType())
+        {
+          mcp[i].enable(false);
+          MCP9600_ThemocoupleType type = val;
+          mcp[i].setThermocoupleType(type);
+          Serial.print("mcp ");
+          Serial.print(i);
+          Serial.print(" set to ");
+          Serial.println(type);
+          mcp[i].enable(true);
+        }
+      }
+      modbus_server.writeBool(MOD_TC_TYPE_UPDATE_COIL, 0);  // Reset flag
+      xSemaphoreGive(gradientAspcMutex);
+    }
   }
 
   if(streamClient.connected()) // check first, then poll

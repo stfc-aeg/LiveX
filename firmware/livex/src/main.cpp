@@ -58,12 +58,12 @@ Adafruit_MCP9600 mcp[6];  // Use default constructor to make as many as needed
 const unsigned int num_mcp = sizeof(mcp) / sizeof(mcp[0]);
 const uint8_t mcp_addr[] = {0x60, 0x67, 0x66, 0x65, 0x64,
  0x63};
-const int mcp_type[] = {MCP9600_TYPE_R, MCP9600_TYPE_R, MCP9600_TYPE_R, MCP9600_TYPE_K, MCP9600_TYPE_K, MCP9600_TYPE_K};
+const MCP9600_ThemocoupleType mcp_type[] = {MCP9600_TYPE_R, MCP9600_TYPE_R, MCP9600_TYPE_R, MCP9600_TYPE_K, MCP9600_TYPE_K, MCP9600_TYPE_K};
 const int mcp_mod_addrs[] = {};
 
 // Timers and flags - main, taskPid
-hw_timer_t *pidFlagTimer = NULL;
-hw_timer_t *secondaryFlagTimer = NULL;
+hw_timer_t* pidFlagTimer = NULL;
+hw_timer_t* secondaryFlagTimer = NULL;
 volatile bool pidFlag = false;
 volatile bool secondaryFlag = false;
 // Pin interrupt flag
@@ -103,7 +103,7 @@ void setup()
   // initialise.cpp
   initialiseEthernet(modbusEthServer, mac, ip, PIN_SPI_SS_ETHERNET_LIB);
   initialiseInterrupts(&pidFlagTimer);
-  initialiseThermocouples(mcp, num_mcp, mcp_addr);
+  initialiseThermocouples(mcp, num_mcp, mcp_addr, mcp_type);
   writePIDDefaults(modbus_server, PID_A);
   writePIDDefaults(modbus_server, PID_B);
 
@@ -113,7 +113,10 @@ void setup()
   for (int i=0; i<num_mcp; i++)
   {
     modbus_server.floatToHoldingRegisters(
-      MOD_EXTRATC_A_IDX_HOLD+i*2, i
+      MOD_HEATERTC_A_IDX_HOLD+i*2, i
+    );
+    modbus_server.floatToHoldingRegisters(
+      MOD_TCIDX_0_TYPE_HOLD+i*2, mcp_type[i]
     );
   }
 

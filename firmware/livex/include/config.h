@@ -39,9 +39,9 @@
 // Modbus setup/addresses
 
 // Number of each register type
-#define MOD_NUM_HOLD 48
+#define MOD_NUM_HOLD 64
 #define MOD_NUM_INP 48
-#define MOD_NUM_COIL 48
+#define MOD_NUM_COIL 24
 
 // Register addresses
 // coils start at 00001-09999
@@ -57,13 +57,8 @@
 #define MOD_GRADIENT_UPDATE_COIL 10
 #define MOD_FREQ_ASPC_UPDATE_COIL 11
 #define MOD_SETPOINT_UPDATE_COIL 12
-// thermocouple enables/toggles
-#define MOD_TCA_ENABLE_COIL 13
-#define MOD_TCB_ENABLE_COIL 14
-#define MOD_EXTRATC_C_ENABLE_COIL 15
-#define MOD_TCD_ENABLE_COIL 16
-#define MOD_TCE_ENABLE_COIL 17
-#define MOD_TCF_ENABLE_COIL 18
+// A thermocouple type has been changed
+#define MOD_TC_TYPE_UPDATE_COIL 13
 
 // input registers start at 30001-39999
 #define MOD_COUNTER_INP 30001
@@ -111,6 +106,13 @@
 #define MOD_EXTRATC_B_IDX_HOLD 40033
 #define MOD_EXTRATC_C_IDX_HOLD 40035
 #define MOD_EXTRATC_D_IDX_HOLD 40037
+// Thermocouple index type
+#define MOD_TCIDX_0_TYPE_HOLD 40039
+#define MOD_TCIDX_1_TYPE_HOLD 40041
+#define MOD_TCIDX_2_TYPE_HOLD 40043
+#define MOD_TCIDX_3_TYPE_HOLD 40045
+#define MOD_TCIDX_4_TYPE_HOLD 40047
+#define MOD_TCIDX_5_TYPE_HOLD 40049
 
 #define PIN_PWM_A A0_5
 #define PIN_PWM_B A0_6

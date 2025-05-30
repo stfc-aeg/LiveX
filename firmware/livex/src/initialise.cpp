@@ -20,7 +20,7 @@ void initialiseInterrupts(hw_timer_t** pidFlagTimer)
 }
 
 // Run the MCP9600 default setup code. Find devices and set defaults
-void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* mcp_addr)
+void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* mcp_addr, const MCP9600_ThemocoupleType* mcp_type)
 {
   // Initialise MCP9600(s)
   Serial.println("mcp9600 startup");
@@ -54,7 +54,7 @@ void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* 
     Serial.println(" bits");
 
     // Set thermocouple type (K: -200 to 1372 degrees C)
-    mcp[idx].setThermocoupleType(MCP9600_TYPE_K);
+    mcp[idx].setThermocoupleType(mcp_type[idx]);
     Serial.print("Thermocouple type set to ");
     switch (mcp[idx].getThermocoupleType())
     {
