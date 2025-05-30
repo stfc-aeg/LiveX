@@ -41,7 +41,7 @@ def read_decode_input_reg(client, address):
     value = decoder.decode_32bit_float()
 
     if math.isnan(value):  # Error is hard to reproduce but good to account for
-        logging.debug("ISNAN")
+        logging.debug(f"ISNAN when reading from address {address}")
         return -1.0
     return value
 
@@ -56,7 +56,7 @@ def read_decode_holding_reg(client, address):
     value = decoder.decode_32bit_float()
 
     if math.isnan(value):
-        logging.debug("ISNAN")
+        logging.debug(f"ISNAN when reading from address {address}")
         return -1.0
     return value
 

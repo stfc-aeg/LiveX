@@ -11,7 +11,14 @@ class modAddr():
     # What order are the thermocouples in. See mcp_type[] in main.cpp in firmware/livex
     # Addresses are fixed order of (0x60, 0x67, 0x66, 0x65, 0x64, 0x63, 0x62)
     # So these values should correlate with what is connected to those addresses
-    mcp_type = ['R1', 'R2', 'R3', 'K1', 'K2', 'K3']
+
+    # mcp types
+    mcp_types = ["K", "J", "T", "N", "S", "E", "B", "R"]
+    # Numbered 0-7 as with Adafruit library enumeration
+    mcp_type_from_val = dict(enumerate(mcp_types))
+    # Get the enum value from the type
+    mcp_val_from_type = {v:k for k,v in mcp_type_from_val.items()}
+
 
     # Coils start at 00001-09999
     pid_enable_a_coil     = 1
@@ -26,12 +33,7 @@ class modAddr():
     gradient_update_coil  = 10
     freq_aspc_update_coil = 11
     setpoint_update_coil  = 12
-    tc_a_enable_coil      = 13
-    tc_b_enable_coil      = 14
-    tc_c_enable_coil      = 15
-    tc_d_enable_coil      = 16
-    tc_e_enable_coil      = 17
-    tc_f_enable_coil      = 18
+    tc_type_update_coil   = 13
 
     # Input registers (read-only, from device) start at 30001-39999
     counter_inp      = 30001
@@ -78,8 +80,15 @@ class modAddr():
     thermocouple_d_idx_hold     = 40033
     thermocouple_e_idx_hold     = 40035
     thermocouple_f_idx_hold     = 40037
-    # Addresses for controls
 
+    tcidx_0_type_hold           = 40039
+    tcidx_1_type_hold           = 40041
+    tcidx_2_type_hold           = 40043
+    tcidx_3_type_hold           = 40045
+    tcidx_4_type_hold           = 40049
+    tcidx_5_type_hold           = 40049
+
+    # Addresses for controls
     addresses_pid_a = {
         'enable': pid_enable_a_coil,
         'setpoint': pid_setpoint_a_hold,
