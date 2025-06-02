@@ -37,7 +37,7 @@
     },
     "temperature_c": {
         "adapter": "furnace",
-        "get_path": "thermocouples/thermocouple_c",
+        "get_path": "thermocouples/thermocouple_c/value",
         "interval": 1,
         "retention": 60
     }
