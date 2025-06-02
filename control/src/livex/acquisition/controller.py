@@ -72,14 +72,17 @@ class LiveXController(BaseController):
         self.adapters = adapters
 
         # These adapters are all necessary so warn if they are not found
-        self.munir = adapters["munir"] if 'munir' in self.adapters else logging.warning("Munir adapter not found.")
+        if 'munir' in self.adapters:
+            self.munir = adapters["munir"].controller
+            self.munir_adapter = adapters["munir"]
+        else:
+            logging.warning("Munir adapter not found.")
+
         self.furnace = adapters["furnace"].controller if 'furnace' in self.adapters else logging.warning("Furnace adapter not found.")
         self.trigger = adapters["trigger"].controller if 'trigger' in self.adapters else logging.warning("Trigger adapter not found.")
         self.orca = adapters["camera"].camera if 'camera' in self.adapters else logging.warning("Camera adapter not found")
         self.metadata = adapters["metadata"] if 'metadata' in self.adapters else logging.warning("Metadata adapter not found.")
         # Metadata adapter is likely easier with IAC
-
-        self.munir = adapters["munir"].controller
 
         if 'sequencer' in self.adapters:
             logging.debug("Livex controller registering context with sequencer")
@@ -94,7 +97,7 @@ class LiveXController(BaseController):
 
         # Add cameras to self.filepaths for acquisition handling
         for camera in self.orca.cameras:
-            self.filepaths[camera.name] = {'filename': None, 'filepath': None}
+            self.filepaths[camera.name] = {'filename': None, 'filepath': self.filepath}
 
         # Reconstruct tree with relevant adapter references
         self._build_tree()
@@ -147,6 +150,9 @@ class LiveXController(BaseController):
         iac_set(self.metadata, 'markdown', 'file', self.filepaths['metadata']['md']['filename'])
         iac_set(self.metadata, 'markdown', 'path', self.filepaths['metadata']['md']['filepath'])
 
+        for camera in self.orca.cameras:
+            self.filepaths[camera.name]['filename'] = f"{experiment_id}_{camera.name}"  # no .hdf5 extension needed here
+
     def start_acquisition(self, acquisitions=[]):
         """Start an acquisition. Disable timers, configure all values, then start timers simultaneously.
         :param freerun: bool deciding if frame target is overridden to 0 for indefinite capture
@@ -190,21 +196,17 @@ class LiveXController(BaseController):
                 camera.set_config(value=2, param='trigger_source')
                 # Set orca frames to prevent HDF error
                 # No. frames is equal to target set in trigger by user (or 0 if freerun)
-                target = int(self.trigger.triggers[camera].target)
+                target = int(self.trigger.triggers[camera.name].target)
                 camera.set_config(value=target, param='num_frames')
 
                 # Munir arguments for subsystem
-                self.munir.munir_managers[camera.name].set_arg(arg='file_path', value=self.filepath)
-                self.munir.munir_managers[camera.name].set_arg(
-                    arg='file_path',
-                    value=self.filepaths[camera.name]['filepath'])
-                self.munir.munir_managers[camera.name].set_arg(
-                    arg='file_name',
-                    value=self.filepaths[camera.name]['filename'])
-                self.munir.munir_managers[camera.name].set_arg(arg='num_frames', value=target)
-
-                # Presently, '/' is required for execute
-                self.munir.set_execute(subsystem_name=name, value=True)
+                munir_args = {
+                    'file_path': self.filepaths[camera.name]['filepath'],
+                    'file_name': self.filepaths[camera.name]['filename'],
+                    'num_frames': target
+                }
+                iac_set(self.munir_adapter, f'subsystems/{camera.name}/', 'args', munir_args)
+                iac_set(self.munir_adapter, 'execute', camera.name, True)
 
         # Move camera(s) to capture state
         for camera in self.orca.cameras:

@@ -126,12 +126,6 @@ class FurnaceController():
         if self.bg_read_task_enable:
             self._start_background_tasks()
 
-    def set_thermocouple_index(self, index, thermocouple):
-        """Set the index of a given thermocouple. The indices are within the range of 0 to num_mcp.
-        :param int index: number between 0 and num_mcp representing hardware thermocouple.
-        """
-
-
     def initialize(self, adapters) -> None:
         """Initialize the controller.
 
@@ -380,7 +374,7 @@ class FurnaceController():
                             'setpoint_b': [self.pid_b.setpoint],
                             'output_a': [self.pid_a.output],
                             'output_b': [self.pid_b.output],
-                            'temperature_c' : [self.thermocouple_c]
+                            'temperature_c' : [self.tc_manager.thermocouple_values['c']]
                         }
                         self.file_writer.write_hdf5(
                             data=secondary_data,
