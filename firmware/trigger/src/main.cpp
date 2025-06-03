@@ -80,64 +80,36 @@ volatile int counter = 0;
 #define DEBUG_PRINTF(...)
 #endif
 
-// Timer interrupt handlers
-void IRAM_ATTR onTimer0()
-{
-  counter++;
-  pinStates[0] = !pinStates[0];
-  digitalWrite(pwmPins[0], pinStates[0]);
 
-  // Count down on falling edge provided the target is higher than 0
-  if (!pinStates[0] && activePulseCount[0] > 0)
+void IRAM_ATTR handleInterrupt(int i)
+{
+  if (i<0 || i>=NUM_TRIGGERS) { return; }  // Sanity check
+  if (!enablePWM[i]) { return; }  // Only run any code if the timer is enabled
+
+  counter++;
+  pinStates[i] = !pinStates[i];
+  digitalWrite(pwmPins[i], pinStates[i]);
+
+  // Count down on falling edge provided the target is higher than 0 (target 0 is freerun)
+  if (!pinStates[i] && activePulseCount[i] > 0)
   {
-    activePulseCount[0]--;
+    activePulseCount[i]--;
     // at 0, disable PWM
-    if (activePulseCount[0] == 0)
+    if (activePulseCount[i] <= 0)
     {
-      enablePWM[0] = false;
-      digitalWrite(pwmPins[0], LOW);
-      timerAlarmDisable(timers[0]);
+      enablePWM[i] = false;
+      pinStates[i] = false;  // Reset pin
+      digitalWrite(pwmPins[i], pinStates[i]);
+      timerAlarmDisable(timers[i]);
     }
   }
 }
 
-// Written with less whitespace for space
-void IRAM_ATTR onTimer1(){
-  counter++;
-  pinStates[1] = !pinStates[1];
-  digitalWrite(pwmPins[1], pinStates[1]);
-  if (!pinStates[1] && activePulseCount[1] > 0){
-    activePulseCount[1]--;
-    if (activePulseCount[1] == 0){
-      enablePWM[1] = false;
-      digitalWrite(pwmPins[1], LOW);
-      timerAlarmDisable(timers[1]);
-  }}
-}
-void IRAM_ATTR onTimer2(){
-  counter++;
-  pinStates[2] = !pinStates[2];
-  digitalWrite(pwmPins[2], pinStates[2]);
-  if (!pinStates[2] && activePulseCount[2] > 0){
-    activePulseCount[2]--;
-    if (activePulseCount[2] == 0){
-      enablePWM[2] = false;
-      digitalWrite(pwmPins[2], LOW);
-      timerAlarmDisable(timers[2]);
-  }}
-}
-void IRAM_ATTR onTimer3(){
-  counter++;
-  pinStates[3] = !pinStates[3];
-  digitalWrite(pwmPins[3], pinStates[1]);
-  if (!pinStates[3] && activePulseCount[3] > 0){
-    activePulseCount[3]--;
-    if (activePulseCount[3] == 0){
-      enablePWM[3] = false;
-      digitalWrite(pwmPins[3], LOW);
-      timerAlarmDisable(timers[3]);
-  }}
-}
+void IRAM_ATTR onTimer0() { handleInterrupt(0); }
+void IRAM_ATTR onTimer1() { handleInterrupt(1); }
+void IRAM_ATTR onTimer2() { handleInterrupt(2); }
+void IRAM_ATTR onTimer3() { handleInterrupt(3); }
+
 // Establish connection details
 void WiFiEvent(WiFiEvent_t event)
 {
@@ -262,7 +234,7 @@ void updateTimer(int index)
   // Timer alarm toggling pin at period interval gives frequency equal to register value (50%)
   timerAlarmWrite(timers[index], period, true);
 
-  DEBUG_PRINTF("Timer %d set to frequency/period %d/%d with target %d.\n", index, frequency[index], period, activePulseCount[index]);
+  Serial.printf("Timer %d set to frequency/period %d/%d with target %d.\n", index, frequency[index], period, activePulseCount[index]);
 }
 
 // Begin specified timer, ensuring it is updated
@@ -278,7 +250,7 @@ void startTimer(int index)
     timersRunning[index] = true;
     modbusTCPServer.coilWrite(addrRunning[index], timersRunning[index]);
 
-    DEBUG_PRINTF("Started timer %d with frequency/period %d/%d\n", index, frequency[index], period);
+    DEBUG_PRINTF("Started timer %d with frequency %d and target %d\n", index, frequency[index], activePulseCount[index]);
   }
 }
 

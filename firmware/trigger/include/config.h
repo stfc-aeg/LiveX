@@ -1,7 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// #define DEBUG_MODE false
+// #define DEBUG_MODE true
 
 #define MODBUS_TCP_PORT 502
 
