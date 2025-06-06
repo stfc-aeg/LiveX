@@ -373,9 +373,17 @@ class FurnaceController():
                             'setpoint_a': [self.pid_a.setpoint],
                             'setpoint_b': [self.pid_b.setpoint],
                             'output_a': [self.pid_a.output],
-                            'output_b': [self.pid_b.output],
-                            'temperature_c' : [self.tc_manager.thermocouple_values['c']]
+                            'output_b': [self.pid_b.output]
                         }
+                        # Include additional thermocouples if enabled, not including a or b (0,1)
+                        for i in range(2, self.tc_manager.num_mcp):
+                            label = self.tc_manager.labels[i]
+                            # Only include thermocouples that are enabled
+                            # If the index isn't in this range, the thermocouple will be disabled
+                            if self.tc_manager.thermocouple_indices[label] in range(self.tc_manager.num_mcp):
+                                data_label = f'thermocouple_{label}'
+                                secondary_data[data_label] = [self.tc_manager.thermocouple_values[label]]
+
                         self.file_writer.write_hdf5(
                             data=secondary_data,
                             groupname="secondary_readings"
