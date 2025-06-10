@@ -111,11 +111,6 @@ function App(props) {
             connectedPuttingDisable={connectedPuttingDisable}>
           </AutoSetPointControl>
 
-          <Motor
-            furnaceEndPoint={furnaceEndPoint}
-            connectedPuttingDisable={connectedPuttingDisable}>
-          </Motor>
-
           <InfoPanel
             furnaceEndPoint={furnaceEndPoint}
             connectedPuttingDisable={connectedPuttingDisable}>
