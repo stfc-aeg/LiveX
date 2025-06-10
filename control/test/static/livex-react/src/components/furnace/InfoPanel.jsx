@@ -2,10 +2,8 @@ import React from 'react';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
-import Button from 'react-bootstrap/Button';
-import { TitleCard, WithEndpoint } from 'odin-react';
+import { TitleCard } from 'odin-react';
 import { checkNull, usePrevious } from '../../utils';
-
 
 function InfoPanel(props) {
     const {furnaceEndPoint} = props;

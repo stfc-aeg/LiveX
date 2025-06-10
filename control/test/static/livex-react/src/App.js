@@ -12,7 +12,6 @@ import PidControl from './components/furnace/PidControl';
 import ThermalGradient from './components/furnace/ThermalGradient';
 import AutoSetPointControl from './components/furnace/AutoSetPointControl';
 import FurnaceRecording from './components/furnace/FurnaceRecording';
-import Motor from './components/furnace/Motor';
 import React from "react";
 import { OdinApp } from 'odin-react';
 import { WithEndpoint, useAdapterEndpoint } from 'odin-react';
