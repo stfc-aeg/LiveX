@@ -15,7 +15,7 @@ function InfoPanel(props) {
 
     // Fixing the label width of the display labels so that they're consistent
     // ~6px per character.
-    const labelWidth = 120;
+    const labelWidth = 80;
     const valueWidth = 60;
 
     const labelStyling = {
@@ -31,12 +31,55 @@ function InfoPanel(props) {
       </Row>
     }>
       <Row>
+        <label>Extra Thermocouples</label>
+        <Col xs={4}>
+          <InputGroup>
+            <InputGroup.Text style={{width:labelWidth}}>
+              Thermo C
+            </InputGroup.Text>
+            <InputGroup.Text
+              style={labelStyling}>
+                {checkNull(furnaceEndPoint.data?.thermocouples?.thermocouple_c?.value)}
+              </InputGroup.Text>
+          </InputGroup>
+          <InputGroup>
+            <InputGroup.Text style={{width:labelWidth}}>
+              Thermo D
+            </InputGroup.Text>
+            <InputGroup.Text
+              style={labelStyling}>
+                {checkNull(furnaceEndPoint.data?.thermocouples?.thermocouple_d?.value)}
+                </InputGroup.Text>
+          </InputGroup>
+        </Col>
+        <Col>
+          <InputGroup>
+            <InputGroup.Text style={{width:labelWidth}}>
+              Thermo E
+            </InputGroup.Text>
+            <InputGroup.Text
+              style={labelStyling}>
+                {checkNull(furnaceEndPoint.data?.thermocouples?.thermocouple_e?.value)}
+                </InputGroup.Text>
+          </InputGroup>
+          <InputGroup>
+            <InputGroup.Text style={{width:labelWidth}}>
+              Thermo F
+            </InputGroup.Text>
+            <InputGroup.Text
+              style={labelStyling}>
+                {checkNull(furnaceEndPoint.data?.thermocouples?.thermocouple_f?.value)}
+                </InputGroup.Text>
+          </InputGroup>
+        </Col>
+      </Row>
+      <Row className="mt-3">
         <Col xs={4}>
           <label>PID A</label>
           <Row>
             <InputGroup>
               <InputGroup.Text style={{width:labelWidth}}>
-                PID % Output
+                PID % Out
               </InputGroup.Text>
               <InputGroup.Text
                 style={labelStyling}>
@@ -47,7 +90,7 @@ function InfoPanel(props) {
             <Row>
               <InputGroup>
                 <InputGroup.Text style={{width:labelWidth}}>
-                  PLC Voltage
+                  PLC Volt.
                 </InputGroup.Text>
                 <InputGroup.Text
                   style={labelStyling}>
@@ -58,7 +101,7 @@ function InfoPanel(props) {
           <Row className="mt-3">
             <InputGroup>
               <InputGroup.Text style={{width:labelWidth}}>
-                Proportional Gain
+                P Gain
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
                 {checkNull(
@@ -70,7 +113,7 @@ function InfoPanel(props) {
           <Row>
             <InputGroup>
               <InputGroup.Text style={{width:labelWidth}}>
-                Integral Sum Diff.
+                I Sum Diff.
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
                 {checkNull(
@@ -82,7 +125,7 @@ function InfoPanel(props) {
           <Row>
             <InputGroup>
               <InputGroup.Text style={{width:labelWidth}}>
-                Derivative Sum Diff.
+                D Sum Diff.
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
               {checkNull(
@@ -94,7 +137,7 @@ function InfoPanel(props) {
           <Row>
             <InputGroup>
               <InputGroup.Text style={{width:labelWidth}}>
-                PID Output Sum
+                PID Out Sum
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
               {checkNull(furnaceEndPoint.data.pid_a?.outputsum)}
@@ -109,7 +152,7 @@ function InfoPanel(props) {
           <Row>
             <InputGroup>
               <InputGroup.Text style={{width:labelWidth}}>
-                PID % Output
+                PID % Out
               </InputGroup.Text>
               <InputGroup.Text
                 style={labelStyling}>
@@ -120,7 +163,7 @@ function InfoPanel(props) {
             <Row>
               <InputGroup>
                 <InputGroup.Text style={{width:labelWidth}}>
-                  PLC Voltage
+                  PLC Volt.
                 </InputGroup.Text>
                 <InputGroup.Text
                   style={labelStyling}>
@@ -131,7 +174,7 @@ function InfoPanel(props) {
           <Row className="mt-3">
             <InputGroup>
               <InputGroup.Text style={{width:labelWidth}}>
-                Proportional Gain
+                P Gain
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
                 {checkNull(
@@ -143,7 +186,7 @@ function InfoPanel(props) {
           <Row>
             <InputGroup>
               <InputGroup.Text style={{width:labelWidth}}>
-                Integral Sum Diff.
+                I Sum Diff.
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
                 {checkNull(
@@ -155,7 +198,7 @@ function InfoPanel(props) {
           <Row>
             <InputGroup>
               <InputGroup.Text style={{width:labelWidth}}>
-                Derivative Sum Diff.
+                D Sum Diff.
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
               {checkNull(
@@ -167,7 +210,7 @@ function InfoPanel(props) {
           <Row>
             <InputGroup>
               <InputGroup.Text style={{width:labelWidth}}>
-                PID Output Sum
+                PID Out Sum
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
               {checkNull(furnaceEndPoint.data.pid_b?.outputsum)}
