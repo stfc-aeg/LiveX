@@ -94,6 +94,7 @@ class LiveXController(BaseController):
         # Write furnace timer to go for readings
         self.trigger.triggers['furnace'].set_frequency(10)
         self.trigger.triggers['furnace'].set_enable(True)
+        self.furnace.update_furnace_frequency(10)  # Inform furnace of frequency change, as this is done outside of usual channel
 
         # Add cameras to self.filepaths for acquisition handling
         for camera in self.orca.cameras:
