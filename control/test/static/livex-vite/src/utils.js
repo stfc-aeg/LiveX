@@ -14,3 +14,15 @@ export const usePrevious = (value) => {
     });
     return ref.current;
 };
+
+export const floatingLabelStyle = {
+    width: "60%",
+    border: '1px solid lightblue',
+    backgroundColor: '#e0f7ff',
+    borderRadius: '0.375rem'
+}
+
+export const floatingInputStyle = {
+  border: "1px solid #ced4da", // thin Bootstrap-like grey border
+  borderRadius: "0.375rem",    // Bootstrap default rounded corners
+};

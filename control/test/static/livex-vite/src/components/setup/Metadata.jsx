@@ -6,7 +6,8 @@ import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/esm/Col';
 import { Container } from 'react-bootstrap';
 import { useState, useEffect } from 'react';
-import { TitleCard, WithEndpoint, useAdapterEndpoint, DropdownSelector } from 'odin-react';
+import { TitleCard, WithEndpoint, useAdapterEndpoint } from 'odin-react';
+import DropdownSelector from '../DropdownSelector.jsx';
 import TagInput from "./TagInput";
 
 const EndPointFormControl = WithEndpoint(Form.Control);
@@ -21,7 +22,7 @@ function Metadata(props) {
     // Need some object defined even when metadataEndPoint is resolving to null
     const metaJson = metadataEndPoint?.data?.fields ? metadataEndPoint.data.fields : {} ;
 
-    const [labelWidth, setLabelWidth] = useState("40px"); // Default value if metaJson is not updated
+    const [labelWidth, setLabelWidth] = useState("60px"); // Default value if metaJson is not updated
 
     // Calculate a 'minimum' label width to make the inputgroup.texts consistent
     useEffect(() => {
@@ -40,7 +41,7 @@ function Metadata(props) {
           }
         });
         const additionalPadding = 24; // Extra room for borders
-        return `${maxLength * 6 + additionalPadding}px`;
+        return `${maxLength * 10 + additionalPadding}px`;
       };
 
       const calculatedWidth = calculateLabelWidth(metaJson);
@@ -155,7 +156,6 @@ function Metadata(props) {
                     type="text"
                     fullpath={"fields/"+key+"/value"}
                     event_type="enter"
-                    value={currentValue}
                     as="textarea"
                     rows="5"
                     style={{flex: 1}}>
@@ -174,8 +174,7 @@ function Metadata(props) {
                   endpoint={metadataEndPoint}
                   type="text"
                   fullpath={"fields/"+key+"/value"}
-                  event_type="enter"
-                  value={currentValue}>
+                  event_type="enter">
                 </EndPointFormControl>
               </InputGroup>
               )

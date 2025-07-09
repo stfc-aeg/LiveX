@@ -1,11 +1,11 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import Col from 'react-bootstrap/Col';
-import { Container } from 'react-bootstrap';
 import Row from 'react-bootstrap/Row';
 import Button from 'react-bootstrap/Button';
-import { OdinGraph, TitleCard } from 'odin-react';
+import { TitleCard } from 'odin-react';
 import InputGroup from 'react-bootstrap/InputGroup';
+import ResizeableOdinGraph from '../ResizeableOdinGraph';
 
 // This component, for convenience, assumes the data is in a `monitor/<name>` structure in the
 // ParameterTree. This makes it easy to edit but a little bit dumb.
@@ -73,10 +73,12 @@ function MonitorGraph(props) {
             </Col>
           </Row>
           <Row>
-            <OdinGraph
+            <ResizeableOdinGraph
               prop_data={filteredData}
-              series_names={filteredSeriesNames}>
-            </OdinGraph>
+              series_names={filteredSeriesNames}
+              width={'99%'}
+              responsive={false}>
+            </ResizeableOdinGraph>
           </Row>
         </Col>
       </TitleCard>
