@@ -336,6 +336,7 @@ class LiveXController(BaseController):
 
         # New furnace target as provided
         ref_target = int(value)
+        self.acq_frame_target = value
 
         self.trigger.triggers[self.ref_trigger].set_target(ref_target)
 
