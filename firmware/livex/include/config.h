@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 // DEBUG outputs some internal values to ensure correct sending/calculation
-#define DEBUG true
+#define DEBUG false
 // PID_DEBUG changes the TCP object sent to be PID calculated values
 // Ensure that the adapter also has this set, otherwise reading TCP values may throw errors.
 #define PID_DEBUG true
@@ -32,7 +32,7 @@
 // MAX # of bits written to relevant power output channel. Min is 0.
 #define POWER_OUTPUT_BITS 4095
 // Scale the output value (0->1*POWER_OUTPUT_BITS) by a 0.1 value. e.g. 0.8 for 80% output
-#define POWER_OUTPUT_SCALE 0.8
+#define POWER_OUTPUT_SCALE 1
 // PID Output is the higher end of the range for this. temporarily moved up here for convenience
 #define PID_OUTPUT_LIMIT 100
 
