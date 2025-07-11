@@ -285,10 +285,10 @@ class LiveXController(BaseController):
     def _get_timer_frequencies(self):
         """Update the timer frequency variables."""
         for name, trigger in self.trigger.triggers.items():
-            self.frequencies[name] = trigger.frequency
+            self.frequencies[name] = float(trigger.frequency)
 
             self.frequency_subtree[name] = (
-                lambda trigger=trigger: trigger.frequency,
+                lambda trigger=trigger: float(trigger.frequency),
                 partial(self.set_timer_frequency, timer=name)
             )
 
@@ -304,8 +304,8 @@ class LiveXController(BaseController):
         :param timer: string representing the trigger parameter tree path of the timer to edit
         """
         if timer and timer in self.trigger.triggers.keys():
-            self.trigger.triggers[timer].set_frequency(int(value))
-            self.frequencies[timer] = int(value)
+            self.trigger.triggers[timer].set_frequency(float(value))
+            self.frequencies[timer] = float(value)
             logging.debug(f"self.frequencies: {self.frequencies}")
 
             # Ensure furnace frequency is updated

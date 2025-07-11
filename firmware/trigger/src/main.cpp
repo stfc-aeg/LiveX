@@ -47,7 +47,7 @@ TaskHandle_t modbusTaskHandle;
 SemaphoreHandle_t pwmMutex;
 
 // PWM parameters
-uint32_t frequency[4] = {0, 0, 0, 0};
+float frequency[4] = {0, 0, 0, 0};
 uint32_t pulseCount[4] = {0, 0, 0, 0}; // Target # of instances
 volatile uint32_t activePulseCount[4] = {0, 0, 0, 0}; // For use in interrupts, enables restart logic
 volatile bool enablePWM[4] = {false, false, false, false};
@@ -229,7 +229,7 @@ void setupModbus()
 // Calculate and write timer period, update pulseCount for running timer
 void updateTimer(int index)
 {
-  uint32_t period = 1000000 / (frequency[index] * 2); // Period in us. 1/f * 1/2
+  uint32_t period = (uint32_t)(1000000.0f / (frequency[index]*2)); // Period in us. 1/f * 1/2
   activePulseCount[index] = pulseCount[index];
   // Timer alarm toggling pin at period interval gives frequency equal to register value (50%)
   timerAlarmWrite(timers[index], period, true);
@@ -327,7 +327,7 @@ void modbusTask(void *pvParameters)
           for (int i=0; i<NUM_TRIGGERS; i++)
           {
             bool isRunning = timersRunning[i];
-            uint32_t newFreq = combineHoldingRegisters(&modbusTCPServer, addrIntvl[i]);
+            float newFreq = combineHoldingRegisters(&modbusTCPServer, addrIntvl[i]);
             if (newFreq > 0 && newFreq != frequency[i]) // Avoiding division by 0 errors when calculating period
             {
               // Avoid unexpected results by stopping timer before updating parameters

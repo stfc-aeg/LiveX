@@ -38,7 +38,7 @@ class Trigger():
         self.enable = ret.bits[0]
 
         self.running = read_coil(self.client, self.addr['running_coil'])
-        self.frequency = read_decode_holding_reg(self.client, self.addr['freq_hold'])
+        self.frequency = float(read_decode_holding_reg(self.client, self.addr['freq_hold']))
         self.target = int(read_decode_holding_reg(self.client, self.addr['target_hold']))
 
     def _update_hold_value(self, address, value):
