@@ -52,6 +52,7 @@ uint32_t pulseCount[4] = {0, 0, 0, 0}; // Target # of instances
 volatile uint32_t activePulseCount[4] = {0, 0, 0, 0}; // For use in interrupts, enables restart logic
 volatile bool enablePWM[4] = {false, false, false, false};
 bool timersRunning[4] = {false, false, false, false};
+volatile bool timerComplete[4] = {false, false, false, false};
 
 static bool eth_connected = false;
 bool startAll = false;
@@ -101,6 +102,7 @@ void IRAM_ATTR handleInterrupt(int i)
       pinStates[i] = false;  // Reset pin
       digitalWrite(pwmPins[i], pinStates[i]);
       timerAlarmDisable(timers[i]);
+      timerComplete[i] = true;  // Flag to handle timer stop in main loop
     }
   }
 }
@@ -176,7 +178,7 @@ void setup()
   for (int i=0; i<NUM_TRIGGERS; i++)
   {
     timers[i] = timerBegin(i, 80, true); // Timer number, prescaler (80MHz), count up
-    if (timers[i]){ DEBUG_PRINTF("Timer %d started successfully.", timers[i]); }
+    if (timers[i]){ DEBUG_PRINTF("Timer %d started successfully.", i); }
     switch (i)
     {
     case 0:
@@ -205,6 +207,15 @@ void loop()
 {
   // Tasks handle everything
   DEBUG_PRINTF("%d, ", counter);
+  for (int i=0; i<NUM_TRIGGERS; i++)
+  {
+    if (timerComplete[i])
+    {
+      timerComplete[i] = false;  // Reset the flag
+      stopTimer(i);
+      DEBUG_PRINTF("Timer %d completed.\n", i);
+    }
+  }
   vTaskDelay(1000);
 }
 
@@ -234,7 +245,7 @@ void updateTimer(int index)
   // Timer alarm toggling pin at period interval gives frequency equal to register value (50%)
   timerAlarmWrite(timers[index], period, true);
 
-  Serial.printf("Timer %d set to frequency/period %d/%d with target %d.\n", index, frequency[index], period, activePulseCount[index]);
+  Serial.printf("Timer %d set to frequency/period %d/%d with target %u.\n", index, frequency[index], period, activePulseCount[index]);
 }
 
 // Begin specified timer, ensuring it is updated
