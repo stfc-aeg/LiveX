@@ -17,8 +17,8 @@ function ThermalGradient(props){
     const {furnaceEndPoint} = props;
     const {connectedPuttingDisable} = props;
 
-    const labelWidth=128;
-    const inputLabelWidth=96;
+    const labelWidth=72;
+    const inputLabelWidth=80;
 
     return (
       <TitleCard title={
@@ -39,7 +39,7 @@ function ThermalGradient(props){
           <Col>
           <InputGroup>
             <InputGroup.Text style={{width: inputLabelWidth}}>
-              Wanted (K/mm)
+              K/mm
             </InputGroup.Text>
             <EndPointFormControl
               endpoint={furnaceEndPoint}
@@ -51,7 +51,7 @@ function ThermalGradient(props){
           </InputGroup>
           <InputGroup>
             <InputGroup.Text style={{width: inputLabelWidth}}>
-              Distance (mm)
+              Space (mm)
             </InputGroup.Text>
             <EndPointFormControl
               endpoint={furnaceEndPoint}
@@ -106,18 +106,6 @@ function ThermalGradient(props){
                 backgroundColor: '#e0f7ff'
               }}>
                 {checkNull(furnaceEndPoint.data.gradient?.theoretical)}
-              </InputGroup.Text>
-            </InputGroup>
-            <InputGroup>
-              <InputGroup.Text style={{width: labelWidth}}>
-                Centre Thermocouple
-              </InputGroup.Text>
-              <InputGroup.Text style={{
-                width: labelWidth,
-                border: '1px solid lightblue',
-                backgroundColor: '#e0f7ff'
-              }}>
-                {checkNull(furnaceEndPoint.data.thermocouples?.centre)}
               </InputGroup.Text>
             </InputGroup>
           </Col>

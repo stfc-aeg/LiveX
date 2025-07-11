@@ -52,7 +52,7 @@ function AutoSetPointControl(props){
             </Col>
             <Col xs={12} sm={4}>
             <InputGroup>
-              <InputGroup.Text>Heating/Cooling:</InputGroup.Text>
+              <InputGroup.Text>Heat/Cool:</InputGroup.Text>
               <EndpointDropdown
                 endpoint={furnaceEndPoint} event_type="select"
                 fullpath="autosp/heating"

@@ -25,7 +25,7 @@ PIDAddresses pidA_addr = {
   MOD_PID_OUTPUT_A_INP,
   MOD_PID_OUTPUTSUM_A_INP,
   MOD_PID_ENABLE_A_COIL,
-  MOD_THERMOCOUPLE_A_INP,
+  MOD_HEATERTC_A_INP,
   MOD_KP_A_HOLD,
   MOD_KI_A_HOLD,
   MOD_KD_A_HOLD
@@ -37,7 +37,7 @@ PIDAddresses pidB_addr = {
   MOD_PID_OUTPUT_B_INP,
   MOD_PID_OUTPUTSUM_B_INP,
   MOD_PID_ENABLE_B_COIL,
-  MOD_THERMOCOUPLE_B_INP,
+  MOD_HEATERTC_B_INP,
   MOD_KP_B_HOLD,
   MOD_KI_B_HOLD,
   MOD_KD_B_HOLD
@@ -54,13 +54,16 @@ float counter = 1;
 bool acquiringFlag = false;
 
 // Thermocouples - main, taskPid
-Adafruit_MCP9600 mcp[] = {Adafruit_MCP9600(), Adafruit_MCP9600(), Adafruit_MCP9600()};
+Adafruit_MCP9600 mcp[6];  // Use default constructor to make as many as needed
 const unsigned int num_mcp = sizeof(mcp) / sizeof(mcp[0]);
-const uint8_t mcp_addr[] = {0x60, 0x67, 0x65};
+const uint8_t mcp_addr[] = {0x60, 0x67, 0x66, 0x65, 0x64,
+ 0x63};
+const MCP9600_ThemocoupleType mcp_type[] = {MCP9600_TYPE_R, MCP9600_TYPE_R, MCP9600_TYPE_R, MCP9600_TYPE_K, MCP9600_TYPE_K, MCP9600_TYPE_K};
+const int mcp_mod_addrs[] = {};
 
 // Timers and flags - main, taskPid
-hw_timer_t *pidFlagTimer = NULL;
-hw_timer_t *secondaryFlagTimer = NULL;
+hw_timer_t* pidFlagTimer = NULL;
+hw_timer_t* secondaryFlagTimer = NULL;
 volatile bool pidFlag = false;
 volatile bool secondaryFlag = false;
 // Pin interrupt flag
@@ -100,9 +103,22 @@ void setup()
   // initialise.cpp
   initialiseEthernet(modbusEthServer, mac, ip, PIN_SPI_SS_ETHERNET_LIB);
   initialiseInterrupts(&pidFlagTimer);
-  initialiseThermocouples(mcp, num_mcp, mcp_addr);
+  initialiseThermocouples(mcp, num_mcp, mcp_addr, mcp_type);
   writePIDDefaults(modbus_server, PID_A);
   writePIDDefaults(modbus_server, PID_B);
+
+  // Software needs to know how many thermocouples are active
+  modbus_server.floatToInputRegisters(MOD_NUM_MCP_INP, num_mcp);
+  // Write default indices for active thermocouples, assume in order
+  for (int i=0; i<num_mcp; i++)
+  {
+    modbus_server.floatToHoldingRegisters(
+      MOD_HEATERTC_A_IDX_HOLD+i*2, i
+    );
+    modbus_server.floatToHoldingRegisters(
+      MOD_TCIDX_0_TYPE_HOLD+i*2, mcp_type[i]
+    );
+  }
 
   gpio.init();
   // PID

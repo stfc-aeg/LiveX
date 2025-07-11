@@ -66,6 +66,31 @@ void manageComms()
       autoSetPointControl();
       xSemaphoreGive(gradientAspcMutex);
     }
+    // Has the type of a thermocouple changed
+    if (modbus_server.readBool(MOD_TC_TYPE_UPDATE_COIL))
+    {
+      xSemaphoreTake(gradientAspcMutex, portMAX_DELAY);
+      // Check each thermocouple
+      for (int i=0; i<num_mcp; i++)
+      {
+        // Usual i*2 structure to iterate over sequentially-defined float holding registers
+        MCP9600_ThemocoupleType val = static_cast<MCP9600_ThemocoupleType>(modbus_server.combineHoldingRegisters(MOD_TCIDX_0_TYPE_HOLD+i*2));
+        // Compare to enum. If different, set it to register.
+        if (val != mcp[i].getThermocoupleType())
+        {
+          mcp[i].enable(false);
+          MCP9600_ThemocoupleType type = val;
+          mcp[i].setThermocoupleType(type);
+          Serial.print("mcp ");
+          Serial.print(i);
+          Serial.print(" set to ");
+          Serial.println(type);
+          mcp[i].enable(true);
+        }
+      }
+      modbus_server.writeBool(MOD_TC_TYPE_UPDATE_COIL, 0);  // Reset flag
+      xSemaphoreGive(gradientAspcMutex);
+    }
   }
 
   if(streamClient.connected()) // check first, then poll
@@ -102,6 +127,32 @@ void updateSetPoints()
   PID_B.baseSetPoint = modbus_server.combineHoldingRegisters(MOD_SETPOINT_B_HOLD);
   // When setpoints are updated, thermal gradient will also need adjusting as modifiers will change
 
+  thermalGradient();
+
+  // If gradient is on, we want the setpoints to match, based on the higher heater
+  // With the gradient modifier, active setpoint will be adjusted when PID is
+  if (modbus_server.readBool(MOD_GRADIENT_ENABLE_COIL))
+  {
+    bool highIsB = modbus_server.coilRead(MOD_GRADIENT_HIGH_COIL);
+    if (!highIsB) // A is high
+    {
+      // B should match A in this case, to preserve gradient
+      // Effectively, ignore inputs to B while gradient is on and high towards A
+      PID_B.baseSetPoint = PID_A.baseSetPoint;
+    }
+    if (highIsB) // B is high
+    {
+      // A matches B this time
+      PID_A.baseSetPoint = PID_B.baseSetPoint;
+    }
+    if (DEBUG)
+    {
+      Serial.print("Gradient is on towards ");
+      if (highIsB) {Serial.print("B");} else {Serial.print("A");}
+      Serial.println("new basesetpoints to follow: ");
+    }
+  }
+
   if (DEBUG)
   {
     Serial.print("New baseSetPoint for PID A: ");
@@ -109,12 +160,11 @@ void updateSetPoints()
     Serial.print("New baseSetPoint for PID B: ");
     Serial.println(PID_B.baseSetPoint);
   }
-  thermalGradient();
   // Set coil back to 0 to prevent continuously calling this function
   modbus_server.writeBool(MOD_SETPOINT_UPDATE_COIL, 0);
 }
 
-// Thermal gradient is based off of midpoint of heater setpoints and overrides them
+// Thermal gradient subtracts entire gradient value from target heater
 void thermalGradient()
 {
   // Get temperature (K) per mm
@@ -123,58 +173,29 @@ void thermalGradient()
   float distance = modbus_server.combineHoldingRegisters(MOD_GRADIENT_DISTANCE_HOLD);
   // Theoretical temperature gradient (k/mm * mm = k)
   float theoretical = wanted * distance;
-  float gradientModifier = theoretical/2;
 
-  // Calculate midpoint and signs
-  float setPointA = PID_A.baseSetPoint;
-  float setPointB = PID_B.baseSetPoint;
-  float midpoint = (setPointA + setPointB) / 2.0;
-
-  float signA, signB;
+  // Reset modifiers
+  PID_A.gradientModifier = 0;
+  PID_B.gradientModifier = 0;
 
   // High heater is A (0) or B (1)?
-  bool high = modbus_server.coilRead(MOD_GRADIENT_HIGH_COIL);
+  bool highIsB = modbus_server.coilRead(MOD_GRADIENT_HIGH_COIL);
 
-  if (!high)  // 0 = A = false
+  // If A is high, B should be the theoretical gradient distance below A. Or vice ve
+  if (!highIsB)  // 0 = A = false
   {
-    signA = 1.0;
-    signB = -1.0;
+    PID_B.gradientModifier = -theoretical;
   }
-  else if (high)  // 1 = B = true
+  else if (highIsB)  // 1 = B = true
   {
-    signA = -1.0;
-    signB = 1.0;
+    PID_A.gradientModifier = -theoretical;
   }
-
-  // 'gradient setpoint' is what the setpoint would be to make the requested gradient
-  // based on the current base setpoints
-  float gradientSP_A = midpoint + (signA * gradientModifier);
-  float gradientSP_B = midpoint + (signB * gradientModifier);
-
-  // the PID's 'gradient modifier' is what would need to be applied to the bSP to get that setpoint
-  // e.g.: bSP of 100/200, gradient of 20, gSP of 150+/-10, so gMod is -/+40 for PIDs respectively
-  PID_A.gradientModifier = gradientSP_A - setPointA;
-  PID_B.gradientModifier = gradientSP_B - setPointB;
-  // A positive value means that gradient being enabled increases the active setpoint
-
-  // Actual temperature difference
-  float actual = fabs(PID_A.input - PID_B.input);
-
   // Write relevant values to modbus
   modbus_server.floatToInputRegisters(MOD_GRADIENT_THEORY_INP, theoretical);
-  modbus_server.floatToInputRegisters(MOD_GRADIENT_ACTUAL_INP, actual);
-
   // Reset 'value updated' coil to not repeatedly fire this function
   modbus_server.writeBool(MOD_GRADIENT_UPDATE_COIL, 0);
-
-  if (DEBUG)
-  {
-    Serial.print("gradient midpoint: ");
-    Serial.println(midpoint);
-    Serial.print("gradient modifier: ");
-    Serial.println(gradientModifier);
-  }
 }
+
 
 // Increment setPoint by an average rate per second
 void autoSetPointControl()

@@ -8,6 +8,18 @@ class modAddr():
     def __init__(self):
         pass
 
+    # What order are the thermocouples in. See mcp_type[] in main.cpp in firmware/livex
+    # Addresses are fixed order of (0x60, 0x67, 0x66, 0x65, 0x64, 0x63, 0x62)
+    # So these values should correlate with what is connected to those addresses
+
+    # mcp types
+    mcp_types = ["K", "J", "T", "N", "S", "E", "B", "R"]
+    # Numbered 0-7 as with Adafruit library enumeration
+    mcp_type_from_val = dict(enumerate(mcp_types))
+    # Get the enum value from the type
+    mcp_val_from_type = {v:k for k,v in mcp_type_from_val.items()}
+
+
     # Coils start at 00001-09999
     pid_enable_a_coil     = 1
     pid_enable_b_coil     = 2
@@ -21,6 +33,7 @@ class modAddr():
     gradient_update_coil  = 10
     freq_aspc_update_coil = 11
     setpoint_update_coil  = 12
+    tc_type_update_coil   = 13
 
     # Input registers (read-only, from device) start at 30001-39999
     counter_inp      = 30001
@@ -33,12 +46,13 @@ class modAddr():
     thermocouple_b_inp = 30013
     thermocouple_c_inp = 30015
     thermocouple_d_inp = 30017
+    thermocouple_e_inp = 30019
+    thermocouple_f_inp = 30021
+    number_mcp_inp     = 30023
 
-    gradient_actual_inp     = 30019
-    gradient_theory_inp     = 30021
-    autosp_midpt_inp        = 30023
-
-    motor_lvdt_inp = 30027
+    gradient_actual_inp     = 30025
+    gradient_theory_inp     = 30027
+    autosp_midpt_inp        = 30029
 
     # Holding registers (read/write) start at 40001-49999
     pid_setpoint_a_hold = 40001
@@ -59,10 +73,22 @@ class modAddr():
     autosp_rate_hold       = 40023
     autosp_imgdegree_hold  = 40025
 
-    motor_speed_hold = 40027
+    # Named differently to config.h, which is heatertc_a/b and extratc_a/b/c/d
+    thermocouple_a_idx_hold    = 40027
+    thermocouple_b_idx_hold    = 40029
+    thermocouple_c_idx_hold     = 40031
+    thermocouple_d_idx_hold     = 40033
+    thermocouple_e_idx_hold     = 40035
+    thermocouple_f_idx_hold     = 40037
+
+    tcidx_0_type_hold           = 40039
+    tcidx_1_type_hold           = 40041
+    tcidx_2_type_hold           = 40043
+    tcidx_3_type_hold           = 40045
+    tcidx_4_type_hold           = 40049
+    tcidx_5_type_hold           = 40049
 
     # Addresses for controls
-
     addresses_pid_a = {
         'enable': pid_enable_a_coil,
         'setpoint': pid_setpoint_a_hold,
@@ -106,13 +132,6 @@ class modAddr():
         'midpt': autosp_midpt_inp,
         'imgdegree': autosp_imgdegree_hold,
         'update': freq_aspc_update_coil
-    }
-
-    motor_addresses = {
-        'enable': motor_enable_coil,
-        'direction': motor_direction_coil,
-        'speed': motor_speed_hold,
-        'lvdt': motor_lvdt_inp
     }
 
     # Trigger adapter addresses

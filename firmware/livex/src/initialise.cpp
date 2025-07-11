@@ -20,7 +20,7 @@ void initialiseInterrupts(hw_timer_t** pidFlagTimer)
 }
 
 // Run the MCP9600 default setup code. Find devices and set defaults
-void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* mcp_addr)
+void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* mcp_addr, const MCP9600_ThemocoupleType* mcp_type)
 {
   // Initialise MCP9600(s)
   Serial.println("mcp9600 startup");
@@ -42,7 +42,7 @@ void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* 
     Serial.println(mcp_addr[idx], 16);
 
     // Set ADC resolution
-    mcp[idx].setADCresolution(MCP9600_ADCRESOLUTION_18);
+    mcp[idx].setADCresolution(MCP9600_ADCRESOLUTION_16);
     Serial.print("ADC resolution set to ");
     switch(mcp[idx].getADCresolution())
     {
@@ -54,7 +54,7 @@ void initialiseThermocouples(Adafruit_MCP9600* mcp, int num_mcp, const uint8_t* 
     Serial.println(" bits");
 
     // Set thermocouple type (K: -200 to 1372 degrees C)
-    mcp[idx].setThermocoupleType(MCP9600_TYPE_K);
+    mcp[idx].setThermocoupleType(mcp_type[idx]);
     Serial.print("Thermocouple type set to ");
     switch (mcp[idx].getThermocoupleType())
     {
@@ -102,7 +102,7 @@ void initialiseEthernet(EthernetServer ethServer, byte* mac, byte* ip, int ethPi
       delay(1000); // Do nothing, no point running without Ethernet hardware
     }
   }
-  if (Ethernet.linkStatus() == LinkOFF) 
+  if (Ethernet.linkStatus() == LinkOFF)
   {
     Serial.println("Ethernet cable is not connected.");
   }
