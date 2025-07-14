@@ -333,7 +333,7 @@ class FurnaceController():
                         logging.debug(f"Mock acquisition error: {e}")
 
                     # Do not need to go as fast for a fake acquisition, there is no timeout
-                    time.sleep(1/self.pid_frequency)
+                time.sleep(1/self.pid_frequency)
 
             else:
                 if self.acquiring:
