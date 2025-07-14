@@ -29,7 +29,7 @@ class LiveXController(BaseController):
         self.filepath = options.get('filepath', '/tmp')
 
         self.acq_frame_target = 1000
-        self.acq_time = 1  # Time in seconds
+        self.acq_frame_frequency = 10  # Frequency used for frame target acquisitions
 
         self.acquiring = False
         # Which 'devices' are doing this acquisition. Set in start_acquisition
@@ -110,11 +110,15 @@ class LiveXController(BaseController):
                 'acquiring': (lambda: self.acquiring, None),
                 'start': (lambda: None, self.start_acquisition),
                 'stop': (lambda: None, self.stop_acquisition),
-                'time': (lambda: self.acq_time, self.set_acq_time),
-                'frame_target': (lambda: self.acq_frame_target, self.set_acq_frame_target),
-                'freerun': (lambda: self.freerun, self.set_freerun),
+                'freerun': {
+                    'freerun': (lambda: self.freerun, self.set_freerun),
+                    'frequencies': self.frequency_subtree
+                },
+                'frame_target': {
+                    'frame_target': (lambda: self.acq_frame_target, self.set_acq_frame_target),
+                    'frequency': (lambda: self.acq_frame_frequency, self.set_acq_frame_frequency)
+                },
                 'reference_trigger': (lambda: self.ref_trigger, None),
-                'frequencies': self.frequency_subtree
             }
         })
 
@@ -318,39 +322,21 @@ class LiveXController(BaseController):
         else:
             logging.debug("Timer not updated; not found or timer not in list of triggers.")
 
-    def set_acq_time(self, value):
-        """Set the duration of the acquisition. Used to calculate targets from frequencies."""
-        self.acq_time = int(value)
-        self._get_timer_frequencies()
-
-        # Frame target = time (in s) * frequency
-        for name, trigger in self.trigger.triggers.items():
-            trigger.set_target(
-                self.acq_time * self.frequencies[name]
-            )
-
     def set_acq_frame_target(self, value):
         """Set the frame target(s) of the acquisition."""
         # Furnace is the 'source of truth' for frame targets. Others are derived from it
         self._get_timer_frequencies()
 
-        # New furnace target as provided
-        ref_target = int(value)
-
-        self.trigger.triggers[self.ref_trigger].set_target(ref_target)
-
-        # Get new 'real' acquisition time for calculations
-        self.acq_time = ref_target / self.frequencies[self.ref_trigger]
-        logging.debug(f"acq time = target//freq: {ref_target} / {self.frequencies[self.ref_trigger]} = {self.acq_time}")
-
-        # Calculate targets based on that time
+        # All triggers use same target for this system
         for name, trigger in self.trigger.triggers.items():
-            trigger.set_target(
-                (self.acq_time * trigger.frequency)
-            )
+            trigger.set_target(value)
 
-        self.acq_time = ref_target // self.frequencies[self.ref_trigger]  # Avoid showing long floats to users
-
+    def set_acq_frame_frequency(self, value):
+        """Set the frequency of the frame target acquisition."""
+        value = float(value)
+        self.acq_frame_frequency = value
+        for trigger in self.trigger.triggers.values():
+            trigger.set_frequency(value)
 
     def cleanup(self):
         """Clean up the controller.
