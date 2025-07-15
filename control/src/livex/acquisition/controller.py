@@ -110,15 +110,10 @@ class LiveXController(BaseController):
                 'acquiring': (lambda: self.acquiring, None),
                 'start': (lambda: None, self.start_acquisition),
                 'stop': (lambda: None, self.stop_acquisition),
-                'freerun': {
-                    'freerun': (lambda: self.freerun, self.set_freerun),
-                    'frequencies': self.frequency_subtree
-                },
-                'frame_target': {
-                    'frame_target': (lambda: self.acq_frame_target, self.set_acq_frame_target),
-                    'frequency': (lambda: self.acq_frame_frequency, self.set_acq_frame_frequency)
-                },
+                'freerun': (lambda: self.freerun, self.set_freerun),
+                'frame_target': (lambda: self.acq_frame_target, self.set_acq_frame_target),
                 'reference_trigger': (lambda: self.ref_trigger, None),
+                'frequencies': self.frequency_subtree
             }
         })
 
@@ -327,9 +322,25 @@ class LiveXController(BaseController):
         # Furnace is the 'source of truth' for frame targets. Others are derived from it
         self._get_timer_frequencies()
 
-        # All triggers use same target for this system
+        # New furnace target as provided
+        ref_target = int(value)
+        self.acq_frame_target = ref_target
+
+        self.trigger.triggers[self.ref_trigger].set_target(ref_target)
+
+        # Get new 'real' acquisition time for calculations
+        self.acq_time = ref_target / self.frequencies[self.ref_trigger]
+        logging.debug(f"acq time = target//freq: {ref_target} / {self.frequencies[self.ref_trigger]} = {self.acq_time}")
+
+        # Calculate targets based on that time
         for name, trigger in self.trigger.triggers.items():
-            trigger.set_target(value)
+            trigger.set_target(
+                (self.acq_time * trigger.frequency)
+            )
+            logging.debug(f"trigger target: {trigger.target}")
+
+        self.acq_time = ref_target // self.frequencies[self.ref_trigger]  # Avoid showing long floats to users
+
 
     def set_acq_frame_frequency(self, value):
         """Set the frequency of the frame target acquisition."""

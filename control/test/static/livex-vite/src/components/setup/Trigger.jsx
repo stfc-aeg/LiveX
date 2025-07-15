@@ -27,8 +27,8 @@ function Trigger(props) {
 
     const [timeFrameValue, setTimeFrameValue] = useState('free');
     const timeFrameRadios = [
-      { name: 'Run endlessly', value: 'free'},
-      { name: 'Use frame targets', value: 'frame'}
+      { name: 'Run with target', value: 'frame'},
+      { name: 'Run endless', value: 'free'}
     ];
 
     const handleTimeFrameValueChange = (newValue) => {
@@ -40,8 +40,9 @@ function Trigger(props) {
     }
 
     const triggers = triggerEndPoint.data?.triggers;
+    const ref_trigger = liveXEndPoint.data.acquisition?.reference_trigger;
 
-    const labelWidth = '72px';
+    const labelWidth = 72;
 
     return (
       <Container>
@@ -74,13 +75,32 @@ function Trigger(props) {
                           endpoint={liveXEndPoint}
                           type="number"
                           fullpath={`acquisition/frequencies/${key}`}
-                          event_type="enter"
-                          value={data.frequency}
-                          disabled={timeFrameValue==='frame'}>
+                          event_type="enter">
                         </EndPointFormControl>
                       </InputGroup>
                     </Row>
-                    <Row className="mt-3 ms-1 me-1">
+                    <Row>
+                      <InputGroup>
+                        <InputGroup.Text>Frame #</InputGroup.Text>
+                        {timeFrameValue==='frame' && key===ref_trigger ? (
+                          <EndPointFormControl
+                            endpoint={liveXEndPoint}
+                            type="number"
+                            fullpath={'acquisition/frame_target'}
+                            event_type="enter"
+                            disabled={timeFrameValue==='time' || timeFrameValue==='free'}
+                            style={{
+                              border: timeFrameValue==='frame' ? '1px solid #00cc00' : undefined
+                            }}
+                            />
+                        ) : (
+                          <InputGroup.Text style={{flex:1}}>
+                            {data.target}
+                          </InputGroup.Text>
+                        )}
+                      </InputGroup>
+                    </Row>
+                    <Row className="ms-1 me-1">
                       <EndPointButton
                         className="display-inline-block"
                         endpoint={triggerEndPoint}
@@ -90,7 +110,7 @@ function Trigger(props) {
                         event_type="click"
                         variant={triggerEndPoint?.data.triggers[key]?.running ? "danger" : "primary"}
                       >
-                          {triggerEndPoint?.data.triggers[key]?.running ? "Stop timer": "Start timer"}
+                          {triggerEndPoint?.data.triggers[key]?.running ? "Stop": "Start"}
                       </EndPointButton>
                     </Row>
                   </TitleCard>
@@ -98,13 +118,14 @@ function Trigger(props) {
               ))}
             </Row>
             <Row>
-              <Col xs={12} sm={4} className="mt-3">
+              <Col xs={2}/>
+              <Col xs={12} sm={4} className="mt-3 mb-3">
                 <Row>
                   <ButtonGroup className='d-flex'>
                     {timeFrameRadios.map((radio, idx) => (
                       <ToggleButton
                         key={idx}
-                        style={{flex:1, textAlign: 'center'}}
+                        className='equal-width-buttongroup'
                         id={`radio-${idx}`}
                         type="radio"
                         variant='outline-primary'
@@ -118,62 +139,38 @@ function Trigger(props) {
                   </ButtonGroup>
                 </Row>
               </Col>
-              <Col xs={6} className="mt-3">
-                <InputGroup>
-                  <InputGroup.Text>Capture</InputGroup.Text>
-                  <EndPointFormControl
-                    endpoint={liveXEndPoint}
-                    type="number"
-                    fullpath={`acquisition/frame_target/frame_target`}
-                    value={triggerEndPoint?.data.frame_target?.frame_target}
-                    disabled={timeFrameValue==='free'}>
-                  </EndPointFormControl>
-                  <InputGroup.Text>Frames at</InputGroup.Text>
-                  <EndPointFormControl
-                    endpoint={liveXEndPoint}
-                    type="number"
-                    fullpath={`acquisition/frame_target/frequency`}
-                    value={triggerEndPoint?.data.frame_target?.frequency}
-                    disabled={timeFrameValue==='free'}>
-                  </EndPointFormControl>
-                  <InputGroup.Text>Hz</InputGroup.Text>
-                </InputGroup>
-              </Col>
-            </Row>
-            <Row className='mt-3'>
-              <Col xs={4}>
+              <Col xs={4} className="mt-3">
                 <Row>
-                  <Col className="d-flex gap-2">
-                    <InputGroup className="w-100">
+                  <InputGroup>
+                    <EndPointButton
+                        endpoint={triggerEndPoint}
+                        fullpath={"all_timers_enable"}
+                        value={{
+                          'enable': true,
+                          'freerun': timeFrameValue==='free'
+                        }}
+                        event_type="click"
+                        className="flex-fill"
+                      >
+                        Start all timers
+                      </EndPointButton>
                       <EndPointButton
-                          endpoint={triggerEndPoint}
-                          fullpath={"all_timers_enable"}
-                          value={{
-                            'enable': true,
-                            'freerun': timeFrameValue==='free'
-                          }}
-                          event_type="click"
-                          className="flex-fill"
-                        >
-                          Start all timers
-                        </EndPointButton>
-                        <EndPointButton
-                          endpoint={triggerEndPoint}
-                          fullpath={"all_timers_enable"}
-                          value={{
-                            'enable': false,
-                            'freerun': timeFrameValue==='free'
-                          }}
-                          event_type="click"
-                          variant='danger'
-                          className="flex-fill"
-                        >
-                          Stop all timers
-                        </EndPointButton>
-                    </InputGroup>
-                  </Col>
+                        endpoint={triggerEndPoint}
+                        fullpath={"all_timers_enable"}
+                        value={{
+                          'enable': false,
+                          'freerun': timeFrameValue==='free'
+                        }}
+                        event_type="click"
+                        variant='danger'
+                        className="flex-fill"
+                      >
+                        Stop all timers
+                      </EndPointButton>
+                  </InputGroup>
                 </Row>
               </Col>
+              <Col xs={2}/>
             </Row>
             <Row className='mt-3 mb-3'>
               <Col>
