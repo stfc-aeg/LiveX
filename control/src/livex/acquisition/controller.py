@@ -340,7 +340,6 @@ class LiveXController(BaseController):
 
         self.acq_time = ref_target // self.frequencies[self.ref_trigger]  # Avoid showing long floats to users
 
-
     def set_acq_frame_frequency(self, value):
         """Set the frequency of the frame target acquisition."""
         value = float(value)
