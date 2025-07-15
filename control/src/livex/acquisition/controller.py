@@ -337,7 +337,6 @@ class LiveXController(BaseController):
             trigger.set_target(
                 (self.acq_time * trigger.frequency)
             )
-            logging.debug(f"trigger target: {trigger.target}")
 
         self.acq_time = ref_target // self.frequencies[self.ref_trigger]  # Avoid showing long floats to users
 
