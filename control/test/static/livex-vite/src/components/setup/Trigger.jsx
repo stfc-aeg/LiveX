@@ -6,6 +6,7 @@ import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Button from 'react-bootstrap/Button';
 import { TitleCard, WithEndpoint, useAdapterEndpoint } from 'odin-react';
+import { useEffect } from 'react';
 
 import { checkNullNoDp } from '../../utils';
 
@@ -37,6 +38,23 @@ function Trigger(props) {
       let freerunBool = newValue === 'free';
       const sendVal = {['freerun']: freerunBool};
       liveXEndPoint.put(sendVal, 'acquisition');
+    }
+
+    const [linkCameras, setLinkCameras] = useState(null);
+    useEffect(() => {
+      const currentLinks = liveXEndPoint.data?.acquisition?.link_triggers?.current;
+      
+      const linked = Array.isArray(currentLinks) && currentLinks.length > 0;  // Check if there are linked triggers
+      setLinkCameras(linked);
+    }, [liveXEndPoint.data?.acquisition?.link_triggers?.current, linkCameras]);
+
+    const handleLinkCamerasChange = (e) => {
+      const checked = e.target.checked;
+      setLinkCameras(checked);
+
+      const path = checked ? 'acquisition/link_triggers/link_cameras' : 'acquisition/link_triggers/unlink_cameras';
+      const value = ['widefov', 'narrowfov'];
+      liveXEndPoint.put(value, path);
     }
 
     const triggers = triggerEndPoint.data?.triggers;
@@ -118,7 +136,6 @@ function Trigger(props) {
               ))}
             </Row>
             <Row>
-              <Col xs={2}/>
               <Col xs={12} sm={4} className="mt-3 mb-3">
                 <Row>
                   <ButtonGroup className='d-flex'>
@@ -138,9 +155,7 @@ function Trigger(props) {
                     ))}
                   </ButtonGroup>
                 </Row>
-              </Col>
-              <Col xs={4} className="mt-3">
-                <Row>
+                <Row className='mt-3'>
                   <InputGroup>
                     <EndPointButton
                         endpoint={triggerEndPoint}
@@ -170,7 +185,24 @@ function Trigger(props) {
                   </InputGroup>
                 </Row>
               </Col>
-              <Col xs={2}/>
+              <Col xs={6}>
+                <Row className='mt-3'>
+                  <Form.Check
+                    type="checkbox"
+                    label="Link camera frequencies and exposures"
+                    className="large-checkbox"
+                    checked={linkCameras}
+                    onChange={handleLinkCamerasChange}
+                  />
+                </Row>
+                <Row className='mt-4'>
+                  <Form.Check
+                    type="checkbox"
+                    label="Use camera exposure lookup table"
+                    className="large-checkbox"
+                  />
+                </Row>
+              </Col>
             </Row>
             <Row className='mt-3 mb-3'>
               <Col>

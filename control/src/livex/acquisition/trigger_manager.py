@@ -11,7 +11,7 @@ class TriggerManager:
 
         self.furnace = furnace_adapter
 
-        self.linked_triggers = set()  # List to hold connected triggers
+        self.linked_triggers = []  # List to hold connected triggers
 
         # Initialize frequencies and frequency subtree
         self.frequencies = {}
@@ -43,6 +43,11 @@ class TriggerManager:
         self.frequencies[trigger] = value
 
         # Logic for linked triggers goes here
+        if trigger in self.linked_triggers:
+            for linked in self.linked_triggers:
+                if linked != trigger:
+                    self.triggers[linked].set_frequency(value)
+                    self.frequencies[linked] = value
 
         self.furnace.update_furnace_frequency(self.frequencies[self.ref_trigger])
 
@@ -61,13 +66,16 @@ class TriggerManager:
 
         # Logic for linked triggers goes here
 
-    def link_triggers(self, trigger1, trigger2):
+    def link_triggers(self, triggers):
         """Link two triggers to each other."""
-        self.linked_triggers.add(trigger1)
-        self.linked_triggers.add(trigger2)
+        trigger1, trigger2 = triggers
+        self.linked_triggers.append(trigger1) if trigger1 not in self.linked_triggers else None
+        self.linked_triggers.append(trigger2) if trigger2 not in self.linked_triggers else None
+        logging.debug(f"Linked triggers: {self.linked_triggers}")
 
-    def unlink_triggers(self, trigger1, trigger2):
+    def unlink_triggers(self, triggers):
         """Unlink two triggers from each other."""
+        trigger1, trigger2 = triggers
         if trigger1 in self.linked_triggers:
             self.linked_triggers.remove(trigger1)
         if trigger2 in self.linked_triggers:

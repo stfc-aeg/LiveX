@@ -109,6 +109,11 @@ class LiveXController(BaseController):
                 'frame_target': (lambda: self.trigger_manager.acq_frame_target, self.trigger_manager.set_acq_frame_target),
                 'reference_trigger': (lambda: self.ref_trigger, None),
                 'frequencies': self.trigger_manager.frequency_subtree,
+                'link_triggers': {
+                    'current': (lambda: self.trigger_manager.linked_triggers, None),
+                    'link_cameras': (lambda: None, self.trigger_manager.link_triggers),
+                    'unlink_cameras': (lambda: None, self.trigger_manager.unlink_triggers)
+                }
             }
         })
 
