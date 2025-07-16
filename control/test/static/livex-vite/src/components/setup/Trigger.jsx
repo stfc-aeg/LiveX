@@ -36,7 +36,7 @@ function Trigger(props) {
       // Put value to endpoint
       let freerunBool = newValue === 'free';
       const sendVal = {['freerun']: freerunBool};
-      liveXEndPoint.put(sendVal, 'acquisition/freerun');
+      liveXEndPoint.put(sendVal, 'acquisition');
     }
 
     const triggers = triggerEndPoint.data?.triggers;

@@ -307,6 +307,10 @@ class FurnaceController():
         Otherwise, results may be inconsistent.
         :param freq: new frequency as integer
         """
+        if freq <= 0:
+            logging.warning("""Cannot set furnace frequency to a non-positive value.
+            Defaulting to 1 for data buffer and task interval.""")
+            freq = 1
         self.pid_frequency = freq
 
         # Update buffer size to remain 1/s
