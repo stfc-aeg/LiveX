@@ -120,9 +120,11 @@ class LiveDataProcessor():
             data = np.frombuffer(msg[1], dtype=dtype)  # Otherwise, grab the data as-is
 
         # For histogram, it's easier to clip the data before reshaping it
-        clipped_data = np.clip(data, self.clipping['min'], self.clipping['max'])
+        clipped_ = np.clip(data, self.clipping['min'], self.clipping['max'])
+        # After clipping, scale data back out to full range
+        scaled_data = ((clipped_ - self.clipping['min']) / (self.clipping['max'] - self.clipping['min'])) * 65535
 
-        reshaped_data = clipped_data.reshape((2304, 4096)) # ORCA dimensions
+        reshaped_data = scaled_data.reshape((2304, 4096)) # ORCA dimensions
 
         # OpenCV operations
         resized_data = cv2.resize(reshaped_data, (self.size_x, self.size_y))
@@ -141,13 +143,13 @@ class LiveDataProcessor():
 
         self.image_queue.put(zipped_data.decode('utf-8'))
 
-        bins_size = 100
-        bins_count = (self.clipping['max'] - self.clipping['min'] + 1) // bins_size
+        # Fixed quantity of bins instead of generating it from range
+        bins_count = 2048
 
         # Create histogram
-        flat_roi_data = roi_data.flatten()
+        flat_data = data.flatten()  # Histogram made on original data
         fig, ax = plt.subplots(figsize=(8,2), dpi=100)
-        ax.hist(flat_roi_data, bins=bins_count, alpha=0.75, color='blue')
+        ax.hist(flat_data, bins=bins_count, alpha=0.75, color='blue', log=True)
 
         # No y-axis
         ax.yaxis.set_visible(False)

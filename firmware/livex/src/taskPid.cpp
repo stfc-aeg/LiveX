@@ -88,6 +88,15 @@ void Core0PIDTask(void * pvParameters)
       xSemaphoreTake(gradientAspcMutex, portMAX_DELAY);
       runPID(A);
       runPID(B);
+
+      // These calculations need to occur whenever the temperatures are read
+      // Actual temperature difference
+      float actual = fabs(PID_A.input - PID_B.input);
+      modbus_server.floatToInputRegisters(MOD_GRADIENT_ACTUAL_INP, actual);
+      // Calculate midpoint. Fabs in case B is higher temp
+      float midpoint = fabs((PID_A.input + PID_B.input) / 2);
+      modbus_server.floatToInputRegisters(MOD_AUTOSP_MIDPT_INP, midpoint);
+      xSemaphoreGive(gradientAspcMutex);
       xSemaphoreGive(gradientAspcMutex);
 
       // Set flag back to false for timer
