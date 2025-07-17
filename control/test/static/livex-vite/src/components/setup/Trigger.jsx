@@ -6,6 +6,7 @@ import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Button from 'react-bootstrap/Button';
 import { TitleCard, WithEndpoint, useAdapterEndpoint } from 'odin-react';
+import { useEffect } from 'react';
 
 import { checkNullNoDp } from '../../utils';
 
@@ -21,15 +22,14 @@ function Trigger(props) {
     const {endpoint_url} = props;
 
     const triggerEndPoint = useAdapterEndpoint('trigger', endpoint_url, 1000);
-    const orcaEndPoint = useAdapterEndpoint('camera/cameras/widefov', endpoint_url, 1000);
+    const orcaEndPoint = useAdapterEndpoint('camera/cameras', endpoint_url, 1000);
     const furnaceEndPoint = useAdapterEndpoint('furnace', endpoint_url, 1000);
     const liveXEndPoint = useAdapterEndpoint('livex', endpoint_url, 1000);
 
-    const [timeFrameValue, setTimeFrameValue] = useState('time');
+    const [timeFrameValue, setTimeFrameValue] = useState('free');
     const timeFrameRadios = [
-      { name: 'Time', value: 'time' },
-      { name: 'Frames', value: 'frame'},
-      { name: 'Freerun', value: 'free'}
+      { name: 'Run with target', value: 'frame'},
+      { name: 'Run endless', value: 'free'}
     ];
 
     const handleTimeFrameValueChange = (newValue) => {
@@ -38,6 +38,38 @@ function Trigger(props) {
       let freerunBool = newValue === 'free';
       const sendVal = {['freerun']: freerunBool};
       liveXEndPoint.put(sendVal, 'acquisition');
+    }
+
+    const [linkCameras, setLinkCameras] = useState(null);
+    useEffect(() => {
+      const currentLinks = liveXEndPoint.data?.acquisition?.link_triggers?.current;
+
+      const linked = Array.isArray(currentLinks) && currentLinks.length > 0;  // Check if there are linked triggers
+      setLinkCameras(linked);
+    }, [liveXEndPoint.data?.acquisition?.link_triggers?.current]);
+
+    const handleLinkCamerasChange = (e) => {
+      const checked = e.target.checked;
+      setLinkCameras(checked);
+
+      const path = checked ? 'acquisition/link_triggers/link_cameras' : 'acquisition/link_triggers/unlink_cameras';
+      const value = ['widefov', 'narrowfov'];
+      liveXEndPoint.put(value, path);
+    }
+
+    const [exposureLookup, setExposureLookup] = useState(null);
+    useEffect(() => {
+      const usingLookup = liveXEndPoint.data?.cameras?.use_exposure_lookup;
+      setExposureLookup(usingLookup);
+    }, [liveXEndPoint.data?.cameras?.use_exposure_lookup]);
+
+    const handleExposureLookupChange = (e) => {
+      const checked = e.target.checked;
+      setExposureLookup(checked);
+
+      const path = 'cameras/use_exposure_lookup';
+      const value = checked ? true : false;  // Put false to disable if checked (enabled)
+      liveXEndPoint.put(value, path);
     }
 
     const triggers = triggerEndPoint.data?.triggers;
@@ -66,77 +98,6 @@ function Trigger(props) {
           }>
           <Container>
             <Row>
-              <Col xs={12} sm={4} className="mb-3">
-                <Row>
-                  Measure acq. duration in:
-                  <ButtonGroup>
-                    {timeFrameRadios.map((radio, idx) => (
-                      <ToggleButton
-                        key={idx}
-                        id={`radio-${idx}`}
-                        type="radio"
-                        variant='outline-primary'
-                        name="timeFrameRadio"
-                        value={radio.value}
-                        checked={timeFrameValue === radio.value}
-                        onChange={(e) => handleTimeFrameValueChange(e.currentTarget.value)}>
-                          {radio.name}
-                        </ToggleButton>
-                    ))}
-                  </ButtonGroup>
-                </Row>
-                <Row className="mt-3">
-                  <InputGroup>
-                    <InputGroup.Text>
-                      Duration (s)
-                    </InputGroup.Text>
-                    {timeFrameValue==='time' ? (
-                      <EndPointFormControl
-                        endpoint={liveXEndPoint}
-                        type="number"
-                        fullpath={"acquisition/time"}
-                        value={liveXEndPoint.data.acquisition?.time}
-                        event_type="enter"
-                        disabled={timeFrameValue==='frame' || timeFrameValue==='free'}
-                        style={{border: timeFrameValue==='time' ? '1px solid #00cc00' : undefined}}>
-                      </EndPointFormControl>
-                    ) : (
-                      <InputGroup.Text style={{ flex: 1 }}>
-                        {liveXEndPoint.data.acquisition?.time}
-                      </InputGroup.Text>
-                    )}
-                  </InputGroup>
-                </Row>
-                <Row>
-                  <label className="mt-3">Timer control:</label>
-                  <InputGroup>
-                    <EndPointButton
-                        endpoint={triggerEndPoint}
-                        fullpath={"all_timers_enable"}
-                        value={{
-                          'enable': true,
-                          'freerun': timeFrameValue==='free'
-                        }}
-                        event_type="click"
-                      >
-                        Start all
-                      </EndPointButton>
-                      <EndPointButton
-                        endpoint={triggerEndPoint}
-                        fullpath={"all_timers_enable"}
-                        value={{
-                          'enable': false,
-                          'freerun': timeFrameValue==='free'
-                        }}
-                        event_type="click"
-                        variant='danger'
-                      >
-                        Stop all
-                      </EndPointButton>
-                  </InputGroup>
-                </Row>
-              </Col>
-              
               {triggers && Object.entries(triggers).map(([key, data]) => (
                 <Col key={key}>
                   <TitleCard title={key}>
@@ -147,8 +108,7 @@ function Trigger(props) {
                           endpoint={liveXEndPoint}
                           type="number"
                           fullpath={`acquisition/frequencies/${key}`}
-                          event_type="enter"
-                          value={data.frequency}>
+                          event_type="enter">
                         </EndPointFormControl>
                       </InputGroup>
                     </Row>
@@ -161,7 +121,6 @@ function Trigger(props) {
                             type="number"
                             fullpath={'acquisition/frame_target'}
                             event_type="enter"
-                            value={data.target}
                             disabled={timeFrameValue==='time' || timeFrameValue==='free'}
                             style={{
                               border: timeFrameValue==='frame' ? '1px solid #00cc00' : undefined
@@ -173,6 +132,17 @@ function Trigger(props) {
                           </InputGroup.Text>
                         )}
                       </InputGroup>
+                      {orcaEndPoint?.data?.cameras?.hasOwnProperty(key) && (
+                        <InputGroup>
+                          <InputGroup.Text>Exposure (ms)</InputGroup.Text>
+                          <EndPointFormControl
+                            endpoint={liveXEndPoint}
+                            type="number"
+                            fullpath={`cameras/${key}_exposure`}
+                            event_type="enter"
+                          />
+                        </InputGroup>
+                      )}
                     </Row>
                     <Row className="ms-1 me-1">
                       <EndPointButton
@@ -190,6 +160,77 @@ function Trigger(props) {
                   </TitleCard>
                 </Col>
               ))}
+            </Row>
+            <Row>
+              <Col xs={12} sm={4} className="mt-3 mb-3">
+                <Row>
+                  <ButtonGroup className='d-flex'>
+                    {timeFrameRadios.map((radio, idx) => (
+                      <ToggleButton
+                        key={idx}
+                        className='equal-width-buttongroup'
+                        id={`radio-${idx}`}
+                        type="radio"
+                        variant='outline-primary'
+                        name="timeFrameRadio"
+                        value={radio.value}
+                        checked={timeFrameValue === radio.value}
+                        onChange={(e) => handleTimeFrameValueChange(e.currentTarget.value)}>
+                          {radio.name}
+                        </ToggleButton>
+                    ))}
+                  </ButtonGroup>
+                </Row>
+                <Row className='mt-3'>
+                  <InputGroup>
+                    <EndPointButton
+                        endpoint={triggerEndPoint}
+                        fullpath={"all_timers_enable"}
+                        value={{
+                          'enable': true,
+                          'freerun': timeFrameValue==='free'
+                        }}
+                        event_type="click"
+                        className="flex-fill"
+                      >
+                        Start all timers
+                      </EndPointButton>
+                      <EndPointButton
+                        endpoint={triggerEndPoint}
+                        fullpath={"all_timers_enable"}
+                        value={{
+                          'enable': false,
+                          'freerun': timeFrameValue==='free'
+                        }}
+                        event_type="click"
+                        variant='danger'
+                        className="flex-fill"
+                      >
+                        Stop all timers
+                      </EndPointButton>
+                  </InputGroup>
+                </Row>
+              </Col>
+              <Col xs={6}>
+                <Row className='mt-3'>
+                  <Form.Check
+                    type="checkbox"
+                    label="Link camera frequencies and exposures"
+                    className="large-checkbox"
+                    checked={linkCameras}
+                    onChange={handleLinkCamerasChange}
+                  />
+                </Row>
+                <Row className='mt-4'>
+                  <Form.Check
+                    type="checkbox"
+                    label="Lookup cam exposure from frequency"
+                    className="large-checkbox"
+                    checked={exposureLookup}
+                    onChange={handleExposureLookupChange}
+                  />
+                </Row>
+              </Col>
             </Row>
             <Row className='mt-3 mb-3'>
               <Col>
@@ -212,7 +253,7 @@ function Trigger(props) {
                     border: '1px solid lightblue',
                     backgroundColor: '#e0f7ff'
                   }}>
-                    {checkNullNoDp(orcaEndPoint?.data['widefov']?.status.frame_number)}
+                    {checkNullNoDp(orcaEndPoint?.data?.cameras?.widefov.status.frame_number)}
                   </InputGroup.Text>
                 </InputGroup>
               </Col>

@@ -6,14 +6,12 @@ from functools import partial
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from livex.base_controller import BaseController
-from livex.modbusAddresses import modAddr
 from livex.util import (
     LiveXError,
-    write_coil,
-    write_modbus_float,
     iac_get,
     iac_set
 )
+from livex.acquisition.trigger_manager import TriggerManager
 
 class LiveXController(BaseController):
     """LiveXController - class that manages the other adapters for LiveX."""
@@ -28,18 +26,11 @@ class LiveXController(BaseController):
         self.ref_trigger = options.get('reference_trigger', 'furnace')
         self.filepath = options.get('filepath', '/tmp')
 
-        self.acq_frame_target = 1000
-        self.acq_time = 1  # Time in seconds
-
         self.acquiring = False
         # Which 'devices' are doing this acquisition. Set in start_acquisition
         self.current_acquisition = []
 
-        # Requires trigger adapter, so is to be built later
-        self.frequency_subtree = {}
-        self.frequencies = {}
-
-        self.freerun = False
+        self.exposure_lookup_path = options.get('exposure_lookup_filepath', 'test/config/cam_exposure_lookup.json')
 
         # Furnace is a given as an adapter
         self.filepaths = {
@@ -59,8 +50,6 @@ class LiveXController(BaseController):
             }
         }
 
-        self._build_tree()
-
     def initialize(self, adapters):
         """Initialize the controller.
 
@@ -79,7 +68,12 @@ class LiveXController(BaseController):
             logging.warning("Munir adapter not found.")
 
         self.furnace = adapters["furnace"].controller if 'furnace' in self.adapters else logging.warning("Furnace adapter not found.")
-        self.trigger = adapters["trigger"].controller if 'trigger' in self.adapters else logging.warning("Trigger adapter not found.")
+
+        if 'trigger' in self.adapters:
+            self.trigger = adapters["trigger"].controller
+        else:
+            logging.warning("Trigger adapter not found.")
+
         self.orca = adapters["camera"].camera if 'camera' in self.adapters else logging.warning("Camera adapter not found")
         self.metadata = adapters["metadata"] if 'metadata' in self.adapters else logging.warning("Metadata adapter not found.")
         # Metadata adapter is likely easier with IAC
@@ -89,12 +83,18 @@ class LiveXController(BaseController):
             self.adapters['sequencer'].add_context('livex', self)
 
         # With adapters initialised, IAC can be used to get any more needed info
-        self._get_timer_frequencies()
 
         # Write furnace timer to go for readings
         self.trigger.triggers['furnace'].set_frequency(10)
         self.trigger.triggers['furnace'].set_enable(True)
         self.furnace.update_furnace_frequency(10)  # Inform furnace of frequency change, as this is done outside of usual channel
+
+        self.trigger_manager = TriggerManager(
+            self.trigger, self.furnace, self.orca,
+            exposure_lookup_path=self.exposure_lookup_path, ref_trigger=self.ref_trigger
+        )
+        self.trigger_manager.get_frequencies()
+        self.trigger_manager.set_target(self.trigger_manager.acq_frame_target)
 
         # Add cameras to self.filepaths for acquisition handling
         for camera in self.orca.cameras:
@@ -105,17 +105,23 @@ class LiveXController(BaseController):
 
     def _build_tree(self):
         """Construct the parameter tree once adapters have been initialised."""
+
         self.param_tree = ParameterTree({
             'acquisition': {
                 'acquiring': (lambda: self.acquiring, None),
                 'start': (lambda: None, self.start_acquisition),
                 'stop': (lambda: None, self.stop_acquisition),
-                'time': (lambda: self.acq_time, self.set_acq_time),
-                'frame_target': (lambda: self.acq_frame_target, self.set_acq_frame_target),
-                'freerun': (lambda: self.freerun, self.set_freerun),
+                'freerun': (lambda: self.trigger_manager.freerun, self.trigger_manager.set_freerun),
+                'frame_target': (lambda: self.trigger_manager.acq_frame_target, self.trigger_manager.set_acq_frame_target),
                 'reference_trigger': (lambda: self.ref_trigger, None),
-                'frequencies': self.frequency_subtree
-            }
+                'frequencies': self.trigger_manager.frequency_subtree,
+                'link_triggers': {
+                    'current': (lambda: self.trigger_manager.linked_triggers, None),
+                    'link_cameras': (lambda: None, self.trigger_manager.link_triggers),
+                    'unlink_cameras': (lambda: None, self.trigger_manager.unlink_triggers)
+                }
+            },
+            'cameras': self.trigger_manager.cam_subtree
         })
 
     def _generate_experiment_filenames(self):
@@ -168,12 +174,12 @@ class LiveXController(BaseController):
         # Stop all timers while processing
         self.trigger.set_all_timers(
             {'enable': False,
-             'freerun': self.freerun}
+             'freerun': self.trigger_manager.freerun}
         )
         # Set targets to 0 for freerun
-        if self.freerun:
-            for name in self.trigger.triggers.keys():
-                self.trigger.triggers[name].set_target(0)
+        if self.trigger_manager.freerun:
+            for name in self.trigger_manager.triggers.keys():
+                self.trigger_manager.set_target(0)  # Setting for one sets for all
 
         # Check which acquisitions are being run and call the relevant function
         if 'furnace' in self.current_acquisition:
@@ -197,7 +203,7 @@ class LiveXController(BaseController):
                 camera.set_config(value=2, param='trigger_source')
                 # Set orca frames to prevent HDF error
                 # No. frames is equal to target set in trigger by user (or 0 if freerun)
-                target = int(self.trigger.triggers[camera.name].target)
+                target = int(self.trigger_manager.triggers[camera.name].target)
                 camera.set_config(value=target, param='num_frames')
 
                 # Munir arguments for subsystem
@@ -230,7 +236,7 @@ class LiveXController(BaseController):
         # Enable timer coils simultaneously
         self.trigger.set_all_timers(
             {'enable': True,
-             'freerun': self.freerun}
+             'freerun': self.trigger_manager.freerun}
         )
 
     def stop_acquisition(self, value=None):
@@ -240,7 +246,7 @@ class LiveXController(BaseController):
         # All timers explicitly disabled (even if they have and reach a target)
         self.trigger.set_all_timers(
             {'enable': False,
-             'freerun': self.freerun}
+             'freerun': self.trigger_manager.freerun}
         )
 
         # Furnace
@@ -264,9 +270,9 @@ class LiveXController(BaseController):
         # Post-acquisition, targets are 0 for monitoring
         # Previous targets are lost as updating target restarts timer
         targets = {}
-        for name, trigger in self.trigger.triggers.items():
+        for name, trigger in self.trigger_manager.triggers.items():
             targets[name] = trigger.target
-            trigger.set_target(0)
+            self.trigger_manager.set_target(name, 0)
 
         # Stop time
         now = datetime.now()
@@ -279,78 +285,8 @@ class LiveXController(BaseController):
         # Reenable timers
         self.trigger.set_all_timers(
             {'enable': True,
-             'freerun': self.freerun}
+             'freerun': self.trigger_manager.freerun}
         )
-
-    def _get_timer_frequencies(self):
-        """Update the timer frequency variables."""
-        for name, trigger in self.trigger.triggers.items():
-            self.frequencies[name] = trigger.frequency
-
-            self.frequency_subtree[name] = (
-                lambda trigger=trigger: trigger.frequency,
-                partial(self.set_timer_frequency, timer=name)
-            )
-
-    def set_freerun(self, value):
-        """Set the freerun boolean. If True, frame targets are ignored when running an acquisition.
-        :param value: bool, determines if freerun is True or False.
-        """
-        self.freerun = bool(value)
-
-    def set_timer_frequency(self, value, timer=None):
-        """Set a given timer's frequency to the provided value.
-        :param value: integer represening the new time
-        :param timer: string representing the trigger parameter tree path of the timer to edit
-        """
-        if timer and timer in self.trigger.triggers.keys():
-            self.trigger.triggers[timer].set_frequency(int(value))
-            self.frequencies[timer] = int(value)
-            logging.debug(f"self.frequencies: {self.frequencies}")
-
-            # Ensure furnace frequency is updated
-            self.furnace.update_furnace_frequency(self.frequencies[self.ref_trigger])
-
-            # We can recalculate duration and frame targets for the new frequency by calling this
-            # function with the current ref target, instead of duplicating code.
-            ref_target = self.trigger.triggers[self.ref_trigger].target
-            self.set_acq_frame_target(ref_target)
-        else:
-            logging.debug("Timer not updated; not found or timer not in list of triggers.")
-
-    def set_acq_time(self, value):
-        """Set the duration of the acquisition. Used to calculate targets from frequencies."""
-        self.acq_time = int(value)
-        self._get_timer_frequencies()
-
-        # Frame target = time (in s) * frequency
-        for name, trigger in self.trigger.triggers.items():
-            trigger.set_target(
-                self.acq_time * self.frequencies[name]
-            )
-
-    def set_acq_frame_target(self, value):
-        """Set the frame target(s) of the acquisition."""
-        # Furnace is the 'source of truth' for frame targets. Others are derived from it
-        self._get_timer_frequencies()
-
-        # New furnace target as provided
-        ref_target = int(value)
-
-        self.trigger.triggers[self.ref_trigger].set_target(ref_target)
-
-        # Get new 'real' acquisition time for calculations
-        self.acq_time = ref_target / self.frequencies[self.ref_trigger]
-        logging.debug(f"acq time = target//freq: {ref_target} / {self.frequencies[self.ref_trigger]} = {self.acq_time}")
-
-        # Calculate targets based on that time
-        for name, trigger in self.trigger.triggers.items():
-            trigger.set_target(
-                (self.acq_time * trigger.frequency)
-            )
-
-        self.acq_time = ref_target // self.frequencies[self.ref_trigger]  # Avoid showing long floats to users
-
 
     def cleanup(self):
         """Clean up the controller.
