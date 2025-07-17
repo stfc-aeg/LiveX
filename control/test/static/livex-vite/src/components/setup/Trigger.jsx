@@ -22,7 +22,7 @@ function Trigger(props) {
     const {endpoint_url} = props;
 
     const triggerEndPoint = useAdapterEndpoint('trigger', endpoint_url, 1000);
-    const orcaEndPoint = useAdapterEndpoint('camera/cameras/widefov', endpoint_url, 1000);
+    const orcaEndPoint = useAdapterEndpoint('camera/cameras', endpoint_url, 1000);
     const furnaceEndPoint = useAdapterEndpoint('furnace', endpoint_url, 1000);
     const liveXEndPoint = useAdapterEndpoint('livex', endpoint_url, 1000);
 
@@ -43,7 +43,7 @@ function Trigger(props) {
     const [linkCameras, setLinkCameras] = useState(null);
     useEffect(() => {
       const currentLinks = liveXEndPoint.data?.acquisition?.link_triggers?.current;
-      
+
       const linked = Array.isArray(currentLinks) && currentLinks.length > 0;  // Check if there are linked triggers
       setLinkCameras(linked);
     }, [liveXEndPoint.data?.acquisition?.link_triggers?.current, linkCameras]);
@@ -117,6 +117,17 @@ function Trigger(props) {
                           </InputGroup.Text>
                         )}
                       </InputGroup>
+                      {orcaEndPoint?.data?.cameras?.hasOwnProperty(key) && (
+                        <InputGroup>
+                          <InputGroup.Text>Exposure (ms)</InputGroup.Text>
+                          <EndPointFormControl
+                            endpoint={liveXEndPoint}
+                            type="number"
+                            fullpath={`cameras/${key}_exposure`}
+                            event_type="enter"
+                          />
+                        </InputGroup>
+                      )}
                     </Row>
                     <Row className="ms-1 me-1">
                       <EndPointButton
@@ -225,7 +236,7 @@ function Trigger(props) {
                     border: '1px solid lightblue',
                     backgroundColor: '#e0f7ff'
                   }}>
-                    {checkNullNoDp(orcaEndPoint?.data['widefov']?.status.frame_number)}
+                    {checkNullNoDp(orcaEndPoint?.data?.cameras?.widefov.status.frame_number)}
                   </InputGroup.Text>
                 </InputGroup>
               </Col>

@@ -100,6 +100,12 @@ class LiveXController(BaseController):
 
     def _build_tree(self):
         """Construct the parameter tree once adapters have been initialised."""
+        cam_subtree = {
+            f'{camera.name}_exposure': (lambda camera=camera: camera.config['exposure_time'], partial(
+                self.set_camera_exposure, cam_name=camera.name)
+            ) for camera in self.orca.cameras
+        }
+
         self.param_tree = ParameterTree({
             'acquisition': {
                 'acquiring': (lambda: self.acquiring, None),
@@ -114,7 +120,8 @@ class LiveXController(BaseController):
                     'link_cameras': (lambda: None, self.trigger_manager.link_triggers),
                     'unlink_cameras': (lambda: None, self.trigger_manager.unlink_triggers)
                 }
-            }
+            },
+            'cameras': cam_subtree
         })
 
     def _generate_experiment_filenames(self):
@@ -281,6 +288,26 @@ class LiveXController(BaseController):
              'freerun': self.trigger_manager.freerun}
         )
 
+    def set_camera_exposure(self, exposure_time, cam_name=None):
+        """Interface for the orca-quest adapter to set camera exposure with linked trigger logic.
+        """
+        if cam_name is None or cam_name not in [camera.name for camera in self.orca.cameras]:
+            logging.error("Camera name not provided or not found for exposure setting.")
+            return
+
+        camera = None
+        for cam in self.orca.cameras:
+            if cam.name == cam_name:
+                camera = cam
+        camera.set_config(value=exposure_time, param='exposure_time')
+
+        if cam_name in self.trigger_manager.linked_triggers:
+            for linked in self.trigger_manager.linked_triggers:
+                if linked != cam_name:
+                    for cam in self.orca.cameras:
+                        if cam.name == linked:
+                            cam.set_config(value=exposure_time, param='exposure_time')
+                            logging.debug(f"Set linked camera {linked} exposure to {exposure_time} ms.")
 
     def cleanup(self):
         """Clean up the controller.
