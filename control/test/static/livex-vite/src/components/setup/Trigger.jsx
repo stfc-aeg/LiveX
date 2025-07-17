@@ -46,7 +46,7 @@ function Trigger(props) {
 
       const linked = Array.isArray(currentLinks) && currentLinks.length > 0;  // Check if there are linked triggers
       setLinkCameras(linked);
-    }, [liveXEndPoint.data?.acquisition?.link_triggers?.current, linkCameras]);
+    }, [liveXEndPoint.data?.acquisition?.link_triggers?.current]);
 
     const handleLinkCamerasChange = (e) => {
       const checked = e.target.checked;
@@ -54,6 +54,21 @@ function Trigger(props) {
 
       const path = checked ? 'acquisition/link_triggers/link_cameras' : 'acquisition/link_triggers/unlink_cameras';
       const value = ['widefov', 'narrowfov'];
+      liveXEndPoint.put(value, path);
+    }
+
+    const [exposureLookup, setExposureLookup] = useState(null);
+    useEffect(() => {
+      const usingLookup = liveXEndPoint.data?.cameras?.use_exposure_lookup;
+      setExposureLookup(usingLookup);
+    }, [liveXEndPoint.data?.cameras?.use_exposure_lookup]);
+
+    const handleExposureLookupChange = (e) => {
+      const checked = e.target.checked;
+      setExposureLookup(checked);
+
+      const path = 'cameras/use_exposure_lookup';
+      const value = checked ? true : false;  // Put false to disable if checked (enabled)
       liveXEndPoint.put(value, path);
     }
 
@@ -209,8 +224,10 @@ function Trigger(props) {
                 <Row className='mt-4'>
                   <Form.Check
                     type="checkbox"
-                    label="Use camera exposure lookup table"
+                    label="Lookup cam exposure from frequency"
                     className="large-checkbox"
+                    checked={exposureLookup}
+                    onChange={handleExposureLookupChange}
                   />
                 </Row>
               </Col>

@@ -1,17 +1,29 @@
 """Class to handle trigger management for the acquisition adapter."""
 import logging
 from functools import partial
+import json
 
 class TriggerManager:
 
-    def __init__(self, trigger_adapter, furnace_adapter, ref_trigger='furnace'):
+    def __init__(self, trigger_adapter, furnace_adapter, camera_adapter, exposure_lookup_path, ref_trigger='furnace'):
 
         self.triggers = trigger_adapter.triggers
         self.ref_trigger = ref_trigger
 
         self.furnace = furnace_adapter
+        self.orca = camera_adapter
+        self.cam_names = [cam.name for cam in self.orca.cameras]
+
+        try:
+            with open(exposure_lookup_path, 'r') as f:
+                logging.debug(f"{f}")
+                self.exp_lookup = {int(k): v for k,v in json.load(f).items()}
+        except Exception as e:
+            logging.warning(f"Error loading cam exposure lookup table: {e}. Setting to empty.")
+            self.exp_lookup = {}
 
         self.linked_triggers = []  # List to hold connected triggers
+        self.use_exposure_lookup = False
 
         # Initialize frequencies and frequency subtree
         self.frequencies = {}
@@ -21,6 +33,13 @@ class TriggerManager:
         self.freerun = True
         self.targets = {name: 0 for name in self.triggers.keys()}  # Store targets for freerun use
         self.get_frequencies()
+
+        self.cam_subtree = {
+            f'{camera.name}_exposure': (lambda camera=camera: camera.config['exposure_time'], partial(
+                self.set_camera_exposure, cam_name=camera.name)
+            ) for camera in self.orca.cameras
+        }
+        self.cam_subtree['use_exposure_lookup'] = (lambda: self.use_exposure_lookup, self.set_use_exposure_lookup)
 
     def get_frequencies(self):
         """Get all triggers and set up the tree."""
@@ -39,6 +58,7 @@ class TriggerManager:
             return
 
         value = float(value)
+
         self.triggers[trigger].set_frequency(value)
         self.frequencies[trigger] = value
 
@@ -48,6 +68,12 @@ class TriggerManager:
                 if linked != trigger:
                     self.triggers[linked].set_frequency(value)
                     self.frequencies[linked] = value
+
+        # Handle exposure if needed
+        if self.use_exposure_lookup and trigger in self.cam_names:
+            cam = self.orca.get_camera_by_name(trigger)
+            exp_time = self.exp_lookup.get(value, cam.config['exposure_time'])
+            self.set_camera_exposure(exp_time, trigger)
 
         self.furnace.update_furnace_frequency(self.frequencies[self.ref_trigger])
 
@@ -80,6 +106,31 @@ class TriggerManager:
             self.linked_triggers.remove(trigger1)
         if trigger2 in self.linked_triggers:
             self.linked_triggers.remove(trigger2)
+
+    def set_use_exposure_lookup(self, value):
+        """Enable or disable exposure lookup table for cameras."""
+        self.use_exposure_lookup = bool(value)
+
+    def set_camera_exposure(self, exposure_time, cam_name=None):
+        """Interface for the orca-quest adapter to set camera exposure with linked trigger logic.
+        """
+        if cam_name is None or cam_name not in self.cam_names:
+            logging.error("Camera name not provided or not found for exposure setting.")
+            return
+
+        camera = None
+        camera = self.orca.get_camera_by_name(cam_name)
+        camera.set_config(value=exposure_time, param='exposure_time')
+
+        # Handle linked cameras
+        if cam_name in self.linked_triggers:
+            for linked in self.linked_triggers:
+                if linked != cam_name:
+                    for cam in self.orca.cameras:
+                        if cam.name == linked:
+                            cam.set_config(value=exposure_time, param='exposure_time')
+                            logging.debug(f"Set linked camera {linked} exposure to {exposure_time} ms.")
+
 
     def set_acq_frame_target(self, value):
         """Set the frame target(s) of the acquisition."""
