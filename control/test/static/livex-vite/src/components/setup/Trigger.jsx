@@ -134,7 +134,7 @@ function Trigger(props) {
                       </InputGroup>
                       {orcaEndPoint?.data?.cameras?.hasOwnProperty(key) && (
                         <InputGroup>
-                          <InputGroup.Text>Exposure (ms)</InputGroup.Text>
+                          <InputGroup.Text>Exposure</InputGroup.Text>
                           <EndPointFormControl
                             endpoint={liveXEndPoint}
                             type="number"
