@@ -16,7 +16,6 @@ class TriggerManager:
 
         try:
             with open(exposure_lookup_path, 'r') as f:
-                logging.debug(f"{f}")
                 self.exp_lookup = {int(k): v for k,v in json.load(f).items()}
         except Exception as e:
             logging.warning(f"Error loading cam exposure lookup table: {e}. Setting to empty.")
@@ -45,7 +44,6 @@ class TriggerManager:
         """Get all triggers and set up the tree."""
         for name, trigger in self.triggers.items():
             self.frequencies[name] = float(trigger.frequency)
-            logging.debug(f"self.frequencies[{name}] = {self.frequencies[name]}")
 
             self.frequency_subtree[name] = (
                 lambda trigger=trigger: float(trigger.frequency), partial(self.set_frequency, trigger=name)
@@ -97,7 +95,6 @@ class TriggerManager:
         trigger1, trigger2 = triggers
         self.linked_triggers.append(trigger1) if trigger1 not in self.linked_triggers else None
         self.linked_triggers.append(trigger2) if trigger2 not in self.linked_triggers else None
-        logging.debug(f"Linked triggers: {self.linked_triggers}")
 
     def unlink_triggers(self, triggers):
         """Unlink two triggers from each other."""
@@ -126,11 +123,8 @@ class TriggerManager:
         if cam_name in self.linked_triggers:
             for linked in self.linked_triggers:
                 if linked != cam_name:
-                    for cam in self.orca.cameras:
-                        if cam.name == linked:
-                            cam.set_config(value=exposure_time, param='exposure_time')
-                            logging.debug(f"Set linked camera {linked} exposure to {exposure_time} ms.")
-
+                    cam = self.orca.get_camera_by_name(linked)
+                    cam.set_config(value=exposure_time, param='exposure_time')
 
     def set_acq_frame_target(self, value):
         """Set the frame target(s) of the acquisition."""
