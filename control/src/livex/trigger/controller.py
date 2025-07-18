@@ -8,15 +8,12 @@ from livex.base_controller import BaseController
 from livex.modbusAddresses import modAddr
 from livex.util import (
     LiveXError,
-    read_decode_holding_reg,
-    read_decode_input_reg,
     write_coil,
     write_modbus_float,
 )
 from livex.mockModbusClient import MockModbusClient
 
 from .trigger import Trigger
-
 
 class TriggerController(BaseController):
     """Class to instantiate and manage a modbus connection to control the triggering device."""

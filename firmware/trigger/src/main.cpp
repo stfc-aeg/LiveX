@@ -47,11 +47,12 @@ TaskHandle_t modbusTaskHandle;
 SemaphoreHandle_t pwmMutex;
 
 // PWM parameters
-uint32_t frequency[4] = {0, 0, 0, 0};
+float frequency[4] = {0, 0, 0, 0};
 uint32_t pulseCount[4] = {0, 0, 0, 0}; // Target # of instances
 volatile uint32_t activePulseCount[4] = {0, 0, 0, 0}; // For use in interrupts, enables restart logic
 volatile bool enablePWM[4] = {false, false, false, false};
 bool timersRunning[4] = {false, false, false, false};
+volatile bool timerComplete[4] = {false, false, false, false};
 
 static bool eth_connected = false;
 bool startAll = false;
@@ -101,6 +102,7 @@ void IRAM_ATTR handleInterrupt(int i)
       pinStates[i] = false;  // Reset pin
       digitalWrite(pwmPins[i], pinStates[i]);
       timerAlarmDisable(timers[i]);
+      timerComplete[i] = true;  // Flag to handle timer stop in main loop
     }
   }
 }
@@ -176,7 +178,7 @@ void setup()
   for (int i=0; i<NUM_TRIGGERS; i++)
   {
     timers[i] = timerBegin(i, 80, true); // Timer number, prescaler (80MHz), count up
-    if (timers[i]){ DEBUG_PRINTF("Timer %d started successfully.", timers[i]); }
+    if (timers[i]){ DEBUG_PRINTF("Timer %d started successfully.", i); }
     switch (i)
     {
     case 0:
@@ -205,6 +207,15 @@ void loop()
 {
   // Tasks handle everything
   DEBUG_PRINTF("%d, ", counter);
+  for (int i=0; i<NUM_TRIGGERS; i++)
+  {
+    if (timerComplete[i])
+    {
+      timerComplete[i] = false;  // Reset the flag
+      stopTimer(i);
+      DEBUG_PRINTF("Timer %d completed.\n", i);
+    }
+  }
   vTaskDelay(1000);
 }
 
@@ -229,12 +240,12 @@ void setupModbus()
 // Calculate and write timer period, update pulseCount for running timer
 void updateTimer(int index)
 {
-  uint32_t period = 1000000 / (frequency[index] * 2); // Period in us. 1/f * 1/2
+  uint32_t period = (uint32_t)(1000000.0f / (frequency[index]*2)); // Period in us. 1/f * 1/2
   activePulseCount[index] = pulseCount[index];
   // Timer alarm toggling pin at period interval gives frequency equal to register value (50%)
   timerAlarmWrite(timers[index], period, true);
 
-  Serial.printf("Timer %d set to frequency/period %d/%d with target %d.\n", index, frequency[index], period, activePulseCount[index]);
+  Serial.printf("Timer %d set to frequency/period %d/%d with target %u.\n", index, frequency[index], period, activePulseCount[index]);
 }
 
 // Begin specified timer, ensuring it is updated
@@ -327,7 +338,7 @@ void modbusTask(void *pvParameters)
           for (int i=0; i<NUM_TRIGGERS; i++)
           {
             bool isRunning = timersRunning[i];
-            uint32_t newFreq = combineHoldingRegisters(&modbusTCPServer, addrIntvl[i]);
+            float newFreq = combineHoldingRegisters(&modbusTCPServer, addrIntvl[i]);
             if (newFreq > 0 && newFreq != frequency[i]) // Avoiding division by 0 errors when calculating period
             {
               // Avoid unexpected results by stopping timer before updating parameters

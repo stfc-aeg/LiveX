@@ -307,6 +307,10 @@ class FurnaceController():
         Otherwise, results may be inconsistent.
         :param freq: new frequency as integer
         """
+        if freq <= 0:
+            logging.warning("""Cannot set furnace frequency to a non-positive value.
+            Defaulting to 1 for data buffer and task interval.""")
+            freq = 1
         self.pid_frequency = freq
 
         # Update buffer size to remain 1/s
@@ -333,7 +337,7 @@ class FurnaceController():
                         logging.debug(f"Mock acquisition error: {e}")
 
                     # Do not need to go as fast for a fake acquisition, there is no timeout
-                    time.sleep(1/self.pid_frequency)
+                time.sleep(1/self.pid_frequency)
 
             else:
                 if self.acquiring:

@@ -1,0 +1,13 @@
+html {
+  font: 75% / 1.15 sans-serif;
+}
+
+.large-checkbox .form-check-input {
+  width: 1.5em;
+  height: 1.5em;
+}
+
+.large-checkbox .form-check-label {
+  font-size: 1.25rem;
+  margin-left: 0.5rem;
+}
