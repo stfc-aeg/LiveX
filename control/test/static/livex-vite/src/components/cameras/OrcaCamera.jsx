@@ -150,21 +150,6 @@ function OrcaCamera(props) {
               <Stack>
               <InputGroup>
                 <InputGroup.Text>
-                  command
-                </InputGroup.Text>
-                <EndPointFormControl
-                  endpoint={orcaEndPoint}
-                  type="text"
-                  fullpath="command"
-                  event_type="enter"
-                  disabled={connectedPuttingDisable}>
-                </EndPointFormControl>
-              </InputGroup>
-              </Stack>
-
-              <Stack>
-              <InputGroup>
-                <InputGroup.Text>
                     exposure_time
                 </InputGroup.Text>
                 <EndPointFormControl
