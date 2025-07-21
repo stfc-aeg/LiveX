@@ -28,10 +28,13 @@ function OrcaCamera(props) {
     const nameString = name.toString();
     let orcaAddress = 'camera/cameras/'+nameString;
     const orcaEndPoint = useAdapterEndpoint(orcaAddress, endpoint_url, 1000);
-
-    let liveViewAddress = 'live_data/liveview/'+nameString;
-    const liveViewEndPoint = useAdapterEndpoint(liveViewAddress, endpoint_url, 1000);
+ 
+    const liveViewEndPoint = useAdapterEndpoint('live_data', endpoint_url, 5000);
     const liveViewData = liveViewEndPoint?.data[name];
+
+    // let imgAddress = 'live_data/_image/'+nameString;
+    // const imgEndPoint = useAdapterEndpoint(imgAddress, endpoint_url, 1000);
+    // const imgData = imgEndPoint?.data;
 
     // Array of camera status names
     const status = ['disconnected', 'connected', 'capturing'];
@@ -167,9 +170,9 @@ function OrcaCamera(props) {
                   <ClickableImage
                     id={`image-${name}`}
                     endpoint={liveViewEndPoint}
-                    imgSrc={liveViewData?.image?.data}
-                    fullpath="image"
-                    paramToUpdate="roi"
+                    imgPath={`_image/${name}`}
+                    coordsPath={`${name}/image`}
+                    coordsParam="roi"
                     valuesAsPercentages={true}>
                   </ClickableImage>
                   </Row>

@@ -6,8 +6,8 @@ function ClickableImage(props){
       than one ClickableImage on a single page, you will need a unique id for its canvas.
     - endpoint is used to send selected coordinates, index refers to image path of multiple cameras
     - 'imgSrc' is the image data. this could be from an endpoint e.g.: liveDataEndpoint?.image.data
-    - fullpath is the path the coordinates should be written to, no trailing or leading slashes
-    - paramToUpdate is the parameter you are updating. The 'final' part of the address
+    - coordsPath is the path the coordinates should be written to, no trailing or leading slashes
+    - coordsParam is the parameter you are updating. The 'final' part of the address
     - maximiseAxis is 'x' or 'y' and overrides user selection to the bounds of that axis
     - valuesAsPercentages changes output from pixel values to relative percentage selected.
       For example, x values  100-120 on a 300px-wide image. This returns [33.33,40], not [100,120].
@@ -15,16 +15,38 @@ function ClickableImage(props){
     - rectRgbaProperties is the fill style for the polygon. format: 'rgba(R,G,B,A)'.
       rgba properties are 0->255 or 0->1 for alpha (transparency)
     */
-    const {id, endpoint, imgSrc, fullpath, paramToUpdate, maximiseAxis=null, valuesAsPercentages=false, rectOutlineColour='white', rectRgbaProperties='rgba(255,255,255,0.33)' } = props;
+    const {id, endpoint, imgPath, coordsPath, coordsParam,
+      maximiseAxis=null, valuesAsPercentages=false, rectOutlineColour='white', rectRgbaProperties='rgba(255,255,255,0.33)'
+    } = props;
 
     const svgId = `canvas-${id}`;  // canvas id
 
     const maxAxis = maximiseAxis ? maximiseAxis.toLowerCase() : null;
 
-    const [imgData, changeImgData] = useState([{}]);
+    const [imgData, changeImgData] = useState(null);
+
+    const enable = true;
+
+    const refreshImage = useCallback(() => {
+        endpoint.get(imgPath, {responseType: "blob"})
+        .then(result => {
+            URL.revokeObjectURL(imgData);  // memory management
+            const img_url = URL.createObjectURL(result);
+            changeImgData(img_url);
+            // endpoint.refreshData();
+        }).catch((error) => {
+            console.error("IMAGE GET FAILED: ", error);
+            changeImgData(null);
+        })
+    }, [endpoint.updateFlag]);
+
     useEffect(() => {
-        changeImgData(`data:image/jpg;base64,${imgSrc}`);
-      }, [imgSrc]);
+        let timer_id;
+        if (enable){
+          timer_id = setInterval(refreshImage, 1000);
+        }
+        return () => clearInterval(timer_id);
+    }, [refreshImage, enable]);
 
     // Initialize some states to keep track of points clicked
     const [startPoint, setStartPoint] = useState([]);
@@ -128,9 +150,10 @@ function ClickableImage(props){
         }
 
         // Send the coordinate data
-        const sendVal = {[paramToUpdate]: sendData};
+        const sendVal = {[coordsParam
+        ]: sendData};
         console.log("sendval:", JSON.stringify(sendVal));
-        endpoint.put(sendVal, fullpath);
+        endpoint.put(sendVal, coordsPath);
         setPoints([]);
       }
     }, [startPoint, getPoint, calculateRectangle]);
@@ -157,15 +180,20 @@ function ClickableImage(props){
             : null
           }
         </svg>
-        <img
-          id='img'
-          src={imgData}
-          style={{
-          display:'block',
-          width:'100%',
-          height:'auto'
-          }}>
-        </img>
+        {imgData ? (
+          <img
+            id='img'
+            src={imgData}
+            style={{
+            display:'block',
+            width:'100%',
+            height:'auto'
+            }}
+            alt="Live camera feed"
+            />
+        ) : (
+          <div>No Image Available</div>
+        )}
       </div>
     );
   };

@@ -21,7 +21,7 @@ class LiveDataController(BaseController):
         endpoints = [
             item.strip() for item in options.get('livedata_endpoint', None).split(",")
         ]
-        names = [
+        self.names = [
             item.strip() for item in options.get('endpoint_name', None).split(",")
         ]
         # Array of dicts of resolutions
@@ -32,14 +32,14 @@ class LiveDataController(BaseController):
         ]        
 
         self.tree = {
-            "liveview": {}
+            '_image': {}
         }
 
         self.processors = []
 
         # For each provided endpoint
         for i in range(len(endpoints)):
-            name = names[i]
+            name = self.names[i]
             resolution = resolutions[i]
             self.processors.append(
                 LiveDataProcessor(endpoints[i], resolution)
@@ -49,7 +49,7 @@ class LiveDataController(BaseController):
 
             # Create 'branch' of ParameterTree for each Processor
             tree = {
-                "name": (lambda: name, None),
+                "cam_name": (lambda: name, None),
                 "endpoint": (lambda proc=proc: proc.endpoint, None),
                 "image":
                 {  # Partials provide processor as an argument
@@ -64,8 +64,6 @@ class LiveDataController(BaseController):
                                    partial(self.set_resolution, processor=proc)),
                     "colour": (lambda proc=proc: proc.colour,
                                partial(self.set_img_colour, processor=proc)),
-                    "data": (lambda proc=proc: proc.get_image(), None),
-                    # Use get_image in processor for JSON serialisation
                     "clip_range_value": (lambda proc=proc: [proc.clipping['min'], proc.clipping['max']],
                                    partial(self.set_img_clip_value, processor=proc)),
                     "clip_range_percent": (lambda proc=proc: [proc.clipping['percent']['min'], proc.clipping['percent']['max']],
@@ -76,7 +74,12 @@ class LiveDataController(BaseController):
                     "histogram": (lambda proc=proc: proc.get_histogram(), None)
                 }
             }
-            self.tree['liveview'][name] = tree
+            self.tree[name] = tree
+
+            self.tree['_image'].update({
+                    name: (None, None),
+                    # Use get_image in processor for JSON serialisation
+            })
 
         self.param_tree = ParameterTree(self.tree)
 
@@ -92,6 +95,12 @@ class LiveDataController(BaseController):
         if 'sequencer' in self.adapters:
             logging.debug("Live data controller registering context with sequencer")
             self.adapters['sequencer'].add_context('livedata', self)
+
+    def get_image_from_processor_name(self, name):
+        if name in self.names:
+            index = self.names.index(name)
+            processor = self.processors[index]
+            return processor.get_image()
 
     def cleanup(self):
         """Clean up the LiveDataController instance.

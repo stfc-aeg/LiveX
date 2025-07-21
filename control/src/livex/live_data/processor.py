@@ -136,12 +136,11 @@ class LiveDataProcessor():
         _, buffer = cv2.imencode('.jpg', colour_data)
         buffer = np.array(buffer)
 
-        zipped_data = base64.b64encode(buffer)
-
         while (not self.image_queue.empty()):
             self.image_queue.get()
 
-        self.image_queue.put(zipped_data.decode('utf-8'))
+        # self.image_queue.put(zipped_data.decode('utf-8'))
+        self.image_queue.put(buffer.tobytes())
 
         # Fixed quantity of bins instead of generating it from range
         bins_count = 2048
