@@ -71,13 +71,15 @@ class LiveDataController(BaseController):
                     "roi": (lambda proc=proc: [
                         proc.roi['x_lower'], proc.roi['x_upper'], proc.roi['y_lower'], proc.roi['y_upper']],
                         partial(self.set_roi_boundaries, processor=proc)),
-                    "histogram": (lambda proc=proc: proc.get_histogram(), None)
                 }
             }
             self.tree[name] = tree
 
             self.tree['_image'].update({
-                    name: (None, None),
+                    name: {
+                        'image': (lambda: None, None),
+                        'histogram': (lambda: None, None)
+                    }
                     # Use get_image in processor for JSON serialisation
             })
 
@@ -96,11 +98,17 @@ class LiveDataController(BaseController):
             logging.debug("Live data controller registering context with sequencer")
             self.adapters['sequencer'].add_context('livedata', self)
 
-    def get_image_from_processor_name(self, name):
+    def get_image_from_processor_name(self, name, type):
+        if type not in ['image', 'histogram']:
+            return 0  # 'null image'
+
         if name in self.names:
             index = self.names.index(name)
             processor = self.processors[index]
-            return processor.get_image()
+            if type == 'image':
+                return processor.get_image()
+            elif type == 'histogram':
+                return processor.get_histogram()
 
     def cleanup(self):
         """Clean up the LiveDataController instance.

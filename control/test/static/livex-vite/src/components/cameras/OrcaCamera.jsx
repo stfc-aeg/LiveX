@@ -29,7 +29,7 @@ function OrcaCamera(props) {
     let orcaAddress = 'camera/cameras/'+nameString;
     const orcaEndPoint = useAdapterEndpoint(orcaAddress, endpoint_url, 1000);
  
-    const liveViewEndPoint = useAdapterEndpoint('live_data', endpoint_url, 5000);
+    const liveViewEndPoint = useAdapterEndpoint('live_data', endpoint_url, 1000);
     const liveViewData = liveViewEndPoint?.data[name];
 
     // let imgAddress = 'live_data/_image/'+nameString;
@@ -170,7 +170,7 @@ function OrcaCamera(props) {
                   <ClickableImage
                     id={`image-${name}`}
                     endpoint={liveViewEndPoint}
-                    imgPath={`_image/${name}`}
+                    imgPath={`_image/${name}/image`}
                     coordsPath={`${name}/image`}
                     coordsParam="roi"
                     valuesAsPercentages={true}>
@@ -180,9 +180,9 @@ function OrcaCamera(props) {
                   <ClickableImage
                     id={`histogram-${name}`}
                     endpoint={liveViewEndPoint}
-                    imgSrc={liveViewData?.image?.histogram}
-                    fullpath="image"
-                    paramToUpdate="clip_range_percent"
+                    imgPath={`_image/${name}/histogram`}
+                    coordsPath={`${name}/image`}
+                    coordsParam="clip_range_percent"
                     maximiseAxis="y"
                     rectOutlineColour='black'
                     rectRgbaProperties='rgba(50,50,50,0.05)'

@@ -171,10 +171,9 @@ class LiveDataProcessor():
         plt.close(fig)
 
         _, histImage = cv2.imencode('.jpg', histData)
-        zipped_data = base64.b64encode(histImage)
         while (not self.hist_queue.empty()):
             self.hist_queue.get()
-        self.hist_queue.put(zipped_data.decode('utf-8'))
+        self.hist_queue.put(histImage.tobytes())
 
     def get_colour_map(self):
         """Get the colour map based on the colour string. Defaults to 'bone' (greyscale)."""

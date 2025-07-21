@@ -13,15 +13,20 @@ class LiveDataAdapter(BaseAdapter):
         import logging
         try:
             levels = path.split('/')
+            img_bytes = None
+            # structure for intercept: _image/<name>/<image or histogram>
             if levels[0] == '_image':
+                logging.warning(f"levels: {levels}")
+                if levels[-1] == 'image':
+                    img_bytes = self.controller.get_image_from_processor_name(levels[1], 'image')
+                elif levels[-1] == 'histogram':
+                    img_bytes = self.controller.get_image_from_processor_name(levels[1], 'histogram')
 
-                img_bytes = self.controller.get_image_from_processor_name(levels[1])
                 if not img_bytes or not isinstance(img_bytes, (bytes, bytearray)):
                     return ApiAdapterResponse(b"", content_type="text/plain", status_code=200)
 
                 response=img_bytes
                 content_type="image/jpeg"
-                logging.warning(f"response type: {type(response)} : {response}")
             else:
                 response = self.controller.get(path, with_metadata=False)
                 content_type="application/json"
