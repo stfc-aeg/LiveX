@@ -16,7 +16,6 @@ class LiveDataAdapter(BaseAdapter):
             img_bytes = None
             # structure for intercept: _image/<name>/<image or histogram>
             if levels[0] == '_image':
-                logging.warning(f"levels: {levels}")
                 if levels[-1] == 'image':
                     img_bytes = self.controller.get_image_from_processor_name(levels[1], 'image')
                 elif levels[-1] == 'histogram':

@@ -198,7 +198,7 @@ function OrcaCamera(props) {
                   <EndPointDropdownSelector
                     endpoint={liveViewEndPoint}
                     event_type="select"
-                    fullpath="image/colour"
+                    fullpath={`${name}/image/colour`}
                     buttonText={liveViewData?.image?.colour}
                     variant="outline-secondary">
                       {colourEffects.map((effect, index) => (
@@ -241,7 +241,7 @@ function OrcaCamera(props) {
                     <EndPointButton
                       endpoint={liveViewEndPoint}
                       value={dimensions}
-                      fullpath={"image/dimensions"}
+                      fullpath={`${name}/image/dimensions`}
                       event_type="click"
                       variant="outline-primary"
                       className="mb-2">
@@ -257,7 +257,7 @@ function OrcaCamera(props) {
                       </Form.Label>
                       <EndPointSlider
                         endpoint={liveViewEndPoint}
-                        fullpath="image/resolution"
+                        fullpath={`${name}/image/resolution`}
                         min={1}
                         max={100}
                         step={1}>  
@@ -270,7 +270,7 @@ function OrcaCamera(props) {
                     <EndPointDropdownSelector
                       endpoint={liveViewEndPoint}
                       event_type="select"
-                      fullpath="image/resolution"
+                      fullpath={`${name}/image/resolution`}
                       buttonText={liveViewData?.image?.resolution}
                       variant="outline-secondary">
                         {commonImageResolutions.map((effect, index) => (
@@ -288,7 +288,7 @@ function OrcaCamera(props) {
                 <Row className="mt-3">
                   <EndPointDoubleSlider
                     endpoint={liveViewEndPoint}
-                    fullpath="image/clip_range_value"
+                    fullpath={`${name}/image/clip_range_value`}
                     min="0"
                     max="65535"
                     steps="100"
@@ -296,7 +296,7 @@ function OrcaCamera(props) {
                   </EndPointDoubleSlider>
                   <EndPointButton
                     endpoint={liveViewEndPoint}
-                    fullpath={"image/clip_range_value"}
+                    fullpath={`${name}/image/clip_range_value`}
                     event_type="click"
                     value={[0, 65535]}
                     variant="outline-primary">
@@ -306,7 +306,7 @@ function OrcaCamera(props) {
                 <Row className="mt-3">
                   <EndPointButton
                     endpoint={liveViewEndPoint}
-                    fullpath={"image/roi"}
+                    fullpath={`${name}/image/roi`}
                     event_type="click"
                     value={[[0, 100], [0, 100]]}
                     variant="outline-primary">
