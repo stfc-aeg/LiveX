@@ -20,12 +20,16 @@ function ClickableImage(props){
     } = props;
 
     const svgId = `canvas-${id}`;  // canvas id
-
     const maxAxis = maximiseAxis ? maximiseAxis.toLowerCase() : null;
+    const enable = true;  // Could do something with timer
+
+    const buttons = {
+      left: 0,
+      middle: 1,
+      right: 2
+    }
 
     const [imgData, changeImgData] = useState(null);
-
-    const enable = true;
 
     const refreshImage = useCallback(() => {
         endpoint.get(imgPath, {responseType: "blob"})
@@ -43,7 +47,7 @@ function ClickableImage(props){
     useEffect(() => {
         let timer_id;
         if (enable){
-          timer_id = setInterval(refreshImage, 1000);
+          timer_id = setInterval(refreshImage, 950);
         }
         return () => clearInterval(timer_id);
     }, [refreshImage, enable]);
@@ -104,11 +108,32 @@ function ClickableImage(props){
       setCoords([[minX, maxX], [minY, maxY]]);
     }, [startPoint, endPoint, maxAxis]);
 
+    //  Handle context menu = handle right click
+    const handleContextMenu = useCallback(e => {
+      const isRectangle = startPoint || endPoint || points.length > 0;
+
+      if (isRectangle)
+      {
+        // Cancel context if already rectangle
+        e.preventDefault();
+        // Reset rectangle
+        setStartPoint(null);
+        setEndPoint(null);
+        setPoints([]);
+        setCoords([]);
+      }
+      // Otherwise open context as normal
+    })
+
     const handleMouseDown = useCallback(e => {
-      // First click does nothing by itself
-      const point = getPoint(e);
-      setStartPoint(point);
-      setEndPoint(point);
+      // First press sets start for when mouse moves
+      if (e.button===buttons.left)  // Left click only
+      {
+        const point = getPoint(e);
+        setStartPoint(point);
+        setEndPoint(point);
+      }
+
     }, [getPoint]);
 
     const handleMouseMove = useCallback(e => {
@@ -167,6 +192,7 @@ function ClickableImage(props){
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
+          onContextMenu={handleContextMenu}
           style={{position:'absolute',top:0,left:0,width:'100%',height:'100%'}}>
           {points.length === 4 ?
             <polygon
