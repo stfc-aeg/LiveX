@@ -9,8 +9,9 @@ import DropdownSelector from '../DropdownSelector';
 import Button from 'react-bootstrap/Button';
 import { useState } from 'react';
 import { Dropdown } from 'react-bootstrap';
+import { FloatingLabel } from 'react-bootstrap';
 
-import { checkNullNoDp } from '../../utils';
+import { checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../../utils';
 
 import ClickableImage from './ClickableImage';
 
@@ -125,29 +126,38 @@ function OrcaCamera(props) {
           }>
             <Col>
               <Row className="mb-3">
-                <Col xs={6}>
-                  <InputGroup>
-                    <InputGroup.Text>Status</InputGroup.Text>
-                    <InputGroup.Text style={{
-                      width: labelWidth,
-                      border: '1px solid lightblue',
-                      backgroundColor: '#e0f7ff'
-                    }}>
-                        {(orcaStatus || "Not found")}
-                    </InputGroup.Text>
-                  </InputGroup>
+                <Col xs={4}>
+                  <FloatingLabel
+                    label="Status">
+                      <Form.Control
+                        plaintext
+                        readOnly
+                        style={floatingLabelStyle}
+                        value={(orcaStatus || "Not found")}
+                      />
+                  </FloatingLabel>
                 </Col>
-                <Col xs={6}>
-                  <InputGroup>
-                    <InputGroup.Text>Frame count</InputGroup.Text>
-                    <InputGroup.Text style={{
-                      width: labelWidth,
-                      border: '1px solid lightblue',
-                      backgroundColor: '#e0f7ff'
-                    }}>
-                        {checkNullNoDp(orcaEndPoint?.data[name]?.status.frame_number)}
-                    </InputGroup.Text>
-                  </InputGroup>
+                <Col xs={4}>
+                  <FloatingLabel
+                    label="Frame Count">
+                      <Form.Control
+                        plaintext
+                        readOnly
+                        style={floatingLabelStyle}
+                        value={checkNullNoDp(orcaEndPoint?.data[name]?.status.frame_number)}
+                      />
+                  </FloatingLabel>
+                </Col>
+                <Col xs={4}>
+                  <FloatingLabel
+                    label="Cam Temp. (C)">
+                      <Form.Control
+                        plaintext
+                        readOnly
+                        style={floatingLabelStyle}
+                        value={checkNullNoDp(orcaEndPoint?.data[name]?.status?.camera_temperature || "Not found")}
+                      />
+                  </FloatingLabel>
                 </Col>
               </Row>
               <Stack>
