@@ -185,41 +185,44 @@ function ClickableImage(props){
 
     // Only insert polygon tags if there's enough entries in the array
     return (
-      <div style={{position:'relative', display:'inline-block',
-      width:'100%', height:'auto'}}>
-        <svg
-          id={svgId}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onContextMenu={handleContextMenu}
-          style={{position:'absolute',top:0,left:0,width:'100%',height:'100%'}}>
-          {points.length === 4 ?
-            <polygon
-              points={points.map(point => point.join(",")).join(" ")}
-              style={{
-                      pointerEvents:'none', // Unclickable
-                      fill: rectRgbaProperties,
-                      stroke: rectOutlineColour // border
-                    }}
-              />
-            : null
-          }
-        </svg>
+
+      <div>
         {imgData ? (
-          <img
-            id='img'
-            src={imgData}
-            style={{
-            display:'block',
-            width:'100%',
-            height:'auto'
-            }}
-            alt="Live camera feed"
-            />
-        ) : (
-          <div>No Image Available</div>
-        )}
+          <div style={{position:'relative', display:'inline-block',
+          width:'100%', height:'auto'}}>
+            <svg
+              id={svgId}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onContextMenu={handleContextMenu}
+              style={{position:'absolute',top:0,left:0,width:'100%',height:'100%'}}>
+              {points.length === 4 ?
+                <polygon
+                  points={points.map(point => point.join(",")).join(" ")}
+                  style={{
+                          pointerEvents:'none', // Unclickable
+                          fill: rectRgbaProperties,
+                          stroke: rectOutlineColour // border
+                        }}
+                  />
+                : null
+              }
+            </svg>
+            <img
+              id='img'
+              src={imgData}
+              style={{
+              display:'block',
+              width:'100%',
+              height:'auto'
+              }}
+              alt="Live camera feed"
+              />
+              </div>
+          ) : (
+            <div>No Image Available</div>
+          )}
       </div>
     );
   };
