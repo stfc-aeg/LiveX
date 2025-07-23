@@ -4,6 +4,7 @@ import blosc
 import base64
 import zmq
 from multiprocessing import Process, Queue, Pipe
+import time
 
 import logging
 import matplotlib
@@ -133,22 +134,21 @@ class LiveDataProcessor():
                         self.roi['x_lower']:self.roi['x_upper']]
 
         colour_data = cv2.applyColorMap((roi_data / 256).astype(np.uint8), self.get_colour_map())
-        _, buffer = cv2.imencode('.jpg', colour_data)
+        _, buffer = cv2.imencode('.png', colour_data)
         buffer = np.array(buffer)
 
         while (not self.image_queue.empty()):
             self.image_queue.get()
 
-        # self.image_queue.put(zipped_data.decode('utf-8'))
         self.image_queue.put(buffer.tobytes())
 
         # Fixed quantity of bins instead of generating it from range
-        bins_count = 2048
+        bins_count = 1024
 
         # Create histogram
         flat_data = data.flatten()  # Histogram made on original data
         fig, ax = plt.subplots(figsize=(8,2), dpi=100)
-        ax.hist(flat_data, bins=bins_count, alpha=0.75, color='blue', log=True)
+        ax.hist(flat_data, bins=bins_count, alpha=0.75, color='blue', log=True, histtype='step')
 
         # No y-axis
         ax.yaxis.set_visible(False)
@@ -170,7 +170,7 @@ class LiveDataProcessor():
         # Must explicitly close figures
         plt.close(fig)
 
-        _, histImage = cv2.imencode('.jpg', histData)
+        _, histImage = cv2.imencode('.png', histData)
         while (not self.hist_queue.empty()):
             self.hist_queue.get()
         self.hist_queue.put(histImage.tobytes())

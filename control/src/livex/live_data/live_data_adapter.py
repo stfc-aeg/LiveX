@@ -25,7 +25,7 @@ class LiveDataAdapter(BaseAdapter):
                     return ApiAdapterResponse(b"", content_type="text/plain", status_code=200)
 
                 response=img_bytes
-                content_type="image/jpeg"
+                content_type="image/png"
             else:
                 response = self.controller.get(path, with_metadata=False)
                 content_type="application/json"

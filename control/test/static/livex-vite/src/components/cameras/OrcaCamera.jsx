@@ -201,7 +201,12 @@ function OrcaCamera(props) {
                   </ClickableImage>
                 </Row>
                 <Row className="mt-3">
-                  <Col xs={12} sm={6} style={{alignItems: 'center', justifyContent: 'center', display:'flex'}}>
+                  <Col xs={12} sm={6} 
+                    style={{
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      display:'flex'
+                    }}>
                     <EndPointButton
                       endpoint={liveViewEndPoint}
                       fullpath={`${name}/image/clip_range_value`}
@@ -211,7 +216,12 @@ function OrcaCamera(props) {
                       Reset Clipping Range to 100%
                     </EndPointButton>
                   </Col>
-                  <Col xs={12} sm={6}  style={{alignItems: 'center', justifyContent: 'center', display:'flex'}}>
+                  <Col xs={12} sm={6} 
+                    style={{
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      display:'flex'
+                    }}>
                     <EndPointButton
                       endpoint={liveViewEndPoint}
                       fullpath={`${name}/image/roi`}
