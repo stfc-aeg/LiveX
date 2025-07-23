@@ -17,11 +17,12 @@ from odin_data.control.ipc_channel import IpcChannel
 class LiveDataProcessor():
     """Class to process image data received on a multiprocess that it instantiates."""
 
-    def __init__(self, endpoint, resolution, size_x=2048, size_y=1152, colour='bone'):
+    def __init__(self, endpoint, resolution, pixel_bytes, size_x=2048, size_y=1152, colour='bone'):
         """Initialise the LiveDataProcessor object.
         This method constructs the Queue, Pipes and Process necessary for multiprocessing.
         :param endpoint: string representation of endpoint for image data.
         :param resolution: dict ({'x': x, 'y': y}) of maximum image dimensions
+        :param pixel_bytes: number of bytes per pixel in image data
         :param size_x: integer width of output image in pixels (default 640).
         :param size_y: integer height of output image in pixels (default 480).
         :param colour: string of opencv colourmap label (default 'bone').
@@ -36,6 +37,7 @@ class LiveDataProcessor():
         self.colour = colour
 
         self.resolution_percent = 100
+        self.pixel_bytes = pixel_bytes
 
         self.image = 0
         self.histogram = None
@@ -112,69 +114,74 @@ class LiveDataProcessor():
 
         dtype = 'float32' if header['dtype'] == "float" else header['dtype']
 
-        # Check for image compression by checking raw data size. Decompress if needed
-        # Currently assumes bytes-per-pixel of 2
-        if len(msg[1]) != (self.max_size_x*self.max_size_y*2):
-            uncompressed_data = blosc.decompress(msg[1])
-            data = np.fromstring(uncompressed_data, dtype=dtype)
-        else:
-            data = np.frombuffer(msg[1], dtype=dtype)  # Otherwise, grab the data as-is
+        try:
+            # Check for image compression by checking raw data size. Decompress if needed
+            # Currently assumes bytes-per-pixel of 2
+            if len(msg[1]) != (self.max_size_x*self.max_size_y*self.pixel_bytes):
+                uncompressed_data = blosc.decompress(msg[1])
+                data = np.fromstring(uncompressed_data, dtype=dtype)
+            else:
+                data = np.frombuffer(msg[1], dtype=dtype)  # Otherwise, grab the data as-is
 
-        # For histogram, it's easier to clip the data before reshaping it
-        clipped_ = np.clip(data, self.clipping['min'], self.clipping['max'])
-        # After clipping, scale data back out to full range
-        scaled_data = ((clipped_ - self.clipping['min']) / (self.clipping['max'] - self.clipping['min'])) * 65535
+            # For histogram, it's easier to clip the data before reshaping it
+            clipped_ = np.clip(data, self.clipping['min'], self.clipping['max'])
+            # After clipping, scale data back out to full range
+            scaled_data = ((clipped_ - self.clipping['min']) / (self.clipping['max'] - self.clipping['min'])) * 65535
 
-        reshaped_data = scaled_data.reshape((2304, 4096)) # ORCA dimensions
+            reshaped_data = scaled_data.reshape((2304, 4096)) # ORCA dimensions
 
-        # OpenCV operations
-        resized_data = cv2.resize(reshaped_data, (self.size_x, self.size_y))
+            # OpenCV operations
+            resized_data = cv2.resize(reshaped_data, (self.size_x, self.size_y))
 
-        roi_data = resized_data[self.roi['y_lower']:self.roi['y_upper'],
-                        self.roi['x_lower']:self.roi['x_upper']]
+            roi_data = resized_data[self.roi['y_lower']:self.roi['y_upper'],
+                            self.roi['x_lower']:self.roi['x_upper']]
 
-        colour_data = cv2.applyColorMap((roi_data / 256).astype(np.uint8), self.get_colour_map())
-        _, buffer = cv2.imencode('.png', colour_data)
-        buffer = np.array(buffer)
+            colour_data = cv2.applyColorMap((roi_data / 256).astype(np.uint8), self.get_colour_map())
+            _, buffer = cv2.imencode('.png', colour_data)
+            buffer = np.array(buffer)
 
-        while (not self.image_queue.empty()):
-            self.image_queue.get()
+            while (not self.image_queue.empty()):
+                self.image_queue.get()
 
-        self.image_queue.put(buffer.tobytes())
+            self.image_queue.put(buffer.tobytes())
+        except Exception as e:
+            logging.error(f"Error processing image data, no update: {e}")
 
-        # Fixed quantity of bins instead of generating it from range
-        bins_count = 1024
+        try:
+            # Fixed quantity of bins instead of generating it from range
+            bins_count = 1024
 
-        # Create histogram
-        flat_data = data.flatten()  # Histogram made on original data
-        fig, ax = plt.subplots(figsize=(8,2), dpi=100)
-        ax.hist(flat_data, bins=bins_count, alpha=0.75, color='blue', log=True, histtype='step')
+            # Create histogram
+            flat_data = data.flatten()  # Histogram made on original data
+            fig, ax = plt.subplots(figsize=(8,2), dpi=100)
+            ax.hist(flat_data, bins=bins_count, alpha=0.75, color='blue', log=True, histtype='step')
 
-        # No y-axis
-        ax.yaxis.set_visible(False)
-        for spine in ['top', 'left', 'right']:
-            ax.spines[spine].set_visible(False)
-        # Make x-axis take entire width
-        ax.set_xlim(left=self.clipping['min'], right=self.clipping['max'])
+            # No y-axis
+            ax.yaxis.set_visible(False)
+            for spine in ['top', 'left', 'right']:
+                ax.spines[spine].set_visible(False)
+            # Make x-axis take entire width
+            ax.set_xlim(left=self.clipping['min'], right=self.clipping['max'])
 
-        fig.tight_layout(pad=0.05)
+            fig.tight_layout(pad=0.05)
 
-        # Generate matplotlib figure and convert it to array
-        fig.canvas.draw()
-        histData = np.frombuffer(fig.canvas.renderer.buffer_rgba(), dtype=np.uint8)
-        width, height = fig.canvas.get_width_height()
-        # Resize frombuffer array to 3d
-        histData = histData.reshape((height, width, 4))
-        histData = cv2.cvtColor(histData, cv2.COLOR_RGBA2BGR)
+            # Generate matplotlib figure and convert it to array
+            fig.canvas.draw()
+            histData = np.frombuffer(fig.canvas.renderer.buffer_rgba(), dtype=np.uint8)
+            width, height = fig.canvas.get_width_height()
+            # Resize frombuffer array to 3d
+            histData = histData.reshape((height, width, 4))
+            histData = cv2.cvtColor(histData, cv2.COLOR_RGBA2BGR)
 
-        # Must explicitly close figures
-        plt.close(fig)
+            # Must explicitly close figures
+            plt.close(fig)
 
-        _, histImage = cv2.imencode('.png', histData)
-        while (not self.hist_queue.empty()):
-            self.hist_queue.get()
-        self.hist_queue.put(histImage.tobytes())
-
+            _, histImage = cv2.imencode('.png', histData)
+            while (not self.hist_queue.empty()):
+                self.hist_queue.get()
+            self.hist_queue.put(histImage.tobytes())
+        except Exception as e:
+            logging.error(f"Error when generating histogram: {e}")
     def get_colour_map(self):
         """Get the colour map based on the colour string. Defaults to 'bone' (greyscale)."""
         return getattr(cv2, f'COLORMAP_{self.colour.upper()}', cv2.COLORMAP_BONE)

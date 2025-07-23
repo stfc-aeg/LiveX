@@ -29,7 +29,8 @@ class LiveDataController(BaseController):
             {'x': int(width), 'y': int(height)}  # generate x/y dict
             for resolution in options.get('camera_resolution', '4096x2304').split(',') # get resolutions
             for width, height in [resolution.strip().split("x")] # each resolution split into array
-        ]        
+        ]
+        pixel_bytes = options.get('pixel_size', 2)
 
         self.tree = {
             '_image': {}
@@ -42,7 +43,7 @@ class LiveDataController(BaseController):
             name = self.names[i]
             resolution = resolutions[i]
             self.processors.append(
-                LiveDataProcessor(endpoints[i], resolution)
+                LiveDataProcessor(endpoints[i], resolution, pixel_bytes)
             )
 
             proc = self.processors[i]
