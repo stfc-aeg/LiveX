@@ -243,7 +243,7 @@ function OrcaCamera(props) {
                           style={floatingInputStyle}>
                             {colourEffects.map(
                               (effect, index) => (
-                                <option value={index} key={index}>
+                                <option value={effect} key={index}>
                                   {effect}
                                 </option>
                             ))}
@@ -259,7 +259,7 @@ function OrcaCamera(props) {
                           buttonText={liveViewData?.image?.resolution}
                           style={floatingInputStyle}>
                             {commonImageResolutions.map((effect, index) => (
-                              <option value={index} key={index}>
+                              <option value={effect} key={index}>
                                 {effect}
                               </option>
                               ))
