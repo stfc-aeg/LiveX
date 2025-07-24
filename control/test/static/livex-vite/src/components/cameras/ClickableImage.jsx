@@ -157,7 +157,7 @@ function ClickableImage(props){
         var sendData = coords;
 
         // Adjust to percentages if needed
-        if (valuesAsPercentages) 
+        if (valuesAsPercentages)
         {
           let canvas = document.getElementById(svgId);
           let width = canvas.clientWidth;

@@ -1,5 +1,6 @@
 import logging
 from functools import partial
+import cv2
 
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
@@ -42,8 +43,9 @@ class LiveDataController(BaseController):
         for i in range(len(endpoints)):
             name = self.names[i]
             resolution = resolutions[i]
+            orientation = options.get(f'{name}_orientation', 'up')
             self.processors.append(
-                LiveDataProcessor(endpoints[i], resolution, pixel_bytes)
+                LiveDataProcessor(endpoints[i], resolution, pixel_bytes, orientation)
             )
 
             proc = self.processors[i]
@@ -295,8 +297,15 @@ class LiveDataController(BaseController):
         x_low, x_high = value[0]
         y_low, y_high = value[1]
 
-        img_x = processor.size_x
-        img_y = processor.size_y
+        # If img is rotated 90/270 degrees, x and y will swap
+        if processor.orientation in [
+            cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_90_COUNTERCLOCKWISE
+        ]:
+            img_x = processor.size_y
+            img_y = processor.size_x
+        else:
+            img_x = processor.size_x
+            img_y = processor.size_y
 
         # If provided value is full image size, we don't care about existing ROI, to allow reset.
         value_is_reset = (

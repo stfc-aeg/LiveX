@@ -17,26 +17,36 @@ from odin_data.control.ipc_channel import IpcChannel
 class LiveDataProcessor():
     """Class to process image data received on a multiprocess that it instantiates."""
 
-    def __init__(self, endpoint, resolution, pixel_bytes, size_x=2048, size_y=1152, colour='bone'):
+    orientations = {
+        'up': -1,
+        'right': cv2.ROTATE_90_CLOCKWISE,       # 0
+        'down': cv2.ROTATE_180,                 # 1
+        'left': cv2.ROTATE_90_COUNTERCLOCKWISE  # 2
+    }
+
+    def __init__(self, endpoint, resolution, pixel_bytes, orientation, size_x=2048, size_y=1152, colour='bone'):
         """Initialise the LiveDataProcessor object.
         This method constructs the Queue, Pipes and Process necessary for multiprocessing.
         :param endpoint: string representation of endpoint for image data.
         :param resolution: dict ({'x': x, 'y': y}) of maximum image dimensions
         :param pixel_bytes: number of bytes per pixel in image data
-        :param size_x: integer width of output image in pixels (default 640).
-        :param size_y: integer height of output image in pixels (default 480).
+        :param size_x: integer width of output image in pixels (default 2048).
+        :param size_y: integer height of output image in pixels (default 1152).
         :param colour: string of opencv colourmap label (default 'bone').
         For colourmap options, see https://docs.opencv.org/3.4/d3/d50/group__imgproc__colormap.html
         """
         self.endpoint = endpoint
+        self.colour = colour
+
         self.max_size_x = resolution['x']
         self.max_size_y = resolution['y']
         self.size_x = size_x
         self.size_y = size_y
         self.out_dimensions = [size_x, size_y]
-        self.colour = colour
 
-        self.resolution_percent = 100
+        self.orientation = self.orientations.get(orientation, None)
+
+        self.resolution_percent = 50
         self.pixel_bytes = pixel_bytes
 
         self.image = 0
@@ -128,15 +138,23 @@ class LiveDataProcessor():
             # After clipping, scale data back out to full range
             scaled_data = ((clipped_ - self.clipping['min']) / (self.clipping['max'] - self.clipping['min'])) * 65535
 
-            reshaped_data = scaled_data.reshape((2304, 4096)) # ORCA dimensions
+            reshaped_data = scaled_data.reshape((self.max_size_y, self.max_size_x))  # ORCA dimensions
 
             # OpenCV operations
             resized_data = cv2.resize(reshaped_data, (self.size_x, self.size_y))
 
-            roi_data = resized_data[self.roi['y_lower']:self.roi['y_upper'],
-                            self.roi['x_lower']:self.roi['x_upper']]
+            if self.orientation >=0:
+                rotated_data = cv2.rotate(resized_data, self.orientation)
+            else:
+                rotated_data = resized_data
+
+            roi_data = rotated_data[
+                self.roi['y_lower']:self.roi['y_upper'],
+                self.roi['x_lower']:self.roi['x_upper']
+            ]
 
             colour_data = cv2.applyColorMap((roi_data / 256).astype(np.uint8), self.get_colour_map())
+
             _, buffer = cv2.imencode('.png', colour_data)
             buffer = np.array(buffer)
 
@@ -182,6 +200,7 @@ class LiveDataProcessor():
             self.hist_queue.put(histImage.tobytes())
         except Exception as e:
             logging.error(f"Error when generating histogram: {e}")
+
     def get_colour_map(self):
         """Get the colour map based on the colour string. Defaults to 'bone' (greyscale)."""
         return getattr(cv2, f'COLORMAP_{self.colour.upper()}', cv2.COLORMAP_BONE)
