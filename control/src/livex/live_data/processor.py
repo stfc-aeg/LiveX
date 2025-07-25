@@ -167,7 +167,7 @@ class LiveDataProcessor():
 
         try:
             # Fixed quantity of bins instead of generating it from range
-            bins_count = 1024
+            bins_count = 2048
 
             # Create histogram
             flat_data = data.flatten()  # Histogram made on original data
