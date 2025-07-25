@@ -1,5 +1,6 @@
 import logging
 from functools import partial
+import cv2
 
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
@@ -21,7 +22,7 @@ class LiveDataController(BaseController):
         endpoints = [
             item.strip() for item in options.get('livedata_endpoint', None).split(",")
         ]
-        names = [
+        self.names = [
             item.strip() for item in options.get('endpoint_name', None).split(",")
         ]
         # Array of dicts of resolutions
@@ -29,27 +30,29 @@ class LiveDataController(BaseController):
             {'x': int(width), 'y': int(height)}  # generate x/y dict
             for resolution in options.get('camera_resolution', '4096x2304').split(',') # get resolutions
             for width, height in [resolution.strip().split("x")] # each resolution split into array
-        ]        
+        ]
+        pixel_bytes = options.get('pixel_size', 2)
 
         self.tree = {
-            "liveview": {}
+            '_image': {}
         }
 
         self.processors = []
 
         # For each provided endpoint
         for i in range(len(endpoints)):
-            name = names[i]
+            name = self.names[i]
             resolution = resolutions[i]
+            orientation = options.get(f'{name}_orientation', 'up')
             self.processors.append(
-                LiveDataProcessor(endpoints[i], resolution)
+                LiveDataProcessor(endpoints[i], resolution, pixel_bytes, orientation)
             )
 
             proc = self.processors[i]
 
             # Create 'branch' of ParameterTree for each Processor
             tree = {
-                "name": (lambda: name, None),
+                "cam_name": (lambda: name, None),
                 "endpoint": (lambda proc=proc: proc.endpoint, None),
                 "image":
                 {  # Partials provide processor as an argument
@@ -64,8 +67,6 @@ class LiveDataController(BaseController):
                                    partial(self.set_resolution, processor=proc)),
                     "colour": (lambda proc=proc: proc.colour,
                                partial(self.set_img_colour, processor=proc)),
-                    "data": (lambda proc=proc: proc.get_image(), None),
-                    # Use get_image in processor for JSON serialisation
                     "clip_range_value": (lambda proc=proc: [proc.clipping['min'], proc.clipping['max']],
                                    partial(self.set_img_clip_value, processor=proc)),
                     "clip_range_percent": (lambda proc=proc: [proc.clipping['percent']['min'], proc.clipping['percent']['max']],
@@ -73,10 +74,17 @@ class LiveDataController(BaseController):
                     "roi": (lambda proc=proc: [
                         proc.roi['x_lower'], proc.roi['x_upper'], proc.roi['y_lower'], proc.roi['y_upper']],
                         partial(self.set_roi_boundaries, processor=proc)),
-                    "histogram": (lambda proc=proc: proc.get_histogram(), None)
                 }
             }
-            self.tree['liveview'][name] = tree
+            self.tree[name] = tree
+
+            self.tree['_image'].update({
+                    name: {
+                        'image': (lambda: None, None),
+                        'histogram': (lambda: None, None)
+                    }
+                    # Use get_image in processor for JSON serialisation
+            })
 
         self.param_tree = ParameterTree(self.tree)
 
@@ -92,6 +100,18 @@ class LiveDataController(BaseController):
         if 'sequencer' in self.adapters:
             logging.debug("Live data controller registering context with sequencer")
             self.adapters['sequencer'].add_context('livedata', self)
+
+    def get_image_from_processor_name(self, name, type):
+        if type not in ['image', 'histogram']:
+            return 0  # 'null image'
+
+        if name in self.names:
+            index = self.names.index(name)
+            processor = self.processors[index]
+            if type == 'image':
+                return processor.get_image()
+            elif type == 'histogram':
+                return processor.get_histogram()
 
     def cleanup(self):
         """Clean up the LiveDataController instance.
@@ -277,8 +297,15 @@ class LiveDataController(BaseController):
         x_low, x_high = value[0]
         y_low, y_high = value[1]
 
-        img_x = processor.size_x
-        img_y = processor.size_y
+        # If img is rotated 90/270 degrees, x and y will swap
+        if processor.orientation in [
+            cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_90_COUNTERCLOCKWISE
+        ]:
+            img_x = processor.size_y
+            img_y = processor.size_x
+        else:
+            img_x = processor.size_x
+            img_y = processor.size_y
 
         # If provided value is full image size, we don't care about existing ROI, to allow reset.
         value_is_reset = (
