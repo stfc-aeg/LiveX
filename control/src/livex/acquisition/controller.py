@@ -132,7 +132,6 @@ class LiveXController(BaseController):
         campaign_name = campaign_name.replace(" ", "_")
 
         acquisition_number = iac_get(self.metadata, 'fields/acquisition_num/value', param='value')
-        acquisition_number += 1
 
         experiment_id = campaign_name + "_" + str(acquisition_number).rjust(4, '0')
 
@@ -150,7 +149,6 @@ class LiveXController(BaseController):
         self.filepaths['metadata']['md']['filepath'] = self.filepath + "/logs/acquisitions"
 
         # Set values in metadata adapter
-        iac_set(self.metadata, 'fields/acquisition_num', 'value', acquisition_number)
         iac_set(self.metadata, 'fields/experiment_id', 'value', experiment_id)
         iac_set(self.metadata, 'hdf', 'file', self.filepaths['metadata']['hdf5']['filename'])
         iac_set(self.metadata, 'hdf', 'path', self.filepaths['metadata']['hdf5']['filepath'])
@@ -159,6 +157,10 @@ class LiveXController(BaseController):
 
         for camera in self.orca.cameras:
             self.filepaths[camera.name]['filename'] = f"{experiment_id}_{camera.name}"  # no .hdf5 extension needed here
+
+        # Increase acquisition number after filepaths so UI indicates next acq instead of previous
+        acquisition_number += 1
+        iac_set(self.metadata, 'fields/acquisition_num', 'value', acquisition_number)
 
     def start_acquisition(self, acquisitions=[]):
         """Start an acquisition. Disable timers, configure all values, then start timers simultaneously.
