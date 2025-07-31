@@ -22,9 +22,13 @@ class LiveXController(BaseController):
         This constructor initialises the LiveXController, building the parameter tree and getting
         system info.
         """
+        self.options = options
         # Parse options
         self.ref_trigger = options.get('reference_trigger', 'furnace')
-        self.filepath = options.get('filepath', '/tmp')
+        # Filepaths can vary by system - i.e. cameras may have multiple storage locations
+        self.furnace_filepath = options.get('furnace_filepath', '/tmp')
+        self.widefov_filepath = options.get('widefov_filepath', '/tmp')
+        self.narrowfov_filepath = options.get('narrowfov_filepath', '/tmp')
 
         self.acquiring = False
         # Which 'devices' are doing this acquisition. Set in start_acquisition
@@ -129,34 +133,44 @@ class LiveXController(BaseController):
         """
         # Experiment id is campaign name plus incrementing acquisition number value
         campaign_name = iac_get(self.metadata, 'fields/campaign_name/value', param='value')
-        campaign_name = campaign_name.replace(" ", "_")
-
         acquisition_number = iac_get(self.metadata, 'fields/acquisition_num/value', param='value')
-
+        campaign_name = campaign_name.replace(" ", "_")
         experiment_id = campaign_name + "_" + str(acquisition_number).rjust(4, '0')
 
-        # Most files should have the same structure and location
-        for key in self.filepaths.keys():
-            # Special handling for metadata
-            self.filepaths[key]['filename'] = experiment_id + "_" + key + ".hdf5"
-            self.filepaths[key]['filepath'] = self.filepath
+        base_path = self.filepath
 
-        # metadata hdf5 writes to same file as furnace
-        self.filepaths['metadata']['hdf5']['filename'] = self.filepaths['furnace']['filename']
-        self.filepaths['metadata']['hdf5']['filepath'] = self.filepaths['furnace']['filepath']
-        # metadata markdown goes to unique logs/acquisitions location
-        self.filepaths['metadata']['md']['filename'] = experiment_id + "_" + "furnace.md"
-        self.filepaths['metadata']['md']['filepath'] = self.filepath + "/logs/acquisitions"
+        # Add other path sorting logic here. Consider how the names might need to be in config file for real use
+        # e.g. system_names=furnace, wide... then widefov_dir, narrowfov_dir, etc.. Should furnace be assumed?
 
+        def build_filename(system, ext):
+            return f"{experiment_id}_{system}.{ext}"
+
+        # Furnace
+        filename = build_filename('furnace', 'h5')
+        self.filepaths['furnace']['filename'] = filename
+        self.filepaths['furnace']['filepath'] = self.furnace_filepath
+
+        # Metadata
+        filename = build_filename('metadata', 'h5')
+        self.filepaths['metadata']['hdf5']['filename'] = filename
+        self.filepaths['metadata']['hdf5']['filepath'] = self.furnace_filepath
+        # Metadata markdown
+
+        filename = build_filename('metadata', 'md')
+        self.filepaths['metadata']['md']['filename'] = filename
+        self.filepaths['metadata']['md']['filepath'] = f"{self.furnace_filepath}/logs/acquisitions"
+
+        # Cameras
+        for camera in self.orca.cameras:
+            name = camera.name
+            self.filepaths[name]["filename"] = f"{experiment_id}_{name}"
+            self.filepaths[name]["filepath"] = self.options.get(f"{name}_filepath", self.furnace_filepath)
         # Set values in metadata adapter
         iac_set(self.metadata, 'fields/experiment_id', 'value', experiment_id)
         iac_set(self.metadata, 'hdf', 'file', self.filepaths['metadata']['hdf5']['filename'])
         iac_set(self.metadata, 'hdf', 'path', self.filepaths['metadata']['hdf5']['filepath'])
         iac_set(self.metadata, 'markdown', 'file', self.filepaths['metadata']['md']['filename'])
         iac_set(self.metadata, 'markdown', 'path', self.filepaths['metadata']['md']['filepath'])
-
-        for camera in self.orca.cameras:
-            self.filepaths[camera.name]['filename'] = f"{experiment_id}_{camera.name}"  # no .hdf5 extension needed here
 
         # Increase acquisition number after filepaths so UI indicates next acq instead of previous
         acquisition_number += 1
@@ -172,6 +186,10 @@ class LiveXController(BaseController):
 
         # Get self.filepaths set to
         self._generate_experiment_filenames()
+
+        logging.debug(f"filenames: {self.filepaths}")
+
+        return
 
         # Stop all timers while processing
         self.trigger.set_all_timers(
