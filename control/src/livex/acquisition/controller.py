@@ -170,10 +170,6 @@ class LiveXController(BaseController):
         iac_set(self.metadata, 'markdown', 'file', self.filepaths['metadata']['md']['filename'])
         iac_set(self.metadata, 'markdown', 'path', self.filepaths['metadata']['md']['filepath'])
 
-        # Increase acquisition number after filepaths so UI indicates next acq instead of previous
-        acquisition_number += 1
-        iac_set(self.metadata, 'fields/acquisition_num', 'value', acquisition_number)
-
     def start_acquisition(self, acquisitions=[]):
         """Start an acquisition. Disable timers, configure all values, then start timers simultaneously.
         :param freerun: bool deciding if frame target is overridden to 0 for indefinite capture
@@ -301,6 +297,11 @@ class LiveXController(BaseController):
             {'enable': True,
              'freerun': self.trigger_manager.freerun}
         )
+
+        # Increase acquisition number after acquisition so UI indicates next acq instead of previous
+        acquisition_number = iac_get(self.metadata, 'fields/acquisition_num/value', param='value')
+        acquisition_number += 1
+        iac_set(self.metadata, 'fields/acquisition_num', 'value', acquisition_number)
 
     def cleanup(self):
         """Clean up the controller.
