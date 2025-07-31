@@ -230,18 +230,10 @@ class LiveXController(BaseController):
             if camera.name in self.current_acquisition:
                 camera.send_command('capture')
 
-        # Set temperature profile metadata
-        iac_set(self.metadata, 'fields/thermal_gradient_kmm', 'value', self.furnace.gradient.wanted)
-        iac_set(self.metadata, 'fields/thermal_gradient_distance', 'value', self.furnace.gradient.distance),
-        iac_set(self.metadata, 'fields/cooling_rate', 'value', self.furnace.aspc.rate)
-
         # Start time
         now = datetime.now()
         start_time = now.strftime("%d/%m/%Y, %H:%M:%S")
         iac_set(self.metadata, 'fields/start_time', 'value', start_time)
-
-        # Write out markdown metadata - done first so it is available during acquisition
-        iac_set(self.metadata, 'markdown', 'write', True)
 
         # Enable timer coils simultaneously
         self.trigger.set_all_timers(
@@ -284,10 +276,18 @@ class LiveXController(BaseController):
             targets[name] = trigger.target
             self.trigger_manager.set_target(name, 0)
 
+        # Write other metadata information
+        iac_set(self.metadata, 'fields/thermal_gradient_kmm', 'value', self.furnace.gradient.wanted)
+        iac_set(self.metadata, 'fields/thermal_gradient_distance', 'value', self.furnace.gradient.distance),
+        iac_set(self.metadata, 'fields/cooling_rate', 'value', self.furnace.aspc.rate)
+
         # Stop time
         now = datetime.now()
         stop_time = now.strftime("%d/%m/%Y, %H:%M:%S")
         iac_set(self.metadata, 'fields/stop_time', 'value', stop_time)
+
+        # Write out markdown metadata - data matches h5 at this point
+        iac_set(self.metadata, 'markdown', 'write', True)
 
         # Write metadata hdf to file afterwards, only md needs doing first
         iac_set(self.metadata, 'hdf', 'write', True)
