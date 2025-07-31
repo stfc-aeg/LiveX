@@ -42,7 +42,7 @@ function FurnacePage(props){
             </Col>
           </Row>
         </Container>
-        <Col xs={6} xxl={4}>
+        <Col xs={12} md={6} xxl={4}>
           <PidControl
             furnaceEndPoint={furnaceEndPoint}
             connectedPuttingDisable={connectedPuttingDisable}
