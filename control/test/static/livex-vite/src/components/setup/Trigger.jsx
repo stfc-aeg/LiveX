@@ -22,7 +22,7 @@ function Trigger(props) {
     const {endpoint_url} = props;
 
     const triggerEndPoint = useAdapterEndpoint('trigger', endpoint_url, 1000);
-    const orcaEndPoint = useAdapterEndpoint('camera/cameras', endpoint_url, 1000);
+    const orcaEndPoint = useAdapterEndpoint('camera', endpoint_url, 1000);
     const furnaceEndPoint = useAdapterEndpoint('furnace', endpoint_url, 1000);
     const liveXEndPoint = useAdapterEndpoint('livex', endpoint_url, 1000);
 
