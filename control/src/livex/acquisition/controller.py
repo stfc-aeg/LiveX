@@ -49,7 +49,7 @@ class LiveXController(BaseController):
                 },
                 'md': {
                     'filename': None,
-                    'filepath': self.filepath
+                    'filepath': self.furnace_filepath
                 }
             }
         }
@@ -100,9 +100,9 @@ class LiveXController(BaseController):
         self.trigger_manager.get_frequencies()
         self.trigger_manager.set_target(self.trigger_manager.acq_frame_target)
 
-        # Add cameras to self.filepaths for acquisition handling
+        # Add cameras to self.filepaths for acquisition handling with default
         for camera in self.orca.cameras:
-            self.filepaths[camera.name] = {'filename': None, 'filepath': self.filepath}
+            self.filepaths[camera.name] = {'filename': None, 'filepath': self.furnace_filepath}
 
         # Reconstruct tree with relevant adapter references
         self._build_tree()
@@ -136,8 +136,6 @@ class LiveXController(BaseController):
         acquisition_number = iac_get(self.metadata, 'fields/acquisition_num/value', param='value')
         campaign_name = campaign_name.replace(" ", "_")
         experiment_id = campaign_name + "_" + str(acquisition_number).rjust(4, '0')
-
-        base_path = self.filepath
 
         # Add other path sorting logic here. Consider how the names might need to be in config file for real use
         # e.g. system_names=furnace, wide... then widefov_dir, narrowfov_dir, etc.. Should furnace be assumed?
@@ -186,10 +184,6 @@ class LiveXController(BaseController):
 
         # Get self.filepaths set to
         self._generate_experiment_filenames()
-
-        logging.debug(f"filenames: {self.filepaths}")
-
-        return
 
         # Stop all timers while processing
         self.trigger.set_all_timers(
