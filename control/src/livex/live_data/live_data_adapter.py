@@ -10,7 +10,6 @@ class LiveDataAdapter(BaseAdapter):
 
     def get(self, path, with_metadata=False):
         """BaseAdapter get override to handle image processing."""
-        import logging
         try:
             levels = path.split('/')
             img_bytes = None
@@ -27,7 +26,7 @@ class LiveDataAdapter(BaseAdapter):
                 response=img_bytes
                 content_type="image/png"
             else:
-                response = self.controller.get(path, with_metadata=False)
+                response = self.controller.get(path, with_metadata)
                 content_type="application/json"
             status_code = 200
         except self.error_cls as error:

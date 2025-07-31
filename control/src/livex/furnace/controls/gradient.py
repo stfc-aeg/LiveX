@@ -11,12 +11,12 @@ class Gradient():
     def __init__(self, addresses):
         self.addresses = addresses
 
-        self.enable       = None
-        self.wanted       = None
-        self.distance     = None
-        self.actual       = None
-        self.theoretical  = None
-        self.high         = None
+        self.enable       = False
+        self.wanted       = 0
+        self.distance     = 0
+        self.actual       = 0
+        self.theoretical  = 0
+        self.high         = 1
         self.high_options = self.addresses['high_options']
 
         self.tree = ParameterTree({
