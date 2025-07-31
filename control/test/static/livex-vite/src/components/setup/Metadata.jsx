@@ -40,7 +40,7 @@ function Metadata(props) {
             maxLength = labelLength;
           }
         });
-        const additionalPadding = 24; // Extra room for borders
+        const additionalPadding = 8; // Extra room for borders
         return `${maxLength * 10 + additionalPadding}px`;
       };
 
@@ -185,6 +185,14 @@ return(
   <Container>
     <TitleCard title="Experiment Details">
         {renderForm()}
+        <InputGroup>
+          <InputGroup.Text style={{width:labelWidth}}>
+            Also included in metadata:
+          </InputGroup.Text>
+          <InputGroup.Text>
+            Thermal gradient (K/mm, distance), ASPC cooling rate, acquisition start/stop
+          </InputGroup.Text>
+        </InputGroup>
     </TitleCard>
   </Container>
     )
