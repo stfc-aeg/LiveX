@@ -16,15 +16,15 @@ class PID():
         self.addresses = addresses
         self.pid_defaults = pid_defaults
 
-        self.enable = None
-        self.setpoint = None
+        self.enable = False
+        self.setpoint = 0.0
         # PID term default display rounded for readability
-        self.kp = None
-        self.ki = None
-        self.kd = None
-        self.output = None
-        self.outputsum = None
-        self.temperature = None
+        self.kp = 0.1
+        self.ki = 0.1
+        self.kd = 0.1
+        self.output = 0.1
+        self.outputsum = 0.1
+        self.temperature = 0.1
 
         self.tree = ParameterTree({
             'enable': (lambda: self.enable, self.set_enable),

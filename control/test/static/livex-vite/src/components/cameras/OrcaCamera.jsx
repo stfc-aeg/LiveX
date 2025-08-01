@@ -4,11 +4,8 @@ import Row from 'react-bootstrap/Row';
 import { Container, Stack } from 'react-bootstrap';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
-import { useAdapterEndpoint, WithEndpoint, TitleCard, OdinDoubleSlider } from 'odin-react';
-import DropdownSelector from '../DropdownSelector';
+import { useAdapterEndpoint, WithEndpoint, TitleCard } from 'odin-react';
 import Button from 'react-bootstrap/Button';
-import { useState } from 'react';
-import { Dropdown } from 'react-bootstrap';
 import { FloatingLabel } from 'react-bootstrap';
 
 import { checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../../utils';
@@ -17,32 +14,22 @@ import ClickableImage from './ClickableImage';
 
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndPointButton = WithEndpoint(Button);
-const EndPointDropdownSelector = WithEndpoint(DropdownSelector);
-const EndPointDoubleSlider = WithEndpoint(OdinDoubleSlider);
-const EndPointSlider = WithEndpoint(Form.Range);
 const EndPointSelect = WithEndpoint(Form.Select);
 
 function OrcaCamera(props) {
+    const {endpoint} = props;
     const {endpoint_url} = props;
     const {name} = props;
     const {connectedPuttingDisable} = props;
-
-    const nameString = name.toString();
-    let orcaAddress = 'camera/cameras/'+nameString;
-    const orcaEndPoint = useAdapterEndpoint(orcaAddress, endpoint_url, 1000);
  
     const liveViewEndPoint = useAdapterEndpoint('live_data', endpoint_url, 1000);
     const liveViewData = liveViewEndPoint?.data[name];
 
-    // let imgAddress = 'live_data/_image/'+nameString;
-    // const imgEndPoint = useAdapterEndpoint(imgAddress, endpoint_url, 1000);
-    // const imgData = imgEndPoint?.data;
-
     // Array of camera status names
     const status = ['disconnected', 'connected', 'capturing'];
     // Current status of orcaCamera (for readability)
-    const orcaStatus = orcaEndPoint?.data[name]?.status?.camera_status;
-    const orcaConnected = orcaEndPoint?.data[name]?.connection?.connected;
+    const orcaStatus = endpoint?.data[name]?.status?.camera_status;
+    const orcaConnected = endpoint?.data[name]?.connection?.connected;
 
     // Colours
     const colourEffects = [
@@ -55,24 +42,6 @@ function OrcaCamera(props) {
         10, 25, 50, 75, 100
     ];
 
-    const labelWidth = 80;
-
-    // Handle image data
-    const [width, setWidth] = useState('');
-    const [height, setHeight] = useState('');
-    const [dimensions, setDimensions] = useState('');
-
-    const heightChange = (e) => {
-        let newHeight = e.target.value;
-        setHeight(newHeight);
-        setDimensions([width, newHeight]);
-    };
-    const widthChange = (e) => {
-        let newWidth = e.target.value;
-        setWidth(newWidth);
-        setDimensions([newWidth, height]);
-    };
-
     /* The titlecard buttons have variable output, display, and colour, depending on the camera status.
     Example, when the camera isn't connected, you can connect. If it's connected, you can disconnect.
     When capturing, that button is disabled - you need to move it out of that state first.*/
@@ -80,17 +49,17 @@ function OrcaCamera(props) {
         <Container>
           <TitleCard title={
             <Row>
-              <Col xs={3} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>
-                {orcaEndPoint?.data[name]?.camera_name + " control"}
+              <Col xs={4} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>
+                {endpoint?.data[name]?.camera_name + " control"}
               </Col>
               <Col>
                 {orcaConnected ? (
                 <Row>
                   <Col xs={3}>
                     <EndPointButton // Move between statuses 1 and 0
-                      endpoint={orcaEndPoint}
+                      endpoint={endpoint}
                       value={orcaStatus!==status[0] ? "disconnect" : "connect"}
-                      fullpath="command"
+                      fullpath={`${name}/command`}
                       event_type="click"
                       disabled={![status[1], status[0]].includes(orcaStatus)}
                       variant={orcaStatus!==status[0] ? "warning" : "success"}>
@@ -99,9 +68,9 @@ function OrcaCamera(props) {
                   </Col>
                   <Col xs={3}>
                     <EndPointButton // Move between statuses 3 and 1
-                      endpoint={orcaEndPoint}
+                      endpoint={endpoint}
                       value={orcaStatus===status[2] ? "end_capture" : "capture"}
-                      fullpath="command"
+                      fullpath={`${name}/command`}
                       event_type="click"
                       disabled={![status[2], status[1]].includes(orcaStatus)}
                       variant={orcaStatus===status[2] ? "warning" : "success"}>
@@ -112,9 +81,9 @@ function OrcaCamera(props) {
                 ) : (
                 <Col>
                   <EndPointButton
-                    endpoint={orcaEndPoint}
+                    endpoint={endpoint}
                     value={true}
-                    fullpath="connection/reconnect"
+                    fullpath={`${name}/connection/reconnect`}
                     event_type="click"
                     disabled={orcaConnected}
                     variant={orcaConnected ? "info" : "danger"}>
@@ -145,7 +114,7 @@ function OrcaCamera(props) {
                         plaintext
                         readOnly
                         style={floatingLabelStyle}
-                        value={checkNullNoDp(orcaEndPoint?.data[name]?.status.frame_number)}
+                        value={checkNullNoDp(endpoint?.data[name]?.status.frame_number)}
                       />
                   </FloatingLabel>
                 </Col>
@@ -156,7 +125,7 @@ function OrcaCamera(props) {
                         plaintext
                         readOnly
                         style={floatingLabelStyle}
-                        value={checkNullNoDp(orcaEndPoint?.data[name]?.status?.camera_temperature || "Not found")}
+                        value={checkNullNoDp(endpoint?.data[name]?.status?.camera_temperature || "Not found")}
                       />
                   </FloatingLabel>
                 </Col>
@@ -167,16 +136,15 @@ function OrcaCamera(props) {
                     exposure_time
                 </InputGroup.Text>
                 <EndPointFormControl
-                    endpoint={orcaEndPoint}
+                    endpoint={endpoint}
                     type="number"
-                    fullpath="config/exposure_time"
+                    fullpath={`${name}/config/exposure_time`}
                     event_type="enter"
                     disabled={connectedPuttingDisable}>
                 </EndPointFormControl>
               </InputGroup>
               </Stack>
-
-              <TitleCard title={`${orcaEndPoint?.data[name]?.camera_name} preview`}>
+              <TitleCard title={`${endpoint?.data[name]?.camera_name} preview`}>
                 <Row>
                   <ClickableImage
                     id={`image-${name}`}

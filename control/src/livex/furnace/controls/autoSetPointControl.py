@@ -10,11 +10,11 @@ class AutoSetPointControl():
     def __init__(self, addresses):
         self.addresses = addresses
 
-        self.enable = None
-        self.heating = None
+        self.enable = False
+        self.heating = 1
         self.heating_options = self.addresses['heating_options']
-        self.rate = None
-        self.midpt = None
+        self.rate = 0
+        self.midpt = 0
 
         self.tree = ParameterTree({
             'enable': (lambda: self.enable, self.set_enable),

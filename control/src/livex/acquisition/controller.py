@@ -22,9 +22,13 @@ class LiveXController(BaseController):
         This constructor initialises the LiveXController, building the parameter tree and getting
         system info.
         """
+        self.options = options
         # Parse options
         self.ref_trigger = options.get('reference_trigger', 'furnace')
-        self.filepath = options.get('filepath', '/tmp')
+        # Filepaths can vary by system - i.e. cameras may have multiple storage locations
+        self.furnace_filepath = options.get('furnace_filepath', '/tmp')
+        self.widefov_filepath = options.get('widefov_filepath', '/tmp')
+        self.narrowfov_filepath = options.get('narrowfov_filepath', '/tmp')
 
         self.acquiring = False
         # Which 'devices' are doing this acquisition. Set in start_acquisition
@@ -45,7 +49,7 @@ class LiveXController(BaseController):
                 },
                 'md': {
                     'filename': None,
-                    'filepath': self.filepath
+                    'filepath': self.furnace_filepath
                 }
             }
         }
@@ -96,9 +100,9 @@ class LiveXController(BaseController):
         self.trigger_manager.get_frequencies()
         self.trigger_manager.set_target(self.trigger_manager.acq_frame_target)
 
-        # Add cameras to self.filepaths for acquisition handling
+        # Add cameras to self.filepaths for acquisition handling with default
         for camera in self.orca.cameras:
-            self.filepaths[camera.name] = {'filename': None, 'filepath': self.filepath}
+            self.filepaths[camera.name] = {'filename': None, 'filepath': self.furnace_filepath}
 
         # Reconstruct tree with relevant adapter references
         self._build_tree()
@@ -129,36 +133,42 @@ class LiveXController(BaseController):
         """
         # Experiment id is campaign name plus incrementing acquisition number value
         campaign_name = iac_get(self.metadata, 'fields/campaign_name/value', param='value')
-        campaign_name = campaign_name.replace(" ", "_")
-
         acquisition_number = iac_get(self.metadata, 'fields/acquisition_num/value', param='value')
-        acquisition_number += 1
-
+        campaign_name = campaign_name.replace(" ", "_")
         experiment_id = campaign_name + "_" + str(acquisition_number).rjust(4, '0')
 
-        # Most files should have the same structure and location
-        for key in self.filepaths.keys():
-            # Special handling for metadata
-            self.filepaths[key]['filename'] = experiment_id + "_" + key + ".hdf5"
-            self.filepaths[key]['filepath'] = self.filepath
+        # Add other path sorting logic here. Consider how the names might need to be in config file for real use
+        # e.g. system_names=furnace, wide... then widefov_dir, narrowfov_dir, etc.. Should furnace be assumed?
 
-        # metadata hdf5 writes to same file as furnace
-        self.filepaths['metadata']['hdf5']['filename'] = self.filepaths['furnace']['filename']
-        self.filepaths['metadata']['hdf5']['filepath'] = self.filepaths['furnace']['filepath']
-        # metadata markdown goes to unique logs/acquisitions location
-        self.filepaths['metadata']['md']['filename'] = experiment_id + "_" + "furnace.md"
-        self.filepaths['metadata']['md']['filepath'] = self.filepath + "/logs/acquisitions"
+        def build_filename(system, ext):
+            return f"{experiment_id}_{system}.{ext}"
 
+        # Furnace
+        filename = build_filename('furnace', 'h5')
+        self.filepaths['furnace']['filename'] = filename
+        self.filepaths['furnace']['filepath'] = self.furnace_filepath
+
+        # Metadata
+        filename = build_filename('metadata', 'h5')
+        self.filepaths['metadata']['hdf5']['filename'] = filename
+        self.filepaths['metadata']['hdf5']['filepath'] = self.furnace_filepath
+        # Metadata markdown
+
+        filename = build_filename('metadata', 'md')
+        self.filepaths['metadata']['md']['filename'] = filename
+        self.filepaths['metadata']['md']['filepath'] = f"{self.furnace_filepath}/logs/acquisitions"
+
+        # Cameras
+        for camera in self.orca.cameras:
+            name = camera.name
+            self.filepaths[name]["filename"] = f"{experiment_id}_{name}"
+            self.filepaths[name]["filepath"] = self.options.get(f"{name}_filepath", self.furnace_filepath)
         # Set values in metadata adapter
-        iac_set(self.metadata, 'fields/acquisition_num', 'value', acquisition_number)
         iac_set(self.metadata, 'fields/experiment_id', 'value', experiment_id)
         iac_set(self.metadata, 'hdf', 'file', self.filepaths['metadata']['hdf5']['filename'])
         iac_set(self.metadata, 'hdf', 'path', self.filepaths['metadata']['hdf5']['filepath'])
         iac_set(self.metadata, 'markdown', 'file', self.filepaths['metadata']['md']['filename'])
         iac_set(self.metadata, 'markdown', 'path', self.filepaths['metadata']['md']['filepath'])
-
-        for camera in self.orca.cameras:
-            self.filepaths[camera.name]['filename'] = f"{experiment_id}_{camera.name}"  # no .hdf5 extension needed here
 
     def start_acquisition(self, acquisitions=[]):
         """Start an acquisition. Disable timers, configure all values, then start timers simultaneously.
@@ -220,18 +230,10 @@ class LiveXController(BaseController):
             if camera.name in self.current_acquisition:
                 camera.send_command('capture')
 
-        # Set temperature profile metadata
-        iac_set(self.metadata, 'fields/thermal_gradient_kmm', 'value', self.furnace.gradient.wanted)
-        iac_set(self.metadata, 'fields/thermal_gradient_distance', 'value', self.furnace.gradient.distance),
-        iac_set(self.metadata, 'fields/cooling_rate', 'value', self.furnace.aspc.rate)
-
         # Start time
         now = datetime.now()
         start_time = now.strftime("%d/%m/%Y, %H:%M:%S")
         iac_set(self.metadata, 'fields/start_time', 'value', start_time)
-
-        # Write out markdown metadata - done first so it is available during acquisition
-        iac_set(self.metadata, 'markdown', 'write', True)
 
         # Enable timer coils simultaneously
         self.trigger.set_all_timers(
@@ -274,10 +276,18 @@ class LiveXController(BaseController):
             targets[name] = trigger.target
             self.trigger_manager.set_target(name, 0)
 
+        # Write other metadata information
+        iac_set(self.metadata, 'fields/thermal_gradient_kmm', 'value', self.furnace.gradient.wanted)
+        iac_set(self.metadata, 'fields/thermal_gradient_distance', 'value', self.furnace.gradient.distance),
+        iac_set(self.metadata, 'fields/cooling_rate', 'value', self.furnace.aspc.rate)
+
         # Stop time
         now = datetime.now()
         stop_time = now.strftime("%d/%m/%Y, %H:%M:%S")
         iac_set(self.metadata, 'fields/stop_time', 'value', stop_time)
+
+        # Write out markdown metadata - data matches h5 at this point
+        iac_set(self.metadata, 'markdown', 'write', True)
 
         # Write metadata hdf to file afterwards, only md needs doing first
         iac_set(self.metadata, 'hdf', 'write', True)
@@ -287,6 +297,11 @@ class LiveXController(BaseController):
             {'enable': True,
              'freerun': self.trigger_manager.freerun}
         )
+
+        # Increase acquisition number after acquisition so UI indicates next acq instead of previous
+        acquisition_number = iac_get(self.metadata, 'fields/acquisition_num/value', param='value')
+        acquisition_number += 1
+        iac_set(self.metadata, 'fields/acquisition_num', 'value', acquisition_number)
 
     def cleanup(self):
         """Clean up the controller.

@@ -123,7 +123,7 @@ class LiveDataController(BaseController):
             processer.process.terminate()
 
 
-    def get(self, path, with_metadata=False):
+    def get(self, path, metadata=False):
         """Get parameter data from controller.
 
         This method gets data from the controller parameter tree.
@@ -133,7 +133,7 @@ class LiveDataController(BaseController):
         :return: dictionary of parameters (and optional metadata) for specified path
         """
         try:
-            return self.param_tree.get(path, with_metadata)
+            return self.param_tree.get(path, metadata)
         except ParameterTreeError as error:
             logging.error(error)
             raise LiveXError(error)
