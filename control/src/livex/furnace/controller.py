@@ -378,13 +378,10 @@ class FurnaceController():
                             'output_b': [self.pid_b.output]
                         }
                         # Include additional thermocouples if enabled, not including a or b (0,1)
-                        for i in range(2, self.tc_manager.num_mcp):
-                            label = self.tc_manager.labels[i]
-                            # Only include thermocouples that are enabled
-                            # If the index isn't in this range, the thermocouple will be disabled
-                            if self.tc_manager.thermocouple_indices[label] in range(self.tc_manager.num_mcp):
-                                data_label = f'thermocouple_{label}'
-                                secondary_data[data_label] = [self.tc_manager.thermocouple_values[label]]
+                        for tc in self.tc_manager.thermocouples[2:self.tc_manager.num_mcp]:
+                            if tc.index is not None and tc.index >= 0:
+                                data_label = f'thermocouple_{tc.label}'
+                                secondary_data[data_label] = [tc.value]
 
                         self.file_writer.write_hdf5(
                             data=secondary_data,

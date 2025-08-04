@@ -25,8 +25,8 @@ function App(props) {
 
   const endpoint_url = import.meta.env.VITE_ENDPOINT_URL;
 
-  const furnaceEndPoint = useAdapterEndpoint('furnace', endpoint_url, 1000);
-  const graphEndPoint = useAdapterEndpoint('graph', endpoint_url, 1000);
+  const furnaceEndPoint = useAdapterEndpoint('furnace', endpoint_url, 500);
+  const graphEndPoint = useAdapterEndpoint('graph', endpoint_url, 200);
   const connectedPuttingDisable = (!(furnaceEndPoint.data.status?.connected || false)) || (furnaceEndPoint.loading === "putting")
 
   const sequencer_url = endpoint_url + "/sequencer.html";

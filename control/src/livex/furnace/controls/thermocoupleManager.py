@@ -32,7 +32,7 @@ class ThermocoupleManager:
 
         upper_heater_tc = options.get('upper_heater_tc', 'a')
         lower_heater_tc = options.get('lower_heater_tc', 'b')
-        extra_tcs = options.get('extra_tcs', '').split(',')
+        extra_tcs = [tc.lower() for tc in options.get('extra_tcs', '').split(',')]
         extra_tc_names = options.get('extra_tc_names', '').split(',')
 
         if len(extra_tcs) != len(extra_tc_names):
@@ -85,8 +85,11 @@ class ThermocoupleManager:
 
     def _build_tree(self):
         """Build the parameter tree."""
-        for tc in self.thermocouples[:self.num_mcp]:
-            self.tree[f"thermocouple_{tc.connection.name}"] = {
+        # The names for the tree are fixed, but the user won't see these
+        tree_names = ['upper_heater', 'lower_heater'] + [f'extra_{i+1}' for i in range(self.num_mcp-2)]
+        for i, tc in enumerate(self.thermocouples[:self.num_mcp]):
+            key = f"thermocouple_{tree_names[i]}"
+            self.tree[key] = {
                 "label": (lambda label=tc.label: label, None),
                 "connection": (lambda conn=tc.connection: conn.name, None),
                 "value": (lambda label=tc.label: self._get_value_by_label(label), None)

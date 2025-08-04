@@ -33,40 +33,40 @@ function InfoPanel(props) {
         <Col xs={4} md={6} xl={4}>
           <InputGroup>
             <InputGroup.Text style={{width:labelWidth}}>
-              Thermo C
+              {furnaceEndPoint.data?.thermocouples?.thermocouple_extra_1?.label ? furnaceEndPoint.data?.thermocouples?.thermocouple_extra_1?.label : 'Not in use'}
             </InputGroup.Text>
             <InputGroup.Text
               style={labelStyling}>
-                {checkNull(furnaceEndPoint.data?.thermocouples?.thermocouple_c?.value)}
+                {checkNull(furnaceEndPoint.data?.thermocouples?.thermocouple_extra_1?.value)}
               </InputGroup.Text>
           </InputGroup>
           <InputGroup>
             <InputGroup.Text style={{width:labelWidth}}>
-              Thermo D
+              {furnaceEndPoint.data?.thermocouples?.thermocouple_extra_2?.label ? furnaceEndPoint.data?.thermocouples?.thermocouple_extra_2?.label : 'Not in use'}
             </InputGroup.Text>
             <InputGroup.Text
               style={labelStyling}>
-                {checkNull(furnaceEndPoint.data?.thermocouples?.thermocouple_d?.value)}
+                {checkNull(furnaceEndPoint.data?.thermocouples?.thermocouple_extra_2?.value)}
                 </InputGroup.Text>
           </InputGroup>
         </Col>
         <Col xs={4} md={6} xl={4}>
           <InputGroup>
             <InputGroup.Text style={{width:labelWidth}}>
-              Thermo E
+              {furnaceEndPoint.data?.thermocouples?.thermocouple_extra_3?.label ? furnaceEndPoint.data?.thermocouples?.thermocouple_extra_3?.label : 'Not in use'}
             </InputGroup.Text>
             <InputGroup.Text
               style={labelStyling}>
-                {checkNull(furnaceEndPoint.data?.thermocouples?.thermocouple_e?.value)}
+                {checkNull(furnaceEndPoint.data?.thermocouples?.thermocouple_extra_3?.value)}
                 </InputGroup.Text>
           </InputGroup>
           <InputGroup>
             <InputGroup.Text style={{width:labelWidth}}>
-              Thermo F
+              {furnaceEndPoint.data?.thermocouples?.thermocouple_extra_4?.label ? furnaceEndPoint.data?.thermocouples?.thermocouple_extra_4?.label : 'Not in use'}
             </InputGroup.Text>
             <InputGroup.Text
               style={labelStyling}>
-                {checkNull(furnaceEndPoint.data?.thermocouples?.thermocouple_f?.value)}
+                {checkNull(furnaceEndPoint.data?.thermocouples?.thermocouple_extra_4?.value)}
                 </InputGroup.Text>
           </InputGroup>
         </Col>
