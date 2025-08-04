@@ -68,7 +68,6 @@ function App(props) {
             seriesData={[
               {dataPath: 'temperature_a', param: 'data', seriesName: "TCA"},
               {dataPath: 'temperature_b', param: 'data', seriesName: "TCB"},
-              {dataPath: 'temperature_c', param: 'data', seriesName: "TC3"},
               {dataPath: 'setpoint_a', param: 'data', seriesName: "SPA"},
               {dataPath: 'setpoint_b', param: 'data', seriesName: "SPB"}
             ]}

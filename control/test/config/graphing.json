@@ -34,11 +34,5 @@
         "get_path": "pid_b/output",
         "interval": 1,
         "retention": 60
-    },
-    "temperature_c": {
-        "adapter": "furnace",
-        "get_path": "thermocouples/thermocouple_c/value",
-        "interval": 1,
-        "retention": 60
     }
 }

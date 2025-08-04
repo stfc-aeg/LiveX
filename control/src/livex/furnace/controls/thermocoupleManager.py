@@ -62,8 +62,6 @@ class ThermocoupleManager:
     def _get_parameters(self):
         """Get parameters needed for the parameter tree."""
         self.num_mcp = int(read_decode_input_reg(self.client, modAddr.number_mcp_inp))
-        logging.warning(f"############################")
-        logging.warning(f"Thermocouple count: {self.num_mcp}")
 
         # Not all connections are necessarily defined, ones that are not will get -1 written
         used_connections = {tc.connection: tc for tc in self.thermocouples}
@@ -88,24 +86,11 @@ class ThermocoupleManager:
     def _build_tree(self):
         """Build the parameter tree."""
         for tc in self.thermocouples[:self.num_mcp]:
-            self.tree[f"thermocouple_{tc.label}"] = {
+            self.tree[f"thermocouple_{tc.connection.name}"] = {
                 "label": (lambda label=tc.label: label, None),
                 "connection": (lambda conn=tc.connection: conn.name, None),
                 "value": (lambda label=tc.label: self._get_value_by_label(label), None)
             }
-
-        logging.warning(f"tree: {self.tree}")
-
-
-
-    # def set_thermocouple_index(self, index, thermocouple):
-    #     """Set the index of a thermocouple."""
-    #     if thermocouple in self.thermocouple_indices.keys():
-    #         self.thermocouple_indices[thermocouple] = index
-    #         addr = getattr(modAddr, f'thermocouple_{thermocouple}_idx_hold')
-    #         write_modbus_float(self.client, index, addr)
-    #     else:
-    #         raise KeyError(f"Thermocouple {thermocouple} is not defined.")
 
     def _get_value_by_label(self, label):
         """Get the value of a thermocouple by its name. e.g.: 'a'"""
