@@ -1,25 +1,52 @@
 from functools import partial
+from enum import Enum
+from dataclasses import dataclass
 from livex.modbusAddresses import modAddr
 import logging
-from livex.util import write_modbus_float, read_decode_input_reg, read_decode_holding_reg, write_coil
+from livex.util import write_modbus_float, read_decode_input_reg, read_decode_holding_reg, write_coil, LiveXError
 
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
+class CONNECTIONS(Enum):
+    """Enum to associate the physical connection point of a thermocouple to the index in the PLC."""
+    a = 0
+    b = 1
+    c = 2
+    d = 3
+    e = 4
+    f = 5
+
+@dataclass
+class Thermocouple:
+    label: str  # User-defined 'name' for the thermocouple
+    connection: CONNECTIONS
+    index: int = None  # Index in the PLC
+    value: float = None  # Value read from PLC
 
 class ThermocoupleManager:
     """Manage the state of thermocouples: their values and the associated hardware index."""
 
-    def __init__(self, indices, types):
-        """Initialise the manager, creating """
-        # Never more than 8 TCs
-        self.init_indices = indices
-        self.init_types = types
-        self.labels = ['a', 'b', 'c', 'd', 'e', 'f']
-        self.num_mcp = 6  # Should get overwritten later
+    def __init__(self, options):
+        """Initialise the manager, creating a tree of thermocouples with types and connection."""
+        self.num_mcp = 6  # Default number of thermocouples, should be overwritten by PLC
 
-        self.thermocouple_values = {label: None for label in self.labels}
-        self.thermocouple_indices = {label: None for label in self.labels}
-        self.thermocouple_types = {label: None for label in self.labels}
+        upper_heater_tc = options.get('upper_heater_tc', 'a')
+        lower_heater_tc = options.get('lower_heater_tc', 'b')
+        extra_tcs = options.get('extra_tcs', '').split(',')
+        extra_tc_names = options.get('extra_tc_names', '').split(',')
+
+        if len(extra_tcs) != len(extra_tc_names):
+            raise LiveXError("Number of extra thermocouples does not match number of names given.")
+
+        # Thermocouple array starts with two mandatory connections
+        self.thermocouples = [
+            Thermocouple(label='upper_heater', connection=CONNECTIONS[upper_heater_tc]),
+            Thermocouple(label='lower_heater', connection=CONNECTIONS[lower_heater_tc])
+        ]
+
+        self.thermocouples.extend(
+            Thermocouple(label=name.strip(), connection=CONNECTIONS[tc.strip()]) for tc, name in zip(extra_tcs, extra_tc_names) if tc and name
+        )
 
         self.tree = {}
 
@@ -33,98 +60,56 @@ class ThermocoupleManager:
             logging.warning(f"Error when attempting to get PID parameters after client connection: {repr(e)}")
 
     def _get_parameters(self):
-        """Get the number of mpcs for tree building."""
-        self.num_mpc = read_decode_input_reg(self.client, modAddr.number_mcp_inp)
+        """Get parameters needed for the parameter tree."""
+        self.num_mcp = int(read_decode_input_reg(self.client, modAddr.number_mcp_inp))
+        logging.warning(f"############################")
+        logging.warning(f"Thermocouple count: {self.num_mcp}")
 
+        # Not all connections are necessarily defined, ones that are not will get -1 written
+        used_connections = {tc.connection: tc for tc in self.thermocouples}
 
-        # Not enough defined, inform user and pad it out
-        if len(self.init_indices) < self.num_mcp:
-            logging.warning(f"Too few thermocouple indices defined. Undefined TCs will be disabled.")
-            self.init_indices = self.init_indices + [-1] * (self.num_mcp-self.init_indices)
-        if len(self.init_types) < self.num_mcp:
-            logging.warning(f"Too few thermocouple types defined. Additional types defaulted to K.")
-            self.init_types = self.init_types + ['K']*(self.num_mcp-self.init_types)
+        for i, connection in enumerate(CONNECTIONS):
+            if i >= self.num_mcp:
+                break
 
-        for i in range(self.num_mcp):
-            tc = self.labels[i]
-            # Write the configured indices and types to the firmware
-            index = self.init_indices[i]
-            write_modbus_float(self.client,
-                index,
-                modAddr.thermocouple_a_idx_hold+i*2
+            if connection in used_connections:
+                index = used_connections[connection].connection.value
+            else:
+                index = -1
+
+            write_modbus_float(
+                self.client, index, getattr(modAddr, f'thermocouple_{connection.name}_idx_hold')
             )
-            self.thermocouple_indices[tc] = index
-            # i*2 for addresses: relevant registers are adjacent and floats take 2
-            tc_type = self.init_types[i]
-            write_modbus_float(self.client,
-                modAddr.mcp_val_from_type[tc_type],
-                modAddr.tcidx_0_type_hold+i*2)
-            self.thermocouple_types[tc] = tc_type
+            if connection in used_connections:
+                used_connections[connection].index = index
+
         write_coil(self.client, modAddr.tc_type_update_coil, 1)
-
-        # i = 0
-        # for key in self.thermocouple_indices.keys():
-        #     # Get current thermocouple indices. i*2 as registers are adjacent and floats take 2
-        #     read_decode_holding_reg(self.client, (modAddr.thermocouple_a_idx_hold+i*2))
-        #     self.thermocouple_indices[key] = i
-        #     # Get the thermocouple types
-        #     type = read_decode_holding_reg(self.client, modAddr.tcidx_0_type_hold+i*2)
-        #     type = modAddr.mcp_type_from_val[type]
-        #     self.thermocouple_types[key] = type
-
-        #     i += 1
-
 
     def _build_tree(self):
         """Build the parameter tree."""
-        for i, label in enumerate(self.labels):
-            if i >= self.num_mcp:
-                break
-            self.tree[f'thermocouple_{label}'] = {
-                'value': (
-                    lambda label=label: self.thermocouple_values[label], None
-                ),
-                'index': (
-                    lambda label=label: self.thermocouple_indices[label],
-                        partial(self.set_thermocouple_index, thermocouple=label)
-                ),
-                'type': (
-                    lambda label=label, i=i: self.thermocouple_types[label],
-                    partial(self._set_thermocouple_type, thermocouple=label, index=i)
-                )
+        for tc in self.thermocouples[:self.num_mcp]:
+            self.tree[f"thermocouple_{tc.label}"] = {
+                "label": (lambda label=tc.label: label, None),
+                "connection": (lambda conn=tc.connection: conn.name, None),
+                "value": (lambda label=tc.label: self._get_value_by_label(label), None)
             }
 
-    def set_thermocouple_index(self, index, thermocouple):
-        """Set the index of a thermocouple."""
-        if thermocouple in self.thermocouple_indices.keys():
-            self.thermocouple_indices[thermocouple] = index
-            addr = getattr(modAddr, f'thermocouple_{thermocouple}_idx_hold')
-            write_modbus_float(self.client, index, addr)
+        logging.warning(f"tree: {self.tree}")
 
-            # With index set, get back the type of thermocouple registered for that index
-            # e.g. set to 1, get type from tcidx_1_type_hold
-            addr = getattr(modAddr, f'tcidx_{index}_type_hold')
-            self.thermocouple_types[thermocouple] = modAddr.mcp_type_from_val[
-                read_decode_holding_reg(self.client, addr)
-            ]
-        else:
-            raise KeyError(f"Thermocouple {thermocouple} is not defined.")
 
-    def _set_thermocouple_type(self, type, thermocouple, index):
-        """Set the type of the thermocouple at a given index.
-        Shouldn't be used unless the hardware has been swapped,
-        otherwise values read back may be unreliable.
-        :param str type: type of thermocouple matching modAddr.mcp_type enumeration options
-        """
-        try:
-            type=type.upper()
-            value = modAddr.mcp_val_from_type[type]
-        except KeyError:
-            logging.debug(f"Type {type} is not a valid thermocouple type.")
-        if thermocouple in self.thermocouple_types.keys():
-            self.thermocouple_types[thermocouple] = type
-            addr = getattr(modAddr, f'tcidx_{index}_type_hold')
-            write_modbus_float(self.client, value, addr)
 
-            # Inform hardware that TC type has been updated
-            write_coil(self.client, modAddr.tc_type_update_coil, 1)
+    # def set_thermocouple_index(self, index, thermocouple):
+    #     """Set the index of a thermocouple."""
+    #     if thermocouple in self.thermocouple_indices.keys():
+    #         self.thermocouple_indices[thermocouple] = index
+    #         addr = getattr(modAddr, f'thermocouple_{thermocouple}_idx_hold')
+    #         write_modbus_float(self.client, index, addr)
+    #     else:
+    #         raise KeyError(f"Thermocouple {thermocouple} is not defined.")
+
+    def _get_value_by_label(self, label):
+        """Get the value of a thermocouple by its name. e.g.: 'a'"""
+        for tc in self.thermocouples:
+            if tc.label == label:
+                return tc.value
+        raise KeyError(f"Could not get value: thermocouple with label {label} not found.")
