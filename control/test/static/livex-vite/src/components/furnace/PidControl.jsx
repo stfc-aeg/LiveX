@@ -10,6 +10,7 @@ import { checkNull  } from '../../utils';
 import { floatingInputStyle, floatingLabelStyle } from '../../utils';
 import { FloatingLabel } from 'react-bootstrap';
 
+
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndPointToggle = WithEndpoint(ToggleSwitch);
 
@@ -98,15 +99,45 @@ function PidControl(props) {
                   </FloatingLabel>
                 </Row>
                 <Row>
-                  <FloatingLabel
-                    label="Temperature">
-                      <Form.Control
-                        plaintext
-                        readOnly
-                        style={floatingLabelStyle}
-                        value={checkNull((furnaceEndPoint.data[pid]?.temperature))}
-                      />
-                  </FloatingLabel>
+                  <Col xs={8} sm={6}>
+                    <FloatingLabel
+                      label="Temperature">
+                        <Form.Control
+                          plaintext
+                          readOnly
+                          style={{
+                              width: "100%",
+                              border: '1px solid lightblue',
+                              backgroundColor: '#e0f7ff',
+                              borderRadius: '0.375rem'
+                          }}
+
+                          value={checkNull((furnaceEndPoint.data[pid]?.temperature))}
+                        />
+                    </FloatingLabel>
+                  </Col>
+                  <Col xs={8} sm={6}>
+                    <FloatingLabel
+                      label="Set/target diff.">
+                        <Form.Control
+                          plaintext
+                          readOnly
+                          style={{
+                              width: "100%",
+                              border: '1px solid lightblue',
+                              backgroundColor: '#e0f7ff',
+                              borderRadius: '0.375rem'
+                          }}
+
+                          value={
+                            Math.abs(
+                              checkNull((furnaceEndPoint.data[pid]?.setpoint)) -
+                              checkNull((furnaceEndPoint.data[pid]?.temperature))
+                            )
+                          }
+                        />
+                    </FloatingLabel>
+                  </Col>
                 </Row>
               </Col>
             </Row>
