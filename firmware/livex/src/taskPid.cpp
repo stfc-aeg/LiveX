@@ -29,32 +29,39 @@ void Core0PIDTask(void * pvParameters)
           Serial.println(interruptCounter);
         }
       }
-      // Mutex required as mcp types can be changed in taskComms
       xSemaphoreTake(gradientAspcMutex, portMAX_DELAY);
-      for (int i=0; i<num_mcp; i++)
+      // Read A
+      int idx = modbus_server.combineHoldingRegisters(MOD_HEATERTC_A_IDX_HOLD);
+      float result = mcp[idx].readThermocouple();
+      if (0<=idx && idx<num_mcp)
       {
-        // Modbus registers are defined with thermocouples in order, so i*2 skips from 40023->40025
-        // MOD_HEATERTC_A_IDX_HOLD to MOD_HEATERTC_B_IDX to MOD_EXTRATC_A_IDX_HOLD etc.
-        int index = modbus_server.combineHoldingRegisters(MOD_HEATERTC_A_IDX_HOLD+i*2);
-        // If the index is valid, read the thermocouple
-        if (0<=index && index<num_mcp)
-        {
-          float result = mcp[index].readThermocouple();
+        PID_A.input = result;
+        modbus_server.floatToInputRegisters(MOD_HEATERTC_A_INP, PID_A.input);
+      }
 
-          // First two are heater A and B which need special handling
-          if (i==0){
-            PID_A.input = result;
-            modbus_server.floatToInputRegisters(MOD_HEATERTC_A_INP, PID_A.input);
-          }
-          if (i==1){
-            PID_B.input = result;
-            modbus_server.floatToInputRegisters(MOD_HEATERTC_B_INP, PID_B.input);
-          }
-          else {
-            modbus_server.floatToInputRegisters(MOD_HEATERTC_A_INP+i*2, result);  // Starts from heater input register
+      // Read B
+      idx = modbus_server.combineHoldingRegisters(MOD_HEATERTC_B_IDX_HOLD);
+      result = mcp[idx].readThermocouple();
+      if (0<=idx && idx<num_mcp)
+      {
+        PID_B.input = result;
+        modbus_server.floatToInputRegisters(MOD_HEATERTC_B_INP, PID_B.input);
+      }
+
+      // Read extra thermocouples only once per second - when counter is multiple of pid frequency
+      // Small tolerance for float errors
+      if (fmod(counter, interruptFrequency) <= 1e-6f)
+      { // num_mcp -2 as we have read two already
+        for (int i=0; i<num_mcp-2; i++)
+        {
+          // Read extra thermocouples
+          idx = modbus_server.combineHoldingRegisters(MOD_EXTRATC_A_IDX_HOLD + (i-2)*2);
+          if (0<=idx && idx<num_mcp)
+          {
+            result = mcp[idx].readThermocouple();
+            modbus_server.floatToInputRegisters(MOD_EXTRATC_A_INP+(i*2), result);
           }
         }
-        else { /* do nothing, tc disabled */ }
       }
       xSemaphoreGive(gradientAspcMutex);
 
