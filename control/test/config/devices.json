@@ -1,0 +1,14 @@
+{
+    "furnace": {
+        "device_type": "KDC101",
+        "port": "/dev/ttyUSB0",
+        "bay_system": false,
+        "stages":{
+            "heater_a": {
+                "stage_type": "MTS50-Z8",
+                "upper_limit": 10,
+                "lower_limit": -10
+            }
+        }
+    }
+}

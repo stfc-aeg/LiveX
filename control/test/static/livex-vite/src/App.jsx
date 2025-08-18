@@ -16,6 +16,8 @@ import Cameras from './components/cameras/Cameras';
 import Trigger from './components/setup/Trigger';
 import MonitorGraph from './components/furnace/MonitorGraph';
 
+import Motors from './components/motors/Motors.jsx';
+
 // import plotly from 'plotly.js-dist-min';
 
 
@@ -32,7 +34,7 @@ function App(props) {
   const sequencer_url = endpoint_url + "/sequencer.html";
 
   return (
-    <OdinApp title="LiveX Controls" navLinks={["Metadata and Setup", "Sequencer", "Furnace Control", "Camera Control", "Monitoring"]}>
+    <OdinApp title="LiveX Controls" navLinks={["Metadata and Setup", "Sequencer", "Furnace Control", "Camera Control", "Monitoring", "Motors"]}>
       <Row>
         <Col xs={12}>
           <Metadata
@@ -84,6 +86,9 @@ function App(props) {
             title={"PID Output Graph"}
           ></MonitorGraph>
         </Col>
+      </Row>
+      <Row>
+        <Motors endpoint_url={endpoint_url}></Motors>
       </Row>
     </OdinApp>
   );
