@@ -89,24 +89,33 @@ function EncoderStage(props){
           </Col>
         </Row>
         <Row>
-          <FloatingLabel
-            label="Current:">
-              <Form.Control
-                plaintext
-                readOnly
-                style={floatingLabelStyle}
-                value={data.position.current_pos}
-              />
-          </FloatingLabel>
-          <FloatingLabel
-            label="Target">
-              <Form.Control
-                value={targetPosition}
-                style={floatingInputStyle}
-                onChange={handleTargetChange}
-                disabled={data.moving}
-              />
-          </FloatingLabel>
+          <Col>
+            <FloatingLabel
+              label="Current:">
+                <Form.Control
+                  plaintext
+                  readOnly
+                  style={{
+                    width: "100%",
+                    border: '1px solid lightblue',
+                    backgroundColor: '#e0f7ff',
+                    borderRadius: '0.375rem'
+                  }}
+                  value={data.position.current_pos}
+                />
+            </FloatingLabel>
+          </Col>
+          <Col>
+            <FloatingLabel
+              label="Target">
+                <Form.Control
+                  value={targetPosition}
+                  style={floatingInputStyle}
+                  onChange={handleTargetChange}
+                  disabled={data.moving}
+                />
+            </FloatingLabel>
+          </Col>
         </Row>
         <Row className='mt-3'>
           <Col>
