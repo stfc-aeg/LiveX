@@ -29,6 +29,9 @@ function EncoderStage(props){
     <Row>
       <Col xs={4}>
         <Row>
+          <label>Movement commands</label>
+        </Row>
+        <Row className='mt-2'>
           <EndPointButton
             endpoint={kinesisEndPoint}
             fullpath={dataPath+"/position/set_target_pos"}
@@ -38,7 +41,7 @@ function EncoderStage(props){
             Move to target
           </EndPointButton>
         </Row>
-        <Row className="mt-3">
+        <Row className="mt-2">
           <Col>
             <EndPointButton
               endpoint={kinesisEndPoint}
@@ -60,7 +63,7 @@ function EncoderStage(props){
             </EndPointButton>
           </Col>
         </Row>
-        <Row className='mt-3'>
+        <Row className='mt-2'>
           <EndPointButton
             endpoint={kinesisEndPoint}
             fullpath={dataPath+"/position/home"}
@@ -70,7 +73,7 @@ function EncoderStage(props){
              Home
           </EndPointButton>
         </Row>
-        <Row className="mt-3">
+        <Row className="mt-2">
           <EndPointButton
             endpoint={kinesisEndPoint}
             fullpath={dataPath+"/position/stop"}
@@ -88,7 +91,7 @@ function EncoderStage(props){
             <label>Position (mm)</label>
           </Col>
         </Row>
-        <Row>
+        <Row className='mt-2'>
           <Col>
             <FloatingLabel
               label="Current:">
@@ -141,8 +144,11 @@ function EncoderStage(props){
         </Row>
       </Col>
       <Col xs={4}>
-        <Row className='mt-2'>
-          <Accordion >
+        <Row>
+          <label>Settings</label>
+        </Row>
+        <Row>
+          <Accordion className='mt-2'>
             <Accordion.Item eventKey="0">
               <Accordion.Header>Jog/step settings</Accordion.Header>
               <Accordion.Body>
