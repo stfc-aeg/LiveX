@@ -28,42 +28,57 @@ class MockModbusClient:
         10: 0,  # gradient_update_coil
         11: 0,  # freq_aspc_update_coil
         12: 0,  # setpoint_update_coil
+        13: 0,  # tc_type_update_coil
 
         # Input Registers (30001-39999)
-        30001: 0,   # counter_inp
-        30003: 0,    # pid_output_a_inp
-        30005: 0,    # pid_output_b_inp
-        30007: 0,   # pid_outputsum_a_inp
-        30009: 0,   # pid_outputsum_b_inp
+        30001: 0,     # counter_inp
+        30003: 0,     # pid_output_a_inp
+        30005: 0,     # pid_output_b_inp
+        30007: 0,     # pid_outputsum_a_inp
+        30009: 0,     # pid_outputsum_b_inp
 
-        30011: 21,   # thermocouple_a_inp
-        30013: 20,   # thermocouple_b_inp
-        30015: 20,   # thermocouple_c_inp
-        30017: 20,   # thermocouple_d_inp
+        30011: 21,    # thermocouple_a_inp
+        30013: 20,    # thermocouple_b_inp
+        30015: 20,    # thermocouple_c_inp
+        30017: 20,    # thermocouple_d_inp
+        30019: 20,    # thermocouple_e_inp
+        30021: 20,    # thermocouple_f_inp
+        30023: 6,     # number_mcp_inp
 
-        30019: 0,     # gradient_actual_inp
-        30021: 0,     # gradient_theory_inp
-        30023: 0,  # autosp_midpt_inp
-
-        30027: 0,   # motor_lvdt_inp
-
+        30025: 0,     # gradient_actual_inp
+        30027: 0,     # gradient_theory_inp
+        30029: 0,     # autosp_midpt_inp
+        
         # Holding Registers (40001-49999)
-        40001: 30,   # pid_setpoint_a_hold
-        40003: 0.3,    # pid_kp_a_hold
-        40005: 0.02,     # pid_ki_a_hold
+        40001: 30,    # pid_setpoint_a_hold
+        40003: 0.3,   # pid_kp_a_hold
+        40005: 0.02,  # pid_ki_a_hold
         40007: 0,     # pid_kd_a_hold
 
-        40009: 30,   # pid_setpoint_b_hold
-        40011: 0.3,    # pid_kp_b_hold
-        40013: 0.02,     # pid_ki_b_hold
+        40009: 30,    # pid_setpoint_b_hold
+        40011: 0.3,   # pid_kp_b_hold
+        40013: 0.02,  # pid_ki_b_hold
         40015: 0,     # pid_kd_b_hold
 
         40017: 10,    # furnace_freq_hold
         40019: 7,     # gradient_wanted_hold
         40021: 25,    # gradient_distance_hold
         40023: 2,     # autosp_rate_hold
-        40025: 0,    # autosp_imgdegree_hold
-        40027: 0,   # motor_speed_hold
+        40025: 0,     # autosp_imgdegree_hold
+
+        40027: 0,     # thermocouple_a_idx_hold
+        40029: 1,     # thermocouple_b_idx_hold
+        40031: 2,     # thermocouple_c_idx_hold
+        40033: 3,     # thermocouple_d_idx_hold
+        40035: 4,     # thermocouple_e_idx_hold
+        40037: 5,     # thermocouple_f_idx_hold
+
+        40039: 0,     # tcidx_0_type_hold
+        40041: 0,     # tcidx_1_type_hold
+        40043: 0,     # tcidx_2_type_hold
+        40045: 0,     # tcidx_3_type_hold
+        40047: 0,     # tcidx_4_type_hold
+        40049: 0,     # tcidx_5_type_hold
     }
     trigger_registers = {
         # Coils (0-13)

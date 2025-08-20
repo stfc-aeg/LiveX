@@ -16,6 +16,8 @@ import Cameras from './components/cameras/Cameras';
 import Trigger from './components/setup/Trigger';
 import MonitorGraph from './components/furnace/MonitorGraph';
 
+import Motors from './components/motors/Motors.jsx';
+
 // import plotly from 'plotly.js-dist-min';
 
 
@@ -25,14 +27,14 @@ function App(props) {
 
   const endpoint_url = import.meta.env.VITE_ENDPOINT_URL;
 
-  const furnaceEndPoint = useAdapterEndpoint('furnace', endpoint_url, 1000);
-  const graphEndPoint = useAdapterEndpoint('graph', endpoint_url, 1000);
+  const furnaceEndPoint = useAdapterEndpoint('furnace', endpoint_url, 500);
+  const graphEndPoint = useAdapterEndpoint('graph', endpoint_url, 200);
   const connectedPuttingDisable = (!(furnaceEndPoint.data.status?.connected || false)) || (furnaceEndPoint.loading === "putting")
 
   const sequencer_url = endpoint_url + "/sequencer.html";
 
   return (
-    <OdinApp title="LiveX Controls" navLinks={["Metadata and Setup", "Sequencer", "Furnace Control", "Camera Control", "Monitoring"]}>
+    <OdinApp title="LiveX Controls" navLinks={["Metadata and Setup", "Sequencer", "Furnace Control", "Camera Control", "Monitoring", "Motors"]}>
       <Row>
         <Col xs={12}>
           <Metadata
@@ -68,7 +70,6 @@ function App(props) {
             seriesData={[
               {dataPath: 'temperature_a', param: 'data', seriesName: "TCA"},
               {dataPath: 'temperature_b', param: 'data', seriesName: "TCB"},
-              {dataPath: 'temperature_c', param: 'data', seriesName: "TC3"},
               {dataPath: 'setpoint_a', param: 'data', seriesName: "SPA"},
               {dataPath: 'setpoint_b', param: 'data', seriesName: "SPB"}
             ]}
@@ -85,6 +86,9 @@ function App(props) {
             title={"PID Output Graph"}
           ></MonitorGraph>
         </Col>
+      </Row>
+      <Row>
+        <Motors endpoint_url={endpoint_url}></Motors>
       </Row>
     </OdinApp>
   );

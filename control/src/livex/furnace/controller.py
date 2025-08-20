@@ -46,8 +46,6 @@ class FurnaceController():
 
         self.tc_indices = options.get('thermocouple_indices', '0,1,2,3,4,5')
         self.tc_indices = [int(val) for val in self.tc_indices.strip(" ").split(",")]
-        self.tc_types = options.get('thermocouple_types', 'r,r,r,k,k,k')
-        self.tc_types = [val.upper() for val in self.tc_types.strip(" ").split(",")]
 
         self.mocking = bool(int(options.get('use_mock_client', 0)))
         pid_debug = bool(int(options.get('pid_debug', 0)))
@@ -93,7 +91,7 @@ class FurnaceController():
 
         self.acquiring = False
 
-        self.tc_manager = ThermocoupleManager(self.tc_indices, self.tc_types)
+        self.tc_manager = ThermocoupleManager(options)
         self.pid_a = PID(modAddr.addresses_pid_a, pid_defaults)
         self.pid_b = PID(modAddr.addresses_pid_b, pid_defaults)
         self.gradient = Gradient(modAddr.gradient_addresses)
@@ -380,13 +378,10 @@ class FurnaceController():
                             'output_b': [self.pid_b.output]
                         }
                         # Include additional thermocouples if enabled, not including a or b (0,1)
-                        for i in range(2, self.tc_manager.num_mcp):
-                            label = self.tc_manager.labels[i]
-                            # Only include thermocouples that are enabled
-                            # If the index isn't in this range, the thermocouple will be disabled
-                            if self.tc_manager.thermocouple_indices[label] in range(self.tc_manager.num_mcp):
-                                data_label = f'thermocouple_{label}'
-                                secondary_data[data_label] = [self.tc_manager.thermocouple_values[label]]
+                        for tc in self.tc_manager.thermocouples[2:self.tc_manager.num_mcp]:
+                            if tc.index is not None and tc.index >= 0:
+                                data_label = f'thermocouple_{tc.label}'
+                                secondary_data[data_label] = [tc.value]
 
                         self.file_writer.write_hdf5(
                             data=secondary_data,
@@ -410,16 +405,15 @@ class FurnaceController():
                 # Get any value updated by the device
                 # Mostly input registers, except for setpoints which can change automatically
                 try:
-                    for i in range(self.tc_manager.num_mcp):
-                        # Get thermocouple label
-                        label = self.tc_manager.labels[i]
-                        # Floats take 2 registers. i*2 iterates over sequentially-defined registers
-                        # thermocouple_a_inp at 30011 to thermocouple_b_inp at 30013 etc.
-                        value = read_decode_input_reg(self.mod_client, modAddr.thermocouple_a_inp+i*2)
-                        self.tc_manager.thermocouple_values[label] = value
+                    for tc in self.tc_manager.thermocouples[:self.tc_manager.num_mcp]:
+                        if tc.index is not None and tc.index>=0:
+                            value = read_decode_input_reg(
+                                self.mod_client, getattr(modAddr, f'thermocouple_{tc.connection.name}_inp')
+                            )
+                            tc.value = value
 
-                    self.pid_a.temperature = self.tc_manager.thermocouple_values['a']
-                    self.pid_b.temperature = self.tc_manager.thermocouple_values['b']
+                    self.pid_a.temperature = self.tc_manager._get_value_by_label('upper_heater')
+                    self.pid_b.temperature = self.tc_manager._get_value_by_label('lower_heater')
 
                     self.lifetime_counter = read_decode_input_reg(self.mod_client, modAddr.counter_inp)
 
