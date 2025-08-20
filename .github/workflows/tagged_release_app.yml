@@ -1,0 +1,50 @@
+name: tagged_release_app
+run-name: Build static app and publish with a tagged release
+on:
+  push:
+   tags:
+     - '*'
+
+permissions:
+  contents: write
+
+jobs:
+
+  release:
+
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: control/test/static/livex-vite
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Use node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Clean install app
+        run: npm ci
+      - name: Build app
+        run: npm run build
+      - name: Create TGZ archive
+        run: |
+          tar -cvzf app_build.tgz dist
+      - name: Create ZIP archive
+        run: |
+          zip -r app_build.zip dist
+      - name: List built files
+        run: ls -lR dist
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            livex-vite/app_build.tgz
+            livex-vite/app_build.zip
