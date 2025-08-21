@@ -20,6 +20,7 @@ class CONNECTIONS(Enum):
 class Thermocouple:
     label: str  # User-defined 'name' for the thermocouple
     connection: CONNECTIONS
+    addr: int = None  # modbus address in modAddr attribute
     index: int = None  # Index in the PLC
     value: float = None  # Value read from PLC
 
@@ -40,13 +41,16 @@ class ThermocoupleManager:
 
         # Thermocouple array starts with two mandatory connections
         self.thermocouples = [
-            Thermocouple(label='upper_heater', connection=CONNECTIONS[upper_heater_tc]),
-            Thermocouple(label='lower_heater', connection=CONNECTIONS[lower_heater_tc])
+            Thermocouple(label='upper_heater', connection=CONNECTIONS[upper_heater_tc], addr=modAddr.thermocouple_a_idx_hold),
+            Thermocouple(label='lower_heater', connection=CONNECTIONS[lower_heater_tc], addr=modAddr.thermocouple_b_idx_hold)
         ]
 
-        self.thermocouples.extend(
-            Thermocouple(label=name.strip(), connection=CONNECTIONS[tc.strip()]) for tc, name in zip(extra_tcs, extra_tc_names) if tc and name
-        )
+        for i, (tc, name) in enumerate(zip(extra_tcs, extra_tc_names)):
+            if tc and name:
+                self.thermocouples.append(
+                    Thermocouple(label=name.strip(), connection=CONNECTIONS[tc.strip()],
+                    addr=(modAddr.thermocouple_c_idx_hold+i*2))
+                )
 
         self.tree = {}
 
@@ -54,32 +58,24 @@ class ThermocoupleManager:
         """Keep internal reference to the Modbus client and attempt to use it to get parameters."""
         self.client = client
         try:
+            # 'Zero out' thermocouple range before setting with _get_parameters()
+            for i in range(self.num_mcp):
+                write_modbus_float(self.client, -1, modAddr.thermocouple_a_idx_hold+i*2)
+
             self._get_parameters()
             self._build_tree()
         except Exception as e:
             logging.warning(f"Error when attempting to get PID parameters after client connection: {repr(e)}")
 
     def _get_parameters(self):
-        """Get parameters needed for the parameter tree."""
+        """Get parameters needed for the parameter tree and send thermocouple info to modbus."""
         self.num_mcp = int(read_decode_input_reg(self.client, modAddr.number_mcp_inp))
 
-        # Not all connections are necessarily defined, ones that are not will get -1 written
-        used_connections = {tc.connection: tc for tc in self.thermocouples}
-
-        for i, connection in enumerate(CONNECTIONS):
-            if i >= self.num_mcp:
-                break
-
-            if connection in used_connections:
-                index = used_connections[connection].connection.value
-            else:
-                index = -1
-
-            write_modbus_float(
-                self.client, index, getattr(modAddr, f'thermocouple_{connection.name}_idx_hold')
-            )
-            if connection in used_connections:
-                used_connections[connection].index = index
+        for tc in self.thermocouples:
+            index = tc.connection.value
+            write_modbus_float(self.client, index, tc.addr)
+            logging.warning(f"Wrote {index} to addr {tc.addr}")
+            tc.index = index
 
         write_coil(self.client, modAddr.tc_type_update_coil, 1)
 
