@@ -74,7 +74,6 @@ class ThermocoupleManager:
         for tc in self.thermocouples:
             index = tc.connection.value
             write_modbus_float(self.client, index, tc.addr)
-            logging.warning(f"Wrote {index} to addr {tc.addr}")
             tc.index = index
 
         write_coil(self.client, modAddr.tc_type_update_coil, 1)
