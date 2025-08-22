@@ -204,35 +204,36 @@ function OrcaCamera(props) {
                   <Col xs={6}>
                     <FloatingLabel
                       label="Image Colour Map">
-                        <EndPointSelect
-                          endpoint={liveViewEndPoint}
-                          fullpath={`${name}/image/colour`}
-                          buttonText={liveViewData?.image?.colour}
-                          style={floatingInputStyle}>
-                            {colourEffects.map(
-                              (effect, index) => (
-                                <option value={effect} key={index}>
-                                  {effect}
-                                </option>
-                            ))}
-                          </EndPointSelect>
+                      <Form.Select
+                        style={floatingInputStyle}
+                        value={liveViewData?.image?.colour.value ?? "?"}
+                        onChange={(e)=> {
+                          liveViewEndPoint.put(e.target.value, `${name}/image/colour`);
+                        }}>
+                          {colourEffects.map((effect, index) => (
+                            <option value={effect} key={index}>
+                              {effect}
+                            </option>
+                          ))}
+                      </Form.Select>
                     </FloatingLabel>
                   </Col>
                   <Col xs={6}>
                     <FloatingLabel
                       label="Resolution (%)">
-                        <EndPointSelect
-                          endpoint={liveViewEndPoint}
-                          fullpath={`${name}/image/resolution`}
-                          buttonText={liveViewData?.image?.resolution}
-                          style={floatingInputStyle}>
+                        <Form.Select
+                          style={floatingInputStyle}
+                          value={liveViewData?.image?.resolution.value}
+                          onChange={(e)=> {
+                            liveViewEndPoint.put(e.target.value, `${name}/image/resolution`);
+                          }}>
                             {commonImageResolutions.map((effect, index) => (
                               <option value={effect} key={index}>
                                 {effect}
                               </option>
                               ))
                             }
-                        </EndPointSelect>
+                        </Form.Select>
                     </FloatingLabel>
                   </Col>
                 </Row>

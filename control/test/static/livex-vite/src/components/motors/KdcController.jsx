@@ -23,8 +23,9 @@ function KdcController(props) {
           <EndPointButton
             endpoint={kinesisEndPoint}
             value={true}
-            fullpath="status/reconnect"
-            variant={kinesisEndPoint.data?.controllers[name].connected ? "primary" : "danger"}>
+            fullpath={`controllers/${name}/connected`}
+            variant={kinesisEndPoint.data?.controllers[name].connected ? "primary" : "danger"}
+            disabled={kinesisEndPoint.data?.controllers[name].connected}>
             {kinesisEndPoint.data?.controllers[name].connected ? 'Connected' : 'Reconnect'}
           </EndPointButton>
         </Col>

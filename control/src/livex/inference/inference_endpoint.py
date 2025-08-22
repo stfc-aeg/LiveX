@@ -53,8 +53,6 @@ class InferenceEndpoint():
                     self.results[key], None
                 )  # Function uses key (the parameter) as argument via partial
 
-            logging.warning(f"\nresults tree: {results_tree}\n")
-
             results_tree = ParameterTree(results_tree)
             self.tree['results'] = results_tree
 
