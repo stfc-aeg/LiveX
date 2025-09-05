@@ -274,7 +274,7 @@ class LiveXController(BaseController):
         targets = {}
         for name, trigger in self.trigger_manager.triggers.items():
             targets[name] = trigger.target
-            self.trigger_manager.set_target(name, 0)
+            self.trigger_manager.set_target(0)
 
         # Write other metadata information
         iac_set(self.metadata, 'fields/thermal_gradient_kmm', 'value', self.furnace.gradient.wanted)
