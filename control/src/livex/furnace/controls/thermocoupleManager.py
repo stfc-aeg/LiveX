@@ -21,6 +21,7 @@ class Thermocouple:
     label: str  # User-defined 'name' for the thermocouple
     connection: CONNECTIONS
     addr: int = None  # modbus address in modAddr attribute
+    val_addr: int = None  # address that thermocouple value should be read from
     index: int = None  # Index in the PLC
     value: float = None  # Value read from PLC
 
@@ -41,15 +42,15 @@ class ThermocoupleManager:
 
         # Thermocouple array starts with two mandatory connections
         self.thermocouples = [
-            Thermocouple(label='upper_heater', connection=CONNECTIONS[upper_heater_tc], addr=modAddr.thermocouple_a_idx_hold),
-            Thermocouple(label='lower_heater', connection=CONNECTIONS[lower_heater_tc], addr=modAddr.thermocouple_b_idx_hold)
+            Thermocouple(label='upper_heater', connection=CONNECTIONS[upper_heater_tc], addr=modAddr.thermocouple_a_idx_hold, val_addr=modAddr.thermocouple_a_inp),
+            Thermocouple(label='lower_heater', connection=CONNECTIONS[lower_heater_tc], addr=modAddr.thermocouple_b_idx_hold, val_addr=modAddr.thermocouple_b_inp)
         ]
 
         for i, (tc, name) in enumerate(zip(extra_tcs, extra_tc_names)):
             if tc and name:
                 self.thermocouples.append(
                     Thermocouple(label=name.strip(), connection=CONNECTIONS[tc.strip()],
-                    addr=(modAddr.thermocouple_c_idx_hold+i*2))
+                    addr=(modAddr.thermocouple_c_idx_hold+i*2), val_addr=(modAddr.thermocouple_c_inp+i*2))
                 )
 
         self.tree = {}
@@ -75,8 +76,9 @@ class ThermocoupleManager:
             index = tc.connection.value
             write_modbus_float(self.client, index, tc.addr)
             tc.index = index
+            logging.warning(f"written {index} to address {tc.addr} for tc {tc.label}")
 
-        write_coil(self.client, modAddr.tc_type_update_coil, 1)
+        # write_coil(self.client, modAddr.tc_type_update_coil, 1)
 
     def _build_tree(self):
         """Build the parameter tree."""

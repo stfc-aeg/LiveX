@@ -276,7 +276,7 @@ class FurnaceController():
 
             self.connected = True
         except Exception as e:
-            logging.debug(f"Connection to modbus client did not succeed: {e}")
+            logging.error(f"Connection to modbus client did not succeed: {e}")
             self.connected = False
 
         self._initialise_tcp_client()
@@ -408,7 +408,7 @@ class FurnaceController():
                     for tc in self.tc_manager.thermocouples[:self.tc_manager.num_mcp]:
                         if tc.index is not None and tc.index>=0:
                             value = read_decode_input_reg(
-                                self.mod_client, getattr(modAddr, f'thermocouple_{tc.connection.name}_inp')
+                                self.mod_client, tc.val_addr
                             )
                             tc.value = value
 
@@ -431,7 +431,8 @@ class FurnaceController():
                     self.pid_a.setpoint = read_decode_holding_reg(self.mod_client, modAddr.pid_setpoint_a_hold)
                     self.pid_b.setpoint = read_decode_holding_reg(self.mod_client, modAddr.pid_setpoint_b_hold)
 
-                except:
+                except Exception as e:
+                    logging.error(f"error in reading: {e}")
                     self.mod_client.close()
                     self.tcp_client.close()
                     # Close both for safety and consistency
