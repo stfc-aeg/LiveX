@@ -27,7 +27,7 @@ class TriggerManager:
         # Initialize frequencies and frequency subtree
         self.frequencies = {}
         self.frequency_subtree = {}
-        self.acq_frame_target = 100
+        self.acq_frame_target = 0
         self.acq_frame_frequency = 10  # Frequency used for frame target acquisitions (future)
         self.freerun = True
         self.targets = {name: 0 for name in self.triggers.keys()}  # Store targets for freerun use
