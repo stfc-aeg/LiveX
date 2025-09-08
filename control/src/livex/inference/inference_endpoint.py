@@ -35,6 +35,9 @@ class InferenceEndpoint():
         # With no return from IpcChannel.connect(), assume success until failure is reached
         self.connected = True
 
+        # Number of acquisition to use for flatfield
+        self.flatfield_num = 0
+
         # Tree branches
         self.tree['endpoint_name'] = self.name
         self.tree['endpoint'] = self.endpoint
@@ -51,7 +54,9 @@ class InferenceEndpoint():
             for key, item in self.results.items():
                 results_tree[key] = (lambda key=key:
                     self.results[key], None
-                )  # Function uses key (the parameter) as argument via partial
+                )
+
+            results_tree['set_flatfield_num'] = (lambda: self.flatfield_num, self.set_flatfield_num)
 
             results_tree = ParameterTree(results_tree)
             self.tree['results'] = results_tree
@@ -71,6 +76,31 @@ class InferenceEndpoint():
         """Close the previous camera connection and recreate it."""
         self._close_connection()
         self._connect()
+
+    def set_flatfield_num(self, num):
+        """Set the acquisition file number for flatfield correction."""
+        logging.error(f"called set_flatfield_acqnum")
+
+        try:
+            if num < 0:
+                self.flatfield_num = 0
+                num = None  # Special case to clear flatfield, assuming -1
+
+            cmd_msg = IpcMessage('cmd', msg_val='set_flatfield_num', id=self._next_msg_id())
+            config = { "params": {"num": num} }
+            cmd_msg.attrs.update(config)
+            self.inference.send(cmd_msg.encode())
+
+            logging.warning(f"msg: {cmd_msg}")
+
+            response = self.await_response(silence_reply=False)
+
+            if response:
+                logging.info(f"Set flatfield acquisition number to {num} for {self.name}:{self.inference.identity}")
+            else:
+                logging.debug(f"Got no or unexpected response structure from {self.name}:{self.inference.identity}")
+        except Exception as e:
+            logging.error(f"Error setting ff acq num: {e}")
 
     def get_results(self, silence_reply=True):
         """Identify if the response is for setting the status or config."""

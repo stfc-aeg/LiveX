@@ -3,11 +3,14 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import { Container } from 'react-bootstrap';
 import Form from 'react-bootstrap/Form';
-import { useAdapterEndpoint, TitleCard } from 'odin-react';
+import { useAdapterEndpoint, WithEndpoint, TitleCard } from 'odin-react';
 import { FloatingLabel } from 'react-bootstrap';
+import Button from 'react-bootstrap/Button';
+import { useState } from 'react';
 
-import { checkNull, checkNullNoDp, floatingLabelStyle } from '../../utils';
+import { checkNull, checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../../utils';
 
+const EndPointButton = WithEndpoint(Button);
 
 function InferenceView(props) {
     const {endpoint_url} = props;
@@ -15,6 +18,11 @@ function InferenceView(props) {
  
     const inferenceEndPoint = useAdapterEndpoint('inference', endpoint_url, 1000);
     const inferenceResults = inferenceEndPoint?.data[name]?.results;
+
+    const [flatfieldNum, setFlatfieldNum] = useState(0);
+    const handleFlatfieldNumChange = (e) => {
+      setFlatfieldNum(e.target.value);
+    };
 
     return (
         <Container>
@@ -54,6 +62,41 @@ function InferenceView(props) {
                         value={checkNull(inferenceResults?.avg_inference_time_ms)}
                       />
                   </FloatingLabel>
+                </Col>
+              </Row>
+              <Row className='mt-3'>
+                <Col xs={3}></Col>
+                <Col>
+                  <Row className="mt-2">
+                    <FloatingLabel
+                      label="Flatfield Acquisition #">
+                        <Form.Control
+                          style={floatingInputStyle}
+                          type="number"
+                          value={inferenceResults?.ff_correction_file}
+                          onChange={handleFlatfieldNumChange}
+                        />
+                    </FloatingLabel>
+                  </Row>
+                </Col>
+                <Col>
+                  <Row>
+                    <EndPointButton
+                      endpoint={inferenceEndPoint}
+                      fullpath={`${name}/results/set_flatfield_num`}
+                      value={flatfieldNum}>
+                        Set flatfield from acquisition
+                    </EndPointButton>
+                  </Row>
+                  <Row>
+                    <EndPointButton
+                      endpoint={inferenceEndPoint}
+                      fullpath={`${name}/results/set_flatfield_num`}
+                      value={-1 /*Special case adapter-side,*/} 
+                      variant='danger'>
+                        Clear flatfield
+                    </EndPointButton>
+                  </Row>
                 </Col>
               </Row>
             </Col>

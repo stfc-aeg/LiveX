@@ -56,9 +56,8 @@ bool acquiringFlag = false;
 // Thermocouples - main, taskPid
 Adafruit_MCP9600 mcp[6];  // Use default constructor to make as many as needed
 const unsigned int num_mcp = sizeof(mcp) / sizeof(mcp[0]);
-const uint8_t mcp_addr[] = {0x60, 0x67, 0x66, 0x65, 0x64,
- 0x63};
-const MCP9600_ThemocoupleType mcp_type[] = {MCP9600_TYPE_R, MCP9600_TYPE_R, MCP9600_TYPE_R, MCP9600_TYPE_K, MCP9600_TYPE_K, MCP9600_TYPE_K};
+const uint8_t mcp_addr[] = {0x60, 0x67, 0x66, 0x65, 0x64, 0x63};
+const MCP9600_ThemocoupleType mcp_type[] = {MCP9600_TYPE_R, MCP9600_TYPE_R, MCP9600_TYPE_K, MCP9600_TYPE_K, MCP9600_TYPE_K, MCP9600_TYPE_R};
 const int mcp_mod_addrs[] = {};
 
 // Timers and flags - main, taskPid
