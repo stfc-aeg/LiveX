@@ -2,20 +2,16 @@ import { checkNull } from '../../utils';
 
 import React from "react";
 import { TitleCard, WithEndpoint } from 'odin-react';
-import ToggleSwitch from '../ToggleSwitch';
-import DropdownSelector from '../DropdownSelector';
-import InputGroup from 'react-bootstrap/InputGroup';
+import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
-import Dropdown from 'react-bootstrap/Dropdown';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import { floatingInputStyle, floatingLabelStyle } from '../../utils';
 
-const EndpointDropdown = WithEndpoint(DropdownSelector);
+const EndPointButton = WithEndpoint(Button);
 const EndpointSelect = WithEndpoint(Form.Select);
-const EndPointToggle = WithEndpoint(ToggleSwitch);
 const EndPointFormControl = WithEndpoint(Form.Control);
 
 function AutoSetPointControl(props){
@@ -28,14 +24,14 @@ function AutoSetPointControl(props){
             <Row>
               <Col xs={3} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>Auto Set Point Control</Col>
               <Col xs={3}>
-                <EndPointToggle
-                    endpoint={furnaceEndPoint}
-                    fullpath="autosp/enable"
-                    event_type="click" 
-                    checked={furnaceEndPoint.data.autosp?.enable || false}
-                    label="Enable"
-                    disabled={connectedPuttingDisable}>
-                  </EndPointToggle>   
+                <EndPointButton
+                  endpoint={furnaceEndPoint}
+                  fullpath="autosp/enable"
+                  value={furnaceEndPoint.data.autosp?.enable ? false : true}
+                  variant={furnaceEndPoint.data.autosp?.enable ? 'danger' : 'primary'}
+                  >
+                    {furnaceEndPoint.data.autosp?.enable ? "Disable" : "Enable"}
+                </EndPointButton>
               </Col>
             </Row>
           }>

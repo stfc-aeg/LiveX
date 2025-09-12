@@ -3,7 +3,7 @@ import React from 'react';
 import { checkNull } from '../../utils';
 
 import { TitleCard, WithEndpoint } from 'odin-react';
-import ToggleSwitch from '../ToggleSwitch';
+import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
@@ -12,7 +12,7 @@ import { floatingInputStyle, floatingLabelStyle } from '../../utils';
 import { FloatingLabel } from 'react-bootstrap';
 
 const EndpointSelect = WithEndpoint(Form.Select);
-const EndPointToggle = WithEndpoint(ToggleSwitch);
+const EndPointButton = WithEndpoint(Button);
 const EndPointFormControl = WithEndpoint(Form.Control);
 
 function ThermalGradient(props){
@@ -24,12 +24,14 @@ function ThermalGradient(props){
         <Row>
           <Col xs={3} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>Thermal Gradient</Col>
           <Col xs={3}>
-            <EndPointToggle 
+            <EndPointButton
               endpoint={furnaceEndPoint}
               fullpath="gradient/enable"
-              event_type="click"
-              checked={furnaceEndPoint.data.gradient?.enable || false} label="Enable" disabled={connectedPuttingDisable}>
-            </EndPointToggle>
+              value={furnaceEndPoint.data?.gradient?.enable ? false : true}
+              variant={furnaceEndPoint.data?.gradient?.enable ? 'danger' : 'primary'}
+              >
+                {furnaceEndPoint.data?.gradient?.enable ? "Disable" : "Enable"}
+            </EndPointButton>
           </Col>
         </Row>
       }>

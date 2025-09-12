@@ -3,6 +3,7 @@ import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
+import Button from 'react-bootstrap/Button';
 import { TitleCard, WithEndpoint } from 'odin-react';
 import ToggleSwitch from '../ToggleSwitch';
 import { checkNull  } from '../../utils';
@@ -12,7 +13,7 @@ import { FloatingLabel } from 'react-bootstrap';
 
 
 const EndPointFormControl = WithEndpoint(Form.Control);
-const EndPointToggle = WithEndpoint(ToggleSwitch);
+const EndPointButton = WithEndpoint(Button);
 
 function PidControl(props) {
     const {furnaceEndPoint} = props;
@@ -28,14 +29,14 @@ function PidControl(props) {
           <Row>
             <Col xs={3} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>{title}</Col>
             <Col xs={3}>
-              <EndPointToggle
+              <EndPointButton
                 endpoint={furnaceEndPoint}
                 fullpath={pid+"/enable"}
-                event_type="click"
-                checked={furnaceEndPoint.data[pid]?.enable || false}
-                label="Enable"
-                disabled={connectedPuttingDisable}>
-              </EndPointToggle>
+                variant={furnaceEndPoint.data[pid]?.enable ? 'danger' : 'primary'}
+                value={furnaceEndPoint.data[pid]?.enable ? false : true}
+                >
+                  {furnaceEndPoint.data[pid]?.enable ? "Disable" : "Enable"}
+              </EndPointButton>
             </Col>
           </Row>
         }>
