@@ -295,7 +295,7 @@ class LiveXController(BaseController):
         # Reenable timers
         self.trigger.set_all_timers(
             {'enable': True,
-             'freerun': self.trigger_manager.freerun}
+             'freerun': True}
         )
 
         # Increase acquisition number after acquisition so UI indicates next acq instead of previous
