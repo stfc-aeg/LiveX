@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Select from 'react-select';
 
@@ -6,38 +6,42 @@ function TagInput(props) {
   const { options, metadataEndPoint, field, labelWidth, currentValue } = props;
   const timer = useRef(null);
 
-  const selectOptions = options.map(value => ({
-    label: value,
-    value: value
-  }));
+  // Memo for stable references prevents flickering
+  const selectOptions = useMemo(
+    () => options.map(value => ({label: value, value })),
+    [options]
+  );
 
-  const [selected, setSelected] = useState(() => {
-    return Array.isArray(currentValue)
-      ? currentValue.map(value => ({
-          label: value,
-          value: value
-        }))
-      : [];
-  });
+  // Track selected values and not objects to avoid re-render due to comparison issues
+  const [selectedValues, setSelectedValues] = useState(() =>
+    Array.isArray(currentValue) ? currentValue : []
+  );
 
-  const sendTags = (selectedOptions) => {
-    let fullpath = "fields/" + field + "/value";
-    let value = selectedOptions.map(option => option.value);
-    metadataEndPoint.put(value, fullpath)
+  // Convert the values to objects for the select
+  const selectedOptions = useMemo(
+    () => selectOptions.filter(option => selectedValues.includes(option.value)),
+    [selectOptions, selectedValues]
+  );
+
+  const sendTags = (values) => {
+    let fullpath = `fields/${field}/value`;
+    metadataEndPoint.put(values, fullpath)
       .then((response) => {
         metadataEndPoint.mergeData(response, fullpath);
       })
       .catch((err) => {});
   }
 
-  const onChangeHandler = useCallback((selectedOptions) => {
-    setSelected(selectedOptions);
+  const onChangeHandler = useCallback((newSelected) => {
+    const values = newSelected ? newSelected.map(option => option.value) : [];
+    setSelectedValues(values);
+
     if (timer.current) {
       clearTimeout(timer.current);
     }
     timer.current = setTimeout(() => {
-      console.log("Timer Elapsed. Sending Data");
-      sendTags(selectedOptions || []);
+      console.log("Timer Elapsed. Sending tag data.");
+      sendTags(values);
     }, 1000);
   }, []);
 
@@ -50,7 +54,7 @@ function TagInput(props) {
         <Select
           isMulti
           options={selectOptions}
-          value={selected}
+          value={selectedOptions}
           onChange={onChangeHandler}
           styles={{
             menu: (provided) => ({ ...provided, zIndex: 1050 })
