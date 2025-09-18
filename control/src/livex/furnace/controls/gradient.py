@@ -13,7 +13,7 @@ class Gradient():
 
         self.enable       = False
         self.wanted       = 0
-        self.distance     = 0
+        self.distance     = float(1.5)
         self.actual       = 0
         self.theoretical  = 0
         self.high         = 1

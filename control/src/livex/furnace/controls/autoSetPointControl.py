@@ -13,7 +13,7 @@ class AutoSetPointControl():
         self.enable = False
         self.heating = 1
         self.heating_options = self.addresses['heating_options']
-        self.rate = 0
+        self.rate = float(0.5)
         self.midpt = 0
 
         self.tree = ParameterTree({
