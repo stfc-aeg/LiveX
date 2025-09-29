@@ -24,7 +24,7 @@ class LiveDataProcessor():
         'left': cv2.ROTATE_90_COUNTERCLOCKWISE  # 2
     }
 
-    def __init__(self, endpoint, resolution, pixel_bytes, orientation, size_x=2048, size_y=1152, colour='bone'):
+    def __init__(self, endpoint, resolution, pixel_bytes, orientation, size_x=2048, size_y=1152, colour='greyscale'):
         """Initialise the LiveDataProcessor object.
         This method constructs the Queue, Pipes and Process necessary for multiprocessing.
         :param endpoint: string representation of endpoint for image data.
@@ -153,7 +153,12 @@ class LiveDataProcessor():
                 self.roi['x_lower']:self.roi['x_upper']
             ]
 
-            colour_data = cv2.applyColorMap((roi_data / 256).astype(np.uint8), self.get_colour_map())
+            colourmap = self.get_colour_map()
+            if colourmap is None:
+                colour_data = cv2.applyColorMap((roi_data / 256).astype(np.uint8), self.get_colour_map())
+            else:
+                logging.error(f"No colour map")
+                colour_data = roi_data
 
             _, buffer = cv2.imencode('.png', colour_data)
             buffer = np.array(buffer)
@@ -202,8 +207,8 @@ class LiveDataProcessor():
             logging.error(f"Error when generating histogram: {e}")
 
     def get_colour_map(self):
-        """Get the colour map based on the colour string. Defaults to 'bone' (greyscale)."""
-        return getattr(cv2, f'COLORMAP_{self.colour.upper()}', cv2.COLORMAP_BONE)
+        """Get the colour map based on the colour string. Defaults to None (no colour map: i.e. greyscale)."""
+        return getattr(cv2, f'COLORMAP_{self.colour.upper()}', None)
 
     def get_histogram(self):
         """If it exists, update the histogram with one from the queue, then return it."""

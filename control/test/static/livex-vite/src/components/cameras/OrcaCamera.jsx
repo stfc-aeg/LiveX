@@ -33,7 +33,7 @@ function OrcaCamera(props) {
 
     // Colours
     const colourEffects = [
-        'autumn', 'bone', 'jet', 'winter', 'rainbow', 'ocean', 'summer', 'spring',
+        'greyscale', 'autumn', 'bone', 'jet', 'winter', 'rainbow', 'ocean', 'summer', 'spring',
         'cool', 'hsv', 'pink', 'hot', 'parula', 'magma', 'inferno', 'plasma',
         'viridis', 'cividis', 'twilight', 'twilight_shifted', 'turbo', 'deepgreen'
     ];
@@ -210,6 +210,7 @@ function OrcaCamera(props) {
                         onChange={(e)=> {
                           liveViewEndPoint.put(e.target.value, `${name}/image/colour`);
                         }}>
+                          {}
                           {colourEffects.map((effect, index) => (
                             <option value={effect} key={index}>
                               {effect}
