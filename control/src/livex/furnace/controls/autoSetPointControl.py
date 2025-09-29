@@ -11,15 +11,16 @@ class AutoSetPointControl():
         self.addresses = addresses
 
         self.enable = False
-        self.heating = 1
+        self.heating = 'heating'
         self.heating_options = self.addresses['heating_options']
         self.rate = float(0.5)
         self.midpt = 0
 
         self.tree = ParameterTree({
             'enable': (lambda: self.enable, self.set_enable),
-            'heating': (lambda: self.heating, self.set_heating),
-            'heating_options': (lambda: self.heating_options, None), 
+            'heating': (lambda: self.heating, self.set_heating,
+                        {'allowed_values': ['heating', 'cooling']}),
+            'heating_options': (lambda: self.heating_options, None),
             'rate': (lambda: self.rate, self.set_rate),
             'midpt_temp': (lambda: self.midpt, None)
         })
@@ -51,6 +52,17 @@ class AutoSetPointControl():
         write_coil(self.client, self.addresses['update'], 1)
 
     def set_heating(self, value):
+        """Set the value for auto set point control heating."""
+        self.heating = value
+
+        if value == 'heating':  # 1, heating
+            write_coil(self.client, self.addresses['heating'], 1)
+        elif value == 'cooling':      # 0, cooling
+            write_coil(self.client, self.addresses['heating'], 0)
+        else:
+            logging.warning(f"Invalid value for set_heating: {value}. Must be 'heating' or 'cooling'.")
+
+    def _set_heating(self, value):
         """Set the boolean for auto set point control heating."""
         self.heating = value
 

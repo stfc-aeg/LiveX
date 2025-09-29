@@ -19,6 +19,8 @@ function ThermalGradient(props){
     const {furnaceEndPoint} = props;
     const {connectedPuttingDisable} = props;
 
+    const high_metadata = furnaceEndPoint.metadata.gradient.high_heater;
+
     return (
       <TitleCard title={
         <Row>
@@ -63,15 +65,14 @@ function ThermalGradient(props){
                 endpoint={furnaceEndPoint}
                 fullpath="gradient/high_heater"
                 variant="outline-secondary"
-                buttonText={furnaceEndPoint.data.gradient?.high_heater_options[furnaceEndPoint.data.gradient.high_heater] || "Unknown"}
+                buttonText={furnaceEndPoint.data.gradient?.high_heater}
                 disabled={connectedPuttingDisable}
                 style={floatingInputStyle}>
-                  {furnaceEndPoint.data.gradient?.high_heater_options ? furnaceEndPoint.data.gradient.high_heater_options.map(
-                    (label, index) => (
-                      <option value={index} key={index}>
-                        {label}
-                      </option>
-                    )) : <></> }
+                  {(high_metadata.allowed_values).map(
+                    (selection, index) => (
+                      <option value={selection} key={index}>{selection}</option>
+                    )
+                  )}
               </EndpointSelect>
             </FloatingLabel>
           </Col>

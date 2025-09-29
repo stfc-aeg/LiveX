@@ -16,7 +16,7 @@ class Gradient():
         self.distance     = float(1.5)
         self.actual       = 0
         self.theoretical  = 0
-        self.high         = 1
+        self.high         = 'A'
         self.high_options = self.addresses['high_options']
 
         self.tree = ParameterTree({
@@ -25,7 +25,8 @@ class Gradient():
             'distance': (lambda: self.distance, self.set_distance),
             'actual': (lambda: self.actual, None),
             'theoretical': (lambda: self.theoretical, None),
-            'high_heater': (lambda: self.high, self.set_high),
+            'high_heater': (lambda: self.high, self.set_high,
+                            {'allowed_values': ['A', 'B']}),
             'high_heater_options': (lambda: self.high_options, None)
         })
 
@@ -47,13 +48,16 @@ class Gradient():
         self.high         = read_coil(self.client, self.addresses['high'], asInt=True) # used as index for high-heater selection
 
     def set_enable(self, value):
-        """Set the enable boolean for the thermal gradient."""
-        self.enable = bool(value)
+        """Set the enable value for the thermal gradient."""
+        self.enable = value
 
-        if value:
+        if value == 'A':  # 0, heater A
+            write_coil(self.client, self.addresses['enable'], 0)
+        elif value == 'B':  # 1, heater B
             write_coil(self.client, self.addresses['enable'], 1)
         else:
-            write_coil(self.client, self.addresses['enable'], 0)
+            logging.warning(f"Invalid value {value} for gradient enable, must be 'A' or 'B'.")
+
         write_coil(self.client, self.addresses['update'], 1)
 
     def set_distance(self, value):
