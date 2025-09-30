@@ -25,19 +25,15 @@ function OrcaCamera(props) {
     const liveViewEndPoint = useAdapterEndpoint('live_data', endpoint_url, 1000);
     const liveViewData = liveViewEndPoint?.data[name];
 
+    const colour_metadata = liveViewEndPoint?.metadata[name]?.image.colour;
+
     // Array of camera status names
     const status = ['disconnected', 'connected', 'capturing'];
     // Current status of orcaCamera (for readability)
     const orcaStatus = endpoint?.data[name]?.status?.camera_status;
     const orcaConnected = endpoint?.data[name]?.connection?.connected;
 
-    // Colours
-    const colourEffects = [
-        'greyscale', 'autumn', 'bone', 'jet', 'winter', 'rainbow', 'ocean', 'summer', 'spring',
-        'cool', 'hsv', 'pink', 'hot', 'parula', 'magma', 'inferno', 'plasma',
-        'viridis', 'cividis', 'twilight', 'twilight_shifted', 'turbo', 'deepgreen'
-    ];
-
+    // This dropdown behaves differently so that you could enter other resolutions via command
     const commonImageResolutions = [
         10, 25, 50, 75, 100
     ];
@@ -206,16 +202,15 @@ function OrcaCamera(props) {
                       label="Image Colour Map">
                       <Form.Select
                         style={floatingInputStyle}
-                        value={liveViewData?.image?.colour.value ?? "?"}
+                        value={liveViewData?.image?.colour ?? "?"}
                         onChange={(e)=> {
                           liveViewEndPoint.put(e.target.value, `${name}/image/colour`);
                         }}>
-                          {}
-                          {colourEffects.map((effect, index) => (
-                            <option value={effect} key={index}>
-                              {effect}
-                            </option>
-                          ))}
+                          {(colour_metadata?.allowed_values || ['greyscale']).map(
+                            (selection, index) => (
+                              <option value={selection} key={index}>{selection}</option>
+                            )
+                          )}
                       </Form.Select>
                     </FloatingLabel>
                   </Col>

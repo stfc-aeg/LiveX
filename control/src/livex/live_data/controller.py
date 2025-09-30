@@ -66,7 +66,13 @@ class LiveDataController(BaseController):
                     "resolution": (lambda proc=proc: proc.resolution_percent,
                                    partial(self.set_resolution, processor=proc)),
                     "colour": (lambda proc=proc: proc.colour,
-                               partial(self.set_img_colour, processor=proc)),
+                               partial(self.set_img_colour, processor=proc),
+                               {'allowed_values': [
+                                   'greyscale', 'autumn', 'bone', 'jet', 'winter', 'rainbow',
+                                   'ocean', 'summer', 'spring', 'cool', 'hsv',
+                                   'pink', 'hot', 'parula', 'magma', 'inferno',
+                                   'plasma', 'viridis', 'cividis'
+                               ]}),
                     "clip_range_value": (lambda proc=proc: [proc.clipping['min'], proc.clipping['max']],
                                    partial(self.set_img_clip_value, processor=proc)),
                     "clip_range_percent": (lambda proc=proc: [proc.clipping['percent']['min'], proc.clipping['percent']['max']],
