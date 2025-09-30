@@ -219,7 +219,7 @@ function OrcaCamera(props) {
                       label="Resolution (%)">
                         <Form.Select
                           style={floatingInputStyle}
-                          value={liveViewData?.image?.resolution.value}
+                          value={liveViewData?.image?.resolution ?? "?"}
                           onChange={(e)=> {
                             liveViewEndPoint.put(e.target.value, `${name}/image/resolution`);
                           }}>
