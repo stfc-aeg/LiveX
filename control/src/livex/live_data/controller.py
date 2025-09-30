@@ -64,7 +64,9 @@ class LiveDataController(BaseController):
                     "dimensions": (lambda proc=proc: proc.out_dimensions,
                                    partial(self.set_img_dims, processor=proc)),
                     "resolution": (lambda proc=proc: proc.resolution_percent,
-                                   partial(self.set_resolution, processor=proc)),
+                                   partial(self.set_resolution, processor=proc),
+                                   {'min': 1, 'max': 100}
+                    ),
                     "colour": (lambda proc=proc: proc.colour,
                                partial(self.set_img_colour, processor=proc),
                                {'allowed_values': [
@@ -72,11 +74,16 @@ class LiveDataController(BaseController):
                                    'ocean', 'summer', 'spring', 'cool', 'hsv',
                                    'pink', 'hot', 'parula', 'magma', 'inferno',
                                    'plasma', 'viridis', 'cividis'
-                               ]}),
+                               ]}
+                    ),
                     "clip_range_value": (lambda proc=proc: [proc.clipping['min'], proc.clipping['max']],
-                                   partial(self.set_img_clip_value, processor=proc)),
+                                   partial(self.set_img_clip_value, processor=proc),
+                                   {'min': 0, 'max': 65535}
+                    ),
                     "clip_range_percent": (lambda proc=proc: [proc.clipping['percent']['min'], proc.clipping['percent']['max']],
-                                        partial(self.set_img_clip_percent, processor=proc)),
+                                        partial(self.set_img_clip_percent, processor=proc),
+                                        {'min': 0, 'max': 100}
+                    ),
                     "roi": (lambda proc=proc: [
                         proc.roi['x_lower'], proc.roi['x_upper'], proc.roi['y_lower'], proc.roi['y_upper']],
                         partial(self.set_roi_boundaries, processor=proc)),

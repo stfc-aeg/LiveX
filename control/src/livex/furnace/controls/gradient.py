@@ -12,22 +12,22 @@ class Gradient():
         self.addresses = addresses
 
         self.enable       = False
-        self.wanted       = 0
+        self.wanted       = float(0.0)
         self.distance     = float(1.5)
         self.actual       = 0
         self.theoretical  = 0
         self.high         = 'A'
-        self.high_options = self.addresses['high_options']
 
         self.tree = ParameterTree({
             'enable': (lambda: self.enable, self.set_enable),
-            'wanted': (lambda: self.wanted, self.set_wanted),
-            'distance': (lambda: self.distance, self.set_distance),
+            'wanted': (lambda: self.wanted, self.set_wanted,
+                       {'min': 0}),
+            'distance': (lambda: self.distance, self.set_distance,
+                         {'min': 0}),
             'actual': (lambda: self.actual, None),
             'theoretical': (lambda: self.theoretical, None),
             'high_heater': (lambda: self.high, self.set_high,
-                            {'allowed_values': ['A', 'B']}),
-            'high_heater_options': (lambda: self.high_options, None)
+                            {'allowed_values': ['A', 'B']})
         })
 
     def _register_modbus_client(self, client):

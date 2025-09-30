@@ -12,7 +12,6 @@ class AutoSetPointControl():
 
         self.enable = False
         self.heating = 'heating'
-        self.heating_options = self.addresses['heating_options']
         self.rate = float(0.5)
         self.midpt = 0
 
@@ -20,8 +19,7 @@ class AutoSetPointControl():
             'enable': (lambda: self.enable, self.set_enable),
             'heating': (lambda: self.heating, self.set_heating,
                         {'allowed_values': ['heating', 'cooling']}),
-            'heating_options': (lambda: self.heating_options, None),
-            'rate': (lambda: self.rate, self.set_rate),
+            'rate': (lambda: self.rate, self.set_rate, {'min': 0}),
             'midpt_temp': (lambda: self.midpt, None)
         })
 
