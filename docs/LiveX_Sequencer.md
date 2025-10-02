@@ -212,7 +212,7 @@ Sets the frame target of the trigger to the given value.
 
 # Live_Data
 
-The live_data image previewer is also available through the sequencer. It is important to remember that the variables here apply only to the preview images seen, and not the saved data, which is always the full region and resolution. You could use this to define a specific region of interest, increase the resolution, or automatically change the colour map; for example, if you know that during a sequence a certain area will become of interest, or you want to save some processing power with lower resolution images before a certain temperature.
+The live_data image previewer is also available through the sequencer. It is important to remember that the variables here apply only to the preview images seen, and not the saved data, which is always the full region and resolution. You could use this to define a specific zoom, increase the resolution, or automatically change the colour map; for example, if you know that during a sequence a certain area will become of interest, or you want to save some processing power with lower resolution images before a certain temperature.
 When changing any detail with the live_data adapter, it requires an argument for which processor (which accepts the output from one camera) is being referred to. The processors aren’t named but are defined in order from the config – you can access these with `self.processors[x]` where x is (indexed from 0) the number in the list of processors.
 
 | Attr Name | Description | 
@@ -237,7 +237,7 @@ Processors store the actual information, but they are run in a Process. This mea
 | histogram         | Processed histogram image pulled from queue |
 | cam_pixel_min     | (int) minimum pixel value of camera |
 | cam_pixel_max     | (int) maximum pixel value of camera |
-| roi               | (dict) region of interest specifications in px and % |
+| zoom              | (dict) zoom specifications in px and % |
 | clipping          | (dict) pixel clipping values in px and % |
 | image_queue       | (Queue) queue object for sending images through process |
 | hist_queue        | (Queue) queue object for sending histogram images through process |
@@ -245,10 +245,10 @@ Processors store the actual information, but they are run in a Process. This mea
 | process           | (Process) process object that runs image processing logic |
 
 ###  set_img_x/y(int: value, Processor: processor)
-Set the width/height of the image in pixels within an existing region of interest (this can be the full image). If you define more than the maximum width, it should just include the entire image without causing further issue.
+Set the width/height of the image in pixels within an existing zoom (this can be the full image). If you define more than the maximum width, it should just include the entire image without causing further issue.
 
 ### set_img_dims(array, int: value, Processor: processor)
-Sets both image dimensions, width and height (x and y). Value should look like `[x, y]`. This selection occurs within any existing defined region of interest.
+Sets both image dimensions, width and height (x and y). Value should look like `[x, y]`. This selection occurs within any existing defined zoom.
 
 ### set_img_colour(str: value, Processor: processor)
  Set the colourmap based on the string provided. See the [opencv ‘COLORMAP’ pages for information](https://docs.opencv.org/4.x/d3/d50/group__imgproc__colormap.html) on the string – only the name is needed, not the `COLORMAP_` prefix.
@@ -262,9 +262,9 @@ This sets the clipping range proportionally – if you have a range defined, thi
 ### set_resolution(int: value, Processor: processor)
 Sets the resolution of the image, as a percentage. So value should be within 0-100.
 
-### set_roi_boundaries(array, array, int: value, Processor: processor)
-Set region of interest boundaries for the image, effectively ‘zooming in’ on the specified area (as it will fill the full image space on the interface). This will work if you have one set already, allowing the ClickableImage UI to repeatedly click-and-drag to zoom on one area.
-Value should look like this: `[[x_low, x_high], [y_low, y_high]]`. If you provide 0 as both lows and 100 as both highs the region of interest is set to full image size, as an override to allow resetting within one function.
+### set_zoom_boundaries(array, array, int: value, Processor: processor)
+Set zoom boundaries for the image, zooming in on the specified area (as it will fill the full image space on the interface). This will work if you have one set already, allowing the ClickableImage UI to repeatedly click-and-drag to zoom on one area.
+Value should look like this: `[[x_low, x_high], [y_low, y_high]]`. If you provide 0 as both lows and 100 as both highs the zoom is set to full image size, as an override to allow resetting within one function.
 
 # Motors (Kinesis)
 

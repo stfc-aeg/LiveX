@@ -60,8 +60,8 @@ class LiveDataProcessor():
         logging.getLogger('matplotlib.font_manager').disabled = True
         logging.getLogger('PIL.PngImagePlugin').disabled=True
 
-        # Region of interest limits. 0 to dimension until changed
-        self.roi = {
+        # Zoom limits. 0 to dimension until changed
+        self.zoom = {
             'x_lower': 0,
             'x_upper': self.max_size_x,
             'y_lower': 0,
@@ -148,17 +148,17 @@ class LiveDataProcessor():
             else:
                 rotated_data = resized_data
 
-            roi_data = rotated_data[
-                self.roi['y_lower']:self.roi['y_upper'],
-                self.roi['x_lower']:self.roi['x_upper']
+            zoom_data = rotated_data[
+                self.zoom['y_lower']:self.zoom['y_upper'],
+                self.zoom['x_lower']:self.zoom['x_upper']
             ]
 
             colourmap = self.get_colour_map()
             if colourmap is None:
-                colour_data = cv2.applyColorMap((roi_data / 256).astype(np.uint8), self.get_colour_map())
+                colour_data = cv2.applyColorMap((zoom_data / 256).astype(np.uint8), self.get_colour_map())
             else:
                 logging.error(f"No colour map")
-                colour_data = roi_data
+                colour_data = zoom_data
 
             _, buffer = cv2.imencode('.png', colour_data)
             buffer = np.array(buffer)

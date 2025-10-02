@@ -147,7 +147,7 @@ function OrcaCamera(props) {
                     endpoint={liveViewEndPoint}
                     imgPath={`_image/${name}/image`}
                     coordsPath={`${name}/image`}
-                    coordsParam="roi"
+                    coordsParam="zoom"
                     valuesAsPercentages={true}>
                   </ClickableImage>
                   </Row>
@@ -188,11 +188,11 @@ function OrcaCamera(props) {
                     }}>
                     <EndPointButton
                       endpoint={liveViewEndPoint}
-                      fullpath={`${name}/image/roi`}
+                      fullpath={`${name}/image/zoom`}
                       event_type="click"
                       value={[[0, 100], [0, 100]]}
                       variant="primary">
-                        Reset Region of Interest to Full Image
+                        Reset Zoom to Full Image
                     </EndPointButton>
                   </Col>
                 </Row>

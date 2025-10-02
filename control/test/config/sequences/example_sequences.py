@@ -77,7 +77,7 @@ def change_img_settings(camera_name="widefov", x_boundaries=[0,100], y_boundarie
         if processor.name == camera_name:
             proc = processor
 
-    livedata.set_roi_boundaries([x_boundaries, y_boundaries], processor=proc)
+    livedata.set_zoom_boundaries([x_boundaries, y_boundaries], processor=proc)
     livedata.set_img_colour(colour, processor=proc)
     livedata.set_img_clip_percent(clip_percent_range, processor=proc)
 

@@ -84,9 +84,9 @@ class LiveDataController(BaseController):
                                         partial(self.set_img_clip_percent, processor=proc),
                                         {'min': 0, 'max': 100}
                     ),
-                    "roi": (lambda proc=proc: [
-                        proc.roi['x_lower'], proc.roi['x_upper'], proc.roi['y_lower'], proc.roi['y_upper']],
-                        partial(self.set_roi_boundaries, processor=proc)),
+                    "zoom": (lambda proc=proc: [
+                        proc.zoom['x_lower'], proc.zoom['x_upper'], proc.zoom['y_lower'], proc.zoom['y_upper']],
+                        partial(self.set_zoom_boundaries, processor=proc)),
                 }
             }
             self.tree[name] = tree
@@ -178,7 +178,7 @@ class LiveDataController(BaseController):
             "size_y": processor.size_y,
             "colour": processor.colour,
             "clipping": processor.clipping,
-            "roi": processor.roi
+            "zoom": processor.zoom
         }
         processor.pipe_parent.send(params)
 
@@ -207,15 +207,15 @@ class LiveDataController(BaseController):
         processor.size_x = int(processor.dimensions[0])
         processor.size_y = int(processor.dimensions[1])
 
-        # Update region of interest values for new resolution
-        processor.roi['x_lower'] = int(
-            (processor.roi['percent']['x_lower'] / 100) * processor.size_x)
-        processor.roi['x_upper'] = int(
-            (processor.roi['percent']['x_upper'] / 100) * processor.size_x)
-        processor.roi['y_lower'] = int(
-            (processor.roi['percent']['y_lower'] / 100) * processor.size_y)
-        processor.roi['y_upper'] = int(
-            (processor.roi['percent']['y_upper'] / 100) * processor.size_y)
+        # Update zoom values for new resolution
+        processor.zoom['x_lower'] = int(
+            (processor.zoom['percent']['x_lower'] / 100) * processor.size_x)
+        processor.zoom['x_upper'] = int(
+            (processor.zoom['percent']['x_upper'] / 100) * processor.size_x)
+        processor.zoom['y_lower'] = int(
+            (processor.zoom['percent']['y_lower'] / 100) * processor.size_y)
+        processor.zoom['y_upper'] = int(
+            (processor.zoom['percent']['y_upper'] / 100) * processor.size_y)
 
         self._update_render_info(processor)
 
@@ -229,7 +229,7 @@ class LiveDataController(BaseController):
 
     def _scale_percent_to_selection(self, new_percentages, current_percentages):
         """Scale selected percentages to fit an existing selection.
-        e.g.: specifying a further region of interest within an already-specified one.
+        e.g.: specifying a zoom within an already-specified one.
         :param new_percentages: array of upper and lower boundaries selected. [min, max]
         :param current_percentages: array of current boundaries. [min, max]
         :return: new minimum and maximum boundaries.
@@ -301,10 +301,10 @@ class LiveDataController(BaseController):
         new_y = int(processor.max_size_y*(value/100))
         self.set_img_dims([new_x, new_y], processor)
 
-    def set_roi_boundaries(self, value, processor):
-        """Set the region of interest boundaries for the image.
+    def set_zoom_boundaries(self, value, processor):
+        """Set the zoom boundaries for the image.
         Has an override - giving 0 and 100 as both x and y boundaries resets to full size.
-        :param value: array of RoI boundaries in %. [[x_low, x_high], [y_low, y_high]].
+        :param value: array of zoom boundaries in %. [[x_low, x_high], [y_low, y_high]].
         :param processor: LiveData Processor object.
         """
         x_low, x_high = value[0]
@@ -320,7 +320,7 @@ class LiveDataController(BaseController):
             img_x = processor.size_x
             img_y = processor.size_y
 
-        # If provided value is full image size, we don't care about existing ROI, to allow reset.
+        # If provided value is full image size, we don't care about existing zoom, to allow reset.
         value_is_reset = (
             x_low == 0 and x_high == 100 and
             y_low == 0 and y_high == 100
@@ -331,10 +331,10 @@ class LiveDataController(BaseController):
             cur_y_low = 0
             cur_y_high = 100
         else:  # If not reset, get real current value
-            cur_x_low = processor.roi['percent']['x_lower']
-            cur_x_high = processor.roi['percent']['x_upper']
-            cur_y_low = processor.roi['percent']['y_lower']
-            cur_y_high = processor.roi['percent']['y_upper']
+            cur_x_low = processor.zoom['percent']['x_lower']
+            cur_x_high = processor.zoom['percent']['x_upper']
+            cur_y_low = processor.zoom['percent']['y_lower']
+            cur_y_high = processor.zoom['percent']['y_upper']
 
         new_x_low, new_x_high = self._scale_percent_to_selection(
             [x_low, x_high],
@@ -346,14 +346,14 @@ class LiveDataController(BaseController):
         )
 
         # New pixel value is max_size * (%/100)
-        processor.roi['x_lower'] = int(img_x * (new_x_low/100))
-        processor.roi['x_upper'] = int(img_x * (new_x_high/100))
-        processor.roi['y_lower'] = int(img_y * (new_y_low/100))
-        processor.roi['y_upper'] = int(img_y * (new_y_high/100))
+        processor.zoom['x_lower'] = int(img_x * (new_x_low/100))
+        processor.zoom['x_upper'] = int(img_x * (new_x_high/100))
+        processor.zoom['y_lower'] = int(img_y * (new_y_low/100))
+        processor.zoom['y_upper'] = int(img_y * (new_y_high/100))
         # Set percentage to new percentage
-        processor.roi['percent']['x_lower'] = new_x_low
-        processor.roi['percent']['x_upper'] = new_x_high
-        processor.roi['percent']['y_lower'] = new_y_low
-        processor.roi['percent']['y_upper'] = new_y_high
+        processor.zoom['percent']['x_lower'] = new_x_low
+        processor.zoom['percent']['x_upper'] = new_x_high
+        processor.zoom['percent']['y_lower'] = new_y_low
+        processor.zoom['percent']['y_upper'] = new_y_high
 
         self._update_render_info(processor)
