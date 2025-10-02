@@ -44,8 +44,16 @@ class LiveDataController(BaseController):
             name = self.names[i]
             resolution = resolutions[i]
             orientation = options.get(f'{name}_orientation', 'up')
+            # mirrors will be 'x', 'y', 'x,y' or ''
+            mirrors = options.get(f'{name}_mirror', '').lower().split(',')
+            if mirrors:
+                mirror_x = True if 'x' in mirrors else False
+                mirror_y = True if 'y' in mirrors else False
+
+            logging.warning(f"Creating LiveDataProcessor for {name} at {endpoints[i]} with resolution {resolution['x']}x{resolution['y']}, orientation {orientation}, mirror_x={mirror_x}, mirror_y={mirror_y}")
+
             self.processors.append(
-                LiveDataProcessor(endpoints[i], resolution, pixel_bytes, orientation)
+                LiveDataProcessor(endpoints[i], resolution, pixel_bytes, orientation, mirror_x, mirror_y)
             )
 
             proc = self.processors[i]
