@@ -65,7 +65,7 @@ Given a String value, this function sets the filename/filepath for the furnace. 
 
 # Furnace Components (PIDA/B, ASPC, Gradient, Motors)
 
-There are four components, but as of February 2025 the motors are not used, pending future development. The components are accessed as part of the furnace sequencer context.
+There are three components and these are accessed as part of the furnace sequencer context.
 All of these functions contain a ‘register_modbus_client’ and ‘_get_parameters’ function, which are used in initialisation and are not useful for any sequencer activities.
 
 ### PID
@@ -265,6 +265,102 @@ Sets the resolution of the image, as a percentage. So value should be within 0-1
 ### set_roi_boundaries(array, array, int: value, Processor: processor)
 Set region of interest boundaries for the image, effectively ‘zooming in’ on the specified area (as it will fill the full image space on the interface). This will work if you have one set already, allowing the ClickableImage UI to repeatedly click-and-drag to zoom on one area.
 Value should look like this: `[[x_low, x_high], [y_low, y_high]]`. If you provide 0 as both lows and 100 as both highs the region of interest is set to full image size, as an override to allow resetting within one function.
+
+# Motors (Kinesis)
+
+The motors are also available in the sequencer through the 'kinesis' name.
+From there you're able to access each of the motor controllers and their stages, which have a range of functions relating to positions and speed.
+The kinesis controller has a `controllers` attribute which contains a dictionary of motor controllers (key=name (as per `devices.json`): value=motor controller), each of which has a `stages` attribute with the same structure which manages the stages.
+At present, the controllers and stages are one-to-one, which does simplify the structure, but referencing by name is easier. Naming your controllers and stages sensibly can help a lot with making writing a sequence feel natural.
+
+Generally, whenever you need to adjust a position you will do it for a particular stage, which should be done through the stage objects (the children of the motor controllers).  
+
+**Controllers manage the connection, stages manage the movement.**
+
+If you want to look at the codebase for the motor controllers, look here: https://github.com/stfc-aeg/odin-kinesis
+
+### adapter attributes
+
+| attr name           | description |
+|---------------------|-------------|
+| controllers        | (dict) store of controller objects referenced by name |
+| bg_tasks_enable    | (bool) handles wether background tasks (sending messages, getting positions) are running |
+| bg_await_reply_interval | (float) period of task that checks/sends via serial message queues |
+| bg_check_position_interval | (float) period of task that requests motor positions
+
+
+### Motor controller attributes and functions
+
+The motor controllers are built off of a 'baseMotorController' class. Most of the functions defined here relate to sending and decoding instructions and won't be used at all. 
+
+For example, the 'move_jog' function of the `motController` class actually requires a stage given to it as argument. When you call `jog()` on a stage, this calls `move_jog()` of its parent controller and provides itself as an argument. So, none of the functions in the controller class should be used to make a motor move, it is easier to define the stages and control them directly.
+
+
+## Motor Stage Attributes
+
+These vary slightly by stage type (encoder or non-encoder stages). If not specified, it belongs to both.
+
+| attr name             | description | stage type |
+| --------------------- | ----------- | ---------- |
+| name              | (str) name of stage ||
+| channel_identity  | (int) generated number used to identify stages for commands ||
+| command_queue     | (list) list of time-taking (e.g. movement) commands for device to process ||
+| current_command | (obj) current command being processed ||
+| expected_response | (tuple) name and length of expected response to command ||
+| await_queue | (Queue) queue of 'await' commands (commands that take time to process and send a message when they are completed, such as movement)||
+| instant_queue | (PriorityQueue) queue of 'instant' commands that prompt an instant response from device | |
+| moving | (bool) is device moving? ||
+| homing | (bool) is device homing? ||
+| current_position | (float) current reported position of stage ||
+| target_position | (float) desired position of stage ||
+| reverse_jog | (bool) reverse direction of jog (forward->backward, vice versa) ||
+| self.enc_cnt/sf_vel/sf_acc | (int) each of these are encoder scale factors for encoder stages such as the MTS50-Z8. They scale mm to stage movements. | encoderStage |
+| jog_mode | (int) 0x01 or 0x02. Does not need changing | encoderStage |
+| jog_step_size | (float) step size in mm | encoderStage |
+| jog_min_vel   | (float) minimum jog speed. needs to be specified in code but must be 0 | encoderStage |
+| jog_accel | (float) acceleration of jog step | encoderStage |
+| jog_max_vel | (float) maximum jog speed | encoderStage |
+| jog_stop_mode | (int) 0x01 (abrupt) or 0x02 (profiled) stop | encoderStage |
+| upper_limit | (float) upper positional limit in mm | encoderStage |
+| lower_limit | (float) lower positional limit in mm | encoderStage |
+| jog_mode | (int) 0x02 is step, which is desirable for non-encoder stages | piezoStage |
+| jog_step_size_fwd | (int) jog movement forward steps. these stages tend to move much more easily in one direction than another (i.e. unreliable), so are more configurable. (1-2000) | piezoStage |
+| jog_step_size_rev | (int) step quantity of reverse jogs. (1-2000) | piezoStage |
+| jog_step_rate | (int) steps per second of jog. (1-2000) | piezoStage |
+| jog_step_accn | (int) jog movement acceleration in (1-100K steps/s^2)| piezoStage |
+
+
+## Stage Functions
+
+### reverse_jog_direction(self, rev: Bool)
+Reverse (True) or unreverse (False) the direction of the jog
+
+### get_current_position(self)
+Requests the position of this stage from the controller. Done by a background task in the adapter for all stages periodically
+
+### set_target_position(self, pos)
+Implemented differently across stage types. Sets target position, may check if within limits, apply encoder scaling if needed, and then call controller to move stage if target is different to current.
+
+### home(self, value)
+Value is not used. Homes the motor by calling on the controller. Sets `homing` to True.
+
+### stop(self, value)
+Value is not used. Sends a stop command via the controller, setting `homing` and `moving` to False.
+
+### val_to_enc, enc_to_val - encoderStage
+These functions convert values to encoder counts or vice versa. Any other functions should already handle these so it shouldn't be necessary to use them.
+
+### set_upper/lower_limit(self, lim: Float)
+Set the upper or lower limit to the given value. You can set the limit so that the current position is out of bounds, so be careful as this could affect movements to get the stage back in (especially with steps)
+
+### jog(self, direction: Bool)
+Start a jog in a given direction via the controller. True (forward) or False (backward)
+
+### set_jog_mode/step_size/min_vel/accel/max_vel/stop_mode(self, value)
+Set the given attribute to the provided value. Each of these functions calls on the controller to actually send the command.
+
+
+
 
 # Metadata
 
