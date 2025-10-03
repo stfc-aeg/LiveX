@@ -170,11 +170,10 @@ class LiveDataProcessor():
             ]
 
             colourmap = self.get_colour_map()
-            if colourmap is None:
-                colour_data = cv2.applyColorMap((zoom_data / 256).astype(np.uint8), self.get_colour_map())
+            if colourmap is not None:
+                colour_data = cv2.applyColorMap((zoom_data / 256).astype(np.uint8), colourmap)
             else:
-                logging.error(f"No colour map")
-                colour_data = zoom_data
+                colour_data = zoom_data/256
 
             _, buffer = cv2.imencode('.png', colour_data)
             buffer = np.array(buffer)
