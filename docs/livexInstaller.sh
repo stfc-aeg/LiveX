@@ -2,7 +2,7 @@
 
 # config
 VENV_NAME="venv-livex"
-APP_BUILD_URL="https://github.com/stfc-aeg/LiveX/releases/download/v0.2.4/app_build.tgz"
+APP_BUILD_URL="https://github.com/stfc-aeg/LiveX/releases/download/v0.2.5/app_build.tgz"
 
 # get root of repo
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
