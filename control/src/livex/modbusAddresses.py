@@ -120,14 +120,12 @@ class modAddr():
         'actual': gradient_actual_inp,
         'theoretical': gradient_theory_inp,
         'high': gradient_high_coil,  # Which heater is the 'high' end of the gradient
-        'high_options': ["A", "B"],
         'update': gradient_update_coil
     }
 
     aspc_addresses = {
         'enable': autosp_enable_coil,
         'heating': autosp_heating_coil,
-        'heating_options': ["Cooling", "Heating"],
         'rate': autosp_rate_hold,
         'midpt': autosp_midpt_inp,
         'imgdegree': autosp_imgdegree_hold,

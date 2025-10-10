@@ -1,7 +1,6 @@
 [submodule "munir"]
 	path = munir
 	url = https://github.com/stfc-aeg/munir.git
-	branch = odin-data_refactored
 [submodule "odin-sequencer"]
 	path = odin-sequencer
 	url = https://github.com/stfc-aeg/odin-sequencer.git
@@ -11,4 +10,3 @@
 [submodule "odin-kinesis"]
 	path = odin-kinesis
 	url = https://github.com/stfc-aeg/odin-kinesis.git
-	branch=esrf-2025

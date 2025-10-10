@@ -116,7 +116,7 @@ class LiveXController(BaseController):
                 'start': (lambda: None, self.start_acquisition),
                 'stop': (lambda: None, self.stop_acquisition),
                 'freerun': (lambda: self.trigger_manager.freerun, self.trigger_manager.set_freerun),
-                'frame_target': (lambda: self.trigger_manager.acq_frame_target, self.trigger_manager.set_acq_frame_target),
+                'frame_target': (lambda: self.trigger_manager.acq_frame_target, self.trigger_manager.set_acq_frame_target, {'min': 0}),
                 'reference_trigger': (lambda: self.ref_trigger, None),
                 'frequencies': self.trigger_manager.frequency_subtree,
                 'link_triggers': {
@@ -295,7 +295,7 @@ class LiveXController(BaseController):
         # Reenable timers
         self.trigger.set_all_timers(
             {'enable': True,
-             'freerun': self.trigger_manager.freerun}
+             'freerun': True}
         )
 
         # Increase acquisition number after acquisition so UI indicates next acq instead of previous

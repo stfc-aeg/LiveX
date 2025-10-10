@@ -24,12 +24,14 @@ class LiveDataProcessor():
         'left': cv2.ROTATE_90_COUNTERCLOCKWISE  # 2
     }
 
-    def __init__(self, endpoint, resolution, pixel_bytes, orientation, size_x=2048, size_y=1152, colour='bone'):
+    def __init__(self, endpoint, resolution, pixel_bytes, orientation, mirror_x=False, mirror_y=False, size_x=2048, size_y=1152, colour='greyscale'):
         """Initialise the LiveDataProcessor object.
         This method constructs the Queue, Pipes and Process necessary for multiprocessing.
         :param endpoint: string representation of endpoint for image data.
         :param resolution: dict ({'x': x, 'y': y}) of maximum image dimensions
         :param pixel_bytes: number of bytes per pixel in image data
+        :param orientation: string representing image orientation (see `orientations`)
+        :param mirror_x/y: booleans to mirror image in x/y axes
         :param size_x: integer width of output image in pixels (default 2048).
         :param size_y: integer height of output image in pixels (default 1152).
         :param colour: string of opencv colourmap label (default 'bone').
@@ -46,6 +48,9 @@ class LiveDataProcessor():
 
         self.orientation = self.orientations.get(orientation, None)
 
+        self.mirror_x = mirror_x
+        self.mirror_y = mirror_y
+
         self.resolution_percent = 50
         self.pixel_bytes = pixel_bytes
 
@@ -60,8 +65,8 @@ class LiveDataProcessor():
         logging.getLogger('matplotlib.font_manager').disabled = True
         logging.getLogger('PIL.PngImagePlugin').disabled=True
 
-        # Region of interest limits. 0 to dimension until changed
-        self.roi = {
+        # Zoom limits. 0 to dimension until changed
+        self.zoom = {
             'x_lower': 0,
             'x_upper': self.max_size_x,
             'y_lower': 0,
@@ -148,12 +153,27 @@ class LiveDataProcessor():
             else:
                 rotated_data = resized_data
 
-            roi_data = rotated_data[
-                self.roi['y_lower']:self.roi['y_upper'],
-                self.roi['x_lower']:self.roi['x_upper']
+            # Mirror data
+            match (self.mirror_x, self.mirror_y):
+                case (True, True):  # -1/-ve is flip around both axes
+                    mirror_data = cv2.flip(rotated_data, -1)
+                case (True, False):  # 0 is x-axis
+                    mirror_data = cv2.flip(rotated_data, 0)
+                case (False, True):  # 1/+ve is y-axis
+                    mirror_data = cv2.flip(rotated_data, 1)
+                case _:
+                    mirror_data = rotated_data
+
+            zoom_data = mirror_data[
+                self.zoom['y_lower']:self.zoom['y_upper'],
+                self.zoom['x_lower']:self.zoom['x_upper']
             ]
 
-            colour_data = cv2.applyColorMap((roi_data / 256).astype(np.uint8), self.get_colour_map())
+            colourmap = self.get_colour_map()
+            if colourmap is not None:
+                colour_data = cv2.applyColorMap((zoom_data / 256).astype(np.uint8), colourmap)
+            else:
+                colour_data = zoom_data/256
 
             _, buffer = cv2.imencode('.png', colour_data)
             buffer = np.array(buffer)
@@ -202,8 +222,8 @@ class LiveDataProcessor():
             logging.error(f"Error when generating histogram: {e}")
 
     def get_colour_map(self):
-        """Get the colour map based on the colour string. Defaults to 'bone' (greyscale)."""
-        return getattr(cv2, f'COLORMAP_{self.colour.upper()}', cv2.COLORMAP_BONE)
+        """Get the colour map based on the colour string. Defaults to None (no colour map: i.e. greyscale)."""
+        return getattr(cv2, f'COLORMAP_{self.colour.upper()}', None)
 
     def get_histogram(self):
         """If it exists, update the histogram with one from the queue, then return it."""

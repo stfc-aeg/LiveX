@@ -129,11 +129,10 @@ function PidControl(props) {
                               backgroundColor: '#e0f7ff',
                               borderRadius: '0.375rem'
                           }}
-
                           value={
-                            Math.abs(
-                              checkNull((furnaceEndPoint.data[pid]?.setpoint)) -
-                              checkNull((furnaceEndPoint.data[pid]?.temperature))
+                            checkNull(Math.abs(
+                              (furnaceEndPoint.data[pid]?.setpoint) -
+                              (furnaceEndPoint.data[pid]?.temperature))
                             )
                           }
                         />

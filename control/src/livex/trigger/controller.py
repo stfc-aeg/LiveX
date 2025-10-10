@@ -50,7 +50,7 @@ class TriggerController(BaseController):
         self.tree = ParameterTree({
            'triggers': subtrees,
            'background': {
-                'interval': (lambda: self.status_bg_task_interval, self.set_task_interval),
+                'interval': (lambda: self.status_bg_task_interval, self.set_task_interval, {'min': 0.05}),
                 'enable': (lambda: self.status_bg_task_enable, self.set_task_enable)
             },
             'all_timers_enable': (lambda: None, self.set_all_timers),

@@ -3,12 +3,14 @@ from livex.base_adapter import BaseAdapter
 from livex.live_data.controller import LiveDataController, LiveXError
 from livex.base_adapter import ApiAdapterResponse
 
+from odin.adapters.adapter import wants_metadata
+
 class LiveDataAdapter(BaseAdapter):
 
     controller_cls = LiveDataController
     error_cls = LiveXError
 
-    def get(self, path, with_metadata=False):
+    def get(self, path, request):
         """BaseAdapter get override to handle image processing."""
         try:
             levels = path.split('/')
@@ -26,7 +28,7 @@ class LiveDataAdapter(BaseAdapter):
                 response=img_bytes
                 content_type="image/png"
             else:
-                response = self.controller.get(path, with_metadata)
+                response = self.controller.get(path, wants_metadata(request))
                 content_type="application/json"
             status_code = 200
         except self.error_cls as error:

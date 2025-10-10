@@ -18,6 +18,8 @@ function AutoSetPointControl(props){
     const {furnaceEndPoint} = props;
     const {connectedPuttingDisable} = props;
 
+    const heating_metadata = furnaceEndPoint.metadata.autosp?.heating;
+
     return (
         <TitleCard
           title={
@@ -56,18 +58,16 @@ function AutoSetPointControl(props){
                   endpoint={furnaceEndPoint}
                   fullpath="autosp/heating"
                   variant='outline-secondary'
-                  buttonText={furnaceEndPoint.data.autosp?.heating_options[furnaceEndPoint.data.autosp.heating] || "Unknown"}
+                  buttonText={furnaceEndPoint.data.autosp?.heating}
                   style={floatingInputStyle}
                   disabled={connectedPuttingDisable}>
-                      {furnaceEndPoint.data.autosp?.heating_options ? (
-                        furnaceEndPoint.data.autosp.heating_options.map((label, index) => (
-                          <option value={index} key={index}>
-                            {label}
-                          </option>
-                        ))
-                      ) : (
-                        <></>
-                      )}
+                    {(heating_metadata.allowed_values).map(
+                      (selection, index) => (
+                        <option value={selection} key={index}>
+                          {selection}
+                        </option>
+                      )
+                    )}
                 </EndpointSelect>
             </FloatingLabel>
             </Col>

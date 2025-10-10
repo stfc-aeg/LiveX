@@ -41,6 +41,8 @@ class FurnaceController():
         self.bg_stream_task_enable = bool(int(options.get('background_stream_task_enable', False)))
         self.pid_frequency = int(options.get('pid_frequency', 50))
 
+        self.allow_solo_acquisition = bool(int(options.get('allow_furnace_only_acquisition', 0)))
+
         self.ip = options.get('ip', '192.168.0.159')
         self.port = int(options.get('port', '4444'))
 
@@ -110,7 +112,8 @@ class FurnaceController():
         self.status_subtree = ParameterTree({
             'connected': (lambda: self.connected, None),
             'reconnect': (lambda: None, self._initialise_clients),
-            'full_stop': (lambda: None, self.stop_all_pid)
+            'full_stop': (lambda: None, self.stop_all_pid),
+            'allow_solo_acquisition': (lambda: self.allow_solo_acquisition, None),
         })
 
         self.tcp_subtree = ParameterTree({
@@ -221,6 +224,9 @@ class FurnaceController():
         """Toggle whether the system is acquiring data.
         :param value: boolean, setting acquisition to stop or start.
         """
+        if not self.allow_solo_acquisition:
+            logging.warning("Furnace-only acquisition is disabled in the configuration.")
+            return
         value = bool(value)
         logging.debug(f"Toggled furnace acquisition to {value}.")
 

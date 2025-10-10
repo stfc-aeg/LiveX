@@ -10,6 +10,7 @@ import PidControl from './PidControl';
 import ThermalGradient from './ThermalGradient';
 import AutoSetPointControl from './AutoSetPointControl';
 import InfoPanel from './InfoPanel';
+import FurnaceRecording from './FurnaceRecording';
 
 function FurnacePage(props){
     const {furnaceEndPoint} = props;
@@ -56,6 +57,16 @@ function FurnacePage(props){
             title="Lower Heater (B) Controls"
             pid="pid_b">
           </PidControl>
+
+          {
+            furnaceEndPoint.data.status?.allow_solo_acquisition ?
+            <FurnaceRecording
+              furnaceEndPoint={furnaceEndPoint}
+              connectedPuttingDisable={connectedPuttingDisable}
+            />
+            :
+            <></>
+          }
 
         </Col>
         <Col md={6} xxl={4}>
