@@ -10,4 +10,3 @@
 [submodule "odin-kinesis"]
 	path = odin-kinesis
 	url = https://github.com/stfc-aeg/odin-kinesis.git
-	branch=esrf-2025
