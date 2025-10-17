@@ -54,6 +54,9 @@ class LiveDataProcessor():
         self.resolution_percent = 50
         self.pixel_bytes = pixel_bytes
 
+        self.autoclip = True
+        self.autoclip_percent = 90
+
         self.image = 0
         self.histogram = None
 
@@ -138,10 +141,17 @@ class LiveDataProcessor():
             else:
                 data = np.frombuffer(msg[1], dtype=dtype)  # Otherwise, grab the data as-is
 
+            if self.autoclip:
+                lower_q = (100 - self.autoclip_percent) / 2
+                upper_q = 100 - lower_q
+                low = np.percentile(data, lower_q)
+                high = np.percentile(data, upper_q)
+            else:
+                low, high = self.clipping['min'], self.clipping['max']
             # For histogram, it's easier to clip the data before reshaping it
-            clipped_ = np.clip(data, self.clipping['min'], self.clipping['max'])
+            clipped_ = np.clip(data, low, high)
             # After clipping, scale data back out to full range
-            scaled_data = ((clipped_ - self.clipping['min']) / (self.clipping['max'] - self.clipping['min'])) * 65535
+            scaled_data = ((clipped_ - low) / (high - low)) * 65535
 
             reshaped_data = scaled_data.reshape((self.max_size_y, self.max_size_x))  # ORCA dimensions
 
@@ -199,7 +209,7 @@ class LiveDataProcessor():
             for spine in ['top', 'left', 'right']:
                 ax.spines[spine].set_visible(False)
             # Make x-axis take entire width
-            ax.set_xlim(left=self.clipping['min'], right=self.clipping['max'])
+            ax.set_xlim(left=low, right=high)  # low and high derived from clipping check above
 
             fig.tight_layout(pad=0.05)
 

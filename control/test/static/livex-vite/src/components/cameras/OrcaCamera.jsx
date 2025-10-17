@@ -14,7 +14,6 @@ import ClickableImage from './ClickableImage';
 
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndPointButton = WithEndpoint(Button);
-const EndPointSelect = WithEndpoint(Form.Select);
 
 function OrcaCamera(props) {
     const {endpoint} = props;
@@ -165,35 +164,45 @@ function OrcaCamera(props) {
                   </ClickableImage>
                 </Row>
                 <Row className="mt-3">
-                  <Col xs={12} sm={6} 
-                    style={{
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      display:'flex'
-                    }}>
-                    <EndPointButton
-                      endpoint={liveViewEndPoint}
-                      fullpath={`${name}/image/clip_range_value`}
-                      event_type="click"
-                      value={[0, 65535]}
-                      variant="primary">
-                      Reset Clipping Range to 100%
-                    </EndPointButton>
+                  <Col xs={12} sm={6} style={{justifyContent:'center'}}>
+                    <Row style={{justifyContent:'center'}}>
+                        <EndPointButton className="mb-3 w-75"
+                          endpoint={liveViewEndPoint}
+                          fullpath={`${name}/image/autoclip`}
+                          value={liveViewData?.image?.autoclip ? false : true}
+                          variant={liveViewData?.image.autoclip ? 'danger' : 'primary'}>
+                          {liveViewData?.image?.autoclip ? "Disable Autoclip" : "Enable Autoclip"}
+                        </EndPointButton>
+                    </Row>
+                    <FloatingLabel className="mb-3"
+                    label="Autoclip %">
+                      <EndPointFormControl
+                          endpoint={liveViewEndPoint}
+                          type="number"
+                          fullpath={`${name}/image/autoclip_percent`}
+                          disabled={connectedPuttingDisable}>
+                      </EndPointFormControl>
+                    </FloatingLabel>
                   </Col>
-                  <Col xs={12} sm={6} 
-                    style={{
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      display:'flex'
-                    }}>
-                    <EndPointButton
-                      endpoint={liveViewEndPoint}
-                      fullpath={`${name}/image/zoom`}
-                      event_type="click"
-                      value={[[0, 100], [0, 100]]}
-                      variant="primary">
-                        Reset Zoom to Full Image
-                    </EndPointButton>
+                  <Col xs={12} sm={6}>
+                      <Row style={{justifyContent:'center'}}>
+                        <EndPointButton className="mt-2 mb-3 w-75"
+                          endpoint={liveViewEndPoint}
+                          fullpath={`${name}/image/clip_range_value`}
+                          value={[0, 65535]}
+                          variant="primary">
+                          Reset Clipping Range
+                        </EndPointButton>
+                      </Row>
+                      <Row style={{justifyContent:'center'}}>
+                        <EndPointButton className="w-75"
+                          endpoint={liveViewEndPoint}
+                          fullpath={`${name}/image/zoom`}
+                          value={[[0, 100], [0, 100]]}
+                          variant="primary">
+                            Reset Zoom to Full Image
+                        </EndPointButton>
+                      </Row>
                   </Col>
                 </Row>
                 <Row className="mt-3">
