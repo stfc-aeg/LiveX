@@ -200,7 +200,7 @@ function OrcaCamera(props) {
                           fullpath={`${name}/image/zoom`}
                           value={[[0, 100], [0, 100]]}
                           variant="primary">
-                            Reset Zoom to Full Image
+                            Reset Zoom
                         </EndPointButton>
                       </Row>
                   </Col>
