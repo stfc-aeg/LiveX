@@ -16,7 +16,7 @@ export const usePrevious = (value) => {
 };
 
 export const floatingLabelStyle = {
-    width: "60%",
+    width: "75%",
     border: '1px solid lightblue',
     backgroundColor: '#e0f7ff',
     borderRadius: '0.375rem'
