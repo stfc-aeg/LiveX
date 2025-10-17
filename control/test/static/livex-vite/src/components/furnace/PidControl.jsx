@@ -44,61 +44,57 @@ function PidControl(props) {
           <Col>
             <Row>
               <Col xs={6}>
-                <Row>
+                <FloatingLabel
+                  label="Proportional">
+                    <EndPointFormControl
+                      endpoint={furnaceEndPoint}
+                      type="number"
+                      fullpath={pid+"/proportional"}
+                      disabled={connectedPuttingDisable}
+                      style={floatingInputStyle}
+                    />
+                </FloatingLabel>
                   <FloatingLabel
-                    label="Proportional">
-                      <EndPointFormControl
-                        endpoint={furnaceEndPoint}
-                        type="number"
-                        fullpath={pid+"/proportional"}
-                        disabled={connectedPuttingDisable}
-                        style={floatingInputStyle}
-                      />
-                  </FloatingLabel>
-                   <FloatingLabel
-                    label="Integral">
-                      <EndPointFormControl
-                        endpoint={furnaceEndPoint}
-                        type="number"
-                        fullpath={pid+"/integral"}
-                        disabled={connectedPuttingDisable}
-                        style={floatingInputStyle}
-                      />
-                  </FloatingLabel>
-                  <FloatingLabel
-                    label="Derivative">
-                      <EndPointFormControl
-                        endpoint={furnaceEndPoint}
-                        type="number"
-                        fullpath={pid+"/derivative"}
-                        disabled={connectedPuttingDisable}
-                        style={floatingInputStyle}
-                      />
-                  </FloatingLabel>
-                </Row>
+                  label="Integral">
+                    <EndPointFormControl
+                      endpoint={furnaceEndPoint}
+                      type="number"
+                      fullpath={pid+"/integral"}
+                      disabled={connectedPuttingDisable}
+                      style={floatingInputStyle}
+                    />
+                </FloatingLabel>
+                <FloatingLabel
+                  label="Derivative">
+                    <EndPointFormControl
+                      endpoint={furnaceEndPoint}
+                      type="number"
+                      fullpath={pid+"/derivative"}
+                      disabled={connectedPuttingDisable}
+                      style={floatingInputStyle}
+                    />
+                </FloatingLabel>
               </Col>
               <Col xs={6}>
-                <Row>
-                  <FloatingLabel
-                    label="Enter set pt.">
-                      <EndPointFormControl
-                        endpoint={furnaceEndPoint}
-                        type="number"
-                        fullpath={pid+"/setpoint"}
-                        disabled={connectedPuttingDisable}
-                        style={floatingInputStyle}
-                      />
-                  </FloatingLabel>
-                  <FloatingLabel
-                    label="Current set pt.">
-                      <Form.Control
-                        plaintext
-                        readOnly
-                        style={floatingLabelStyle}
-                        value={checkNull(furnaceEndPoint.data[pid]?.setpoint)}
-                      />
-                  </FloatingLabel>
-                </Row>
+                <FloatingLabel
+                  label="Enter set pt.">
+                    <EndPointFormControl
+                      endpoint={furnaceEndPoint}
+                      type="number"
+                      fullpath={pid+"/setpoint"}
+                      disabled={connectedPuttingDisable}
+                      style={floatingInputStyle}
+                    />
+                </FloatingLabel>
+                <FloatingLabel
+                  label="Current set pt.">
+                    <Form.Control
+                      plaintext
+                      readOnly
+                      style={floatingLabelStyle}
+                      value={checkNull(furnaceEndPoint.data[pid]?.setpoint)}
+                    />
+                </FloatingLabel>
                 <Row>
                   <Col xs={8} sm={6}>
                     <FloatingLabel
