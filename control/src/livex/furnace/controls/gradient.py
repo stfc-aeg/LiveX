@@ -51,12 +51,10 @@ class Gradient():
         """Set the enable value for the thermal gradient."""
         self.enable = value
 
-        if value == 'A':  # 0, heater A
+        if value:
             write_coil(self.client, self.addresses['enable'], 0)
-        elif value == 'B':  # 1, heater B
-            write_coil(self.client, self.addresses['enable'], 1)
         else:
-            logging.warning(f"Invalid value {value} for gradient enable, must be 'A' or 'B'.")
+            write_coil(self.client, self.addresses['enable'], 1)
 
         write_coil(self.client, self.addresses['update'], 1)
 
@@ -76,8 +74,8 @@ class Gradient():
         """Set the boolean for thermal gradient high heater."""
         self.high = value
 
-        if value:  # 1, heater B
+        if value =='B':  # 1, heater B
             write_coil(self.client, self.addresses['high'], 1)
-        else:
+        elif value == 'A':  # 0, heater A
             write_coil(self.client, self.addresses['high'], 0)
         write_coil(self.client, self.addresses['update'], 1)
