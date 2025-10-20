@@ -1,4 +1,5 @@
 import React from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import { Container, Stack } from 'react-bootstrap';
@@ -36,6 +37,52 @@ function OrcaCamera(props) {
     const commonImageResolutions = [
         10, 25, 50, 75, 100
     ];
+
+  const [fitMode, setFitMode] = useState(false);
+  const [fitHeightFactor, setFitHeightFactor] = useState(7); // default 70vh
+  const [aspectRatio, setAspectRatio] = useState(null);
+
+  const wrapperRef = useRef(null);
+
+  // measure image to get its aspect ratio
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    const img = wrapper.querySelector("img");
+    if (!img) return;
+
+    const updateAspect = () => {
+      if (img.naturalWidth && img.naturalHeight) {
+        setAspectRatio(img.naturalWidth / img.naturalHeight);
+      }
+    };
+
+    // wait for image to load
+    img.addEventListener("load", updateAspect);
+    updateAspect();
+
+    return () => img.removeEventListener("load", updateAspect);
+  }, [liveViewData]);
+
+  // compute container style
+  const fitStyle =
+    fitMode && aspectRatio
+      ? {
+          height: `${fitHeightFactor * 10}vh`,
+          width: `${fitHeightFactor*10 * aspectRatio}vh`,
+          maxWidth: "100%",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }
+      : {
+          width: "100%",
+          height: "auto",
+          display: "flex",
+          justifyContent: "center",
+        };
+
 
     /* The titlecard buttons have variable output, display, and colour, depending on the camera status.
     Example, when the camera isn't connected, you can connect. If it's connected, you can disconnect.
@@ -139,18 +186,45 @@ function OrcaCamera(props) {
                 </EndPointFormControl>
               </InputGroup>
               </Stack>
-              <TitleCard title={`${endpoint?.data[name]?.camera_name} preview`}>
+              <TitleCard title={
                 <Row>
-                  <ClickableImage
-                    id={`image-${name}`}
-                    endpoint={liveViewEndPoint}
-                    imgPath={`_image/${name}/image`}
-                    coordsPath={`${name}/image`}
-                    coordsParam="zoom"
-                    valuesAsPercentages={true}>
-                  </ClickableImage>
-                  </Row>
-                  <Row>
+                  <Col xs={4} className='d-flex align-items-center' style={{fontSize:'1.3rem'}}>
+                    {`${endpoint?.data[name]?.camera_name} preview`}
+                  </Col>
+                  <Col xs={8} className='d-flex justify-content-end'>
+                    <Form.Text>Fix height scale</Form.Text>
+                    <Form.Range
+                      min={1}
+                      max={10}
+                      step={1}
+                      value={fitHeightFactor}
+                      onChange={(e) => setFitHeightFactor(Number(e.target.value))}
+                      style={{ width: "120px" }}
+                    />
+                    <Button
+                      variant={fitMode?"danger":"primary"}
+                      onClick={()=>setFitMode(!fitMode)}>
+                        {fitMode?"Auto image height":"Fix image height"}
+                    </Button>
+                  </Col>
+                </Row>}>
+                <Row className="justify-content-center">
+                  <div ref={wrapperRef} style={{
+                    ...fitStyle,
+                    lineHeight:0, verticalAlign:'top'
+                    }}>
+                    <ClickableImage
+                      id={`image-${name}`}
+                      endpoint={liveViewEndPoint}
+                      imgPath={`_image/${name}/image`}
+                      coordsPath={`${name}/image`}
+                      coordsParam="zoom"
+                      valuesAsPercentages={true}>
+                    </ClickableImage>
+                  </div>
+
+                </Row>
+                <Row>
                   <ClickableImage
                     id={`histogram-${name}`}
                     endpoint={liveViewEndPoint}

@@ -185,10 +185,9 @@ function ClickableImage(props){
 
     // Only insert polygon tags if there's enough entries in the array
     return (
-
       <div>
         {imgData ? (
-          <div style={{position:'relative', display:'inline-block',
+          <div style={{position:'relative', display:'block',
           width:'100%', height:'auto'}}>
             <svg
               id={svgId}
