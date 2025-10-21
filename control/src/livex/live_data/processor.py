@@ -54,7 +54,7 @@ class LiveDataProcessor():
         self.resolution_percent = 50
         self.pixel_bytes = pixel_bytes
 
-        self.autoclip = True
+        self.autoclip = False
         self.autoclip_percent = 90
 
         self.image = 0
