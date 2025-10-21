@@ -208,11 +208,11 @@ function OrcaCamera(props) {
                     </Button>
                   </Col>
                 </Row>}>
-                <Row className="justify-content-center">
-                  <div ref={wrapperRef} style={{
+                <Row className={fitMode?"justify-content-center":null}>
+                  <div ref={wrapperRef} style={fitMode?{
                     ...fitStyle,
                     lineHeight:0, verticalAlign:'top'
-                    }}>
+                    }:null}>
                     <ClickableImage
                       id={`image-${name}`}
                       endpoint={liveViewEndPoint}

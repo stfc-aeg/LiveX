@@ -214,7 +214,8 @@ function ClickableImage(props){
               style={{
               display:'block',
               width:'100%',
-              height:'auto'
+              height:'auto',
+              minHeight:'18px'  // height of 'no image found' icon. prevent 'flickering' when no img
               }}
               alt="Live camera feed"
               />
