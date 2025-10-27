@@ -75,7 +75,8 @@ class PID():
 
     def set_setpoint(self, value):
         """Set the setpoint of the PID."""
-        if abs(value-self.setpoint) > self.max_temp_step:
+        if (value - self.setpoint) > self.max_temp_step:
+            # Limit is increase-only, safety considerations and cooling has no thermal shock risk
             raise LiveXError("Temperature step size exceeds limit.")
 
         self.setpoint = value

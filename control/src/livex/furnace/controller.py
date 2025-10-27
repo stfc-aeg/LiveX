@@ -45,10 +45,6 @@ class FurnaceController():
         maximum_temperature_step = int(options.get('maximum_temperature_step', 150))
         maximum_autosp_rate = int(options.get('maximum_autosp_rate', 8))
 
-        logging.debug(f"maximum_temperature: {maximum_temperature}")
-        logging.debug(f"maximum_temperature: {maximum_temperature_step}")
-        logging.debug(f"maximum_temperature: {maximum_autosp_rate}")
-
         self.allow_solo_acquisition = bool(int(options.get('allow_furnace_only_acquisition', 0)))
 
         self.ip = options.get('ip', '192.168.0.159')

@@ -107,7 +107,7 @@ function PidControl(props) {
                     </FloatingLabel>
                   </Col>
                   <Col>
-                    <FloatingLabel label="Max Step">
+                    <FloatingLabel label="Max Increase">
                       <EndPointFormControl
                         endpoint={furnaceEndPoint}
                         fullpath={pid+"/max_temp_step"}
