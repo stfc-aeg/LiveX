@@ -76,25 +76,47 @@ function PidControl(props) {
                 </FloatingLabel>
               </Col>
               <Col xs={6}>
-                <FloatingLabel
-                  label="Enter set pt.">
-                    <EndPointFormControl
-                      endpoint={furnaceEndPoint}
-                      type="number"
-                      fullpath={pid+"/setpoint"}
-                      disabled={connectedPuttingDisable}
-                      style={floatingInputStyle}
-                    />
-                </FloatingLabel>
-                <FloatingLabel
-                  label="Current set pt.">
-                    <Form.Control
-                      plaintext
-                      readOnly
-                      style={floatingLabelStyle}
-                      value={checkNull(furnaceEndPoint.data[pid]?.setpoint)}
-                    />
-                </FloatingLabel>
+                <Row>
+                  <Col> {/* This Col avoids minor FloatingLabel positioning bug */}
+                    <FloatingLabel
+                      label="Enter set pt.">
+                        <EndPointFormControl
+                          endpoint={furnaceEndPoint}
+                          type="number"
+                          fullpath={pid+"/setpoint"}
+                          disabled={connectedPuttingDisable}
+                          style={floatingInputStyle}
+                        />
+                    </FloatingLabel>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col>
+                    <FloatingLabel label="Current set pt.">
+                      <Form.Control
+                        plaintext
+                        readOnly
+                        style={{
+                          width: "100%",
+                          border: '1px solid lightblue',
+                          backgroundColor: '#e0f7ff',
+                          borderRadius: '0.375rem'
+                        }}
+                        value={checkNull(furnaceEndPoint.data[pid]?.setpoint)}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                  <Col>
+                    <FloatingLabel label="Max Step">
+                      <EndPointFormControl
+                        endpoint={furnaceEndPoint}
+                        fullpath={pid+"/max_temp_step"}
+                        disabled={connectedPuttingDisable}
+                        style={floatingInputStyle}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                </Row>
                 <Row>
                   <Col xs={8} sm={6}>
                     <FloatingLabel

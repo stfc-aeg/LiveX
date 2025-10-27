@@ -1,5 +1,5 @@
 from odin.adapters.parameter_tree import ParameterTree
-from livex.util import read_coil, read_decode_input_reg, read_decode_holding_reg, write_modbus_float, write_coil
+from livex.util import read_coil, read_decode_input_reg, read_decode_holding_reg, write_modbus_float, write_coil, LiveXError
 import logging
 
 class PID():
@@ -7,7 +7,7 @@ class PID():
     It stores the values, and provides functions to write to the modbus server on the PLC.
     """
 
-    def __init__(self, addresses, pid_defaults):
+    def __init__(self, addresses, pid_defaults, maximum_temperature, maximum_temperature_step):
         """Initialise the PID class with addresses, creating the Parameter Tree and its
         required parameters to be populated when a modbus connection is established via the 
         controller.
@@ -15,6 +15,9 @@ class PID():
         # Addresses are generic via dictionary usage. Particularly important here for two PIDs
         self.addresses = addresses
         self.pid_defaults = pid_defaults
+
+        # Maximum amount setpoint can increase by in one step. Min.1 because SP must be changeable
+        self.max_temp_step = maximum_temperature_step if maximum_temperature_step >= 1 else 1
 
         self.enable = False
         self.setpoint = 0.0
@@ -28,7 +31,8 @@ class PID():
 
         self.tree = ParameterTree({
             'enable': (lambda: self.enable, self.set_enable),
-            'setpoint': (lambda: self.setpoint, self.set_setpoint),
+            'setpoint': (lambda: self.setpoint, self.set_setpoint, {'max': maximum_temperature}),
+            'max_temp_step': (lambda: self.max_temp_step, self.set_max_temp_step, {'min': 1}),
             'proportional': (lambda: self.kp, self.set_proportional),
             'integral': (lambda: self.ki, self.set_integral),
             'derivative': (lambda: self.kd, self.set_derivative),
@@ -71,6 +75,9 @@ class PID():
 
     def set_setpoint(self, value):
         """Set the setpoint of the PID."""
+        if abs(value-self.setpoint) > self.max_temp_step:
+            raise LiveXError("Temperature step size exceeds limit.")
+
         self.setpoint = value
         write_modbus_float(
             self.client, value, self.addresses['setpoint']
@@ -78,6 +85,10 @@ class PID():
         write_coil(
             self.client, self.addresses['setpoint_update'], True
         )
+
+    def set_max_temp_step(self, value):
+        """Set the maximum allowed step for the setpoint value."""
+        self.max_temp_step = value
 
     def set_proportional(self, value):
         """Set the proportional term of the PID."""

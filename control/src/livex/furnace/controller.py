@@ -41,6 +41,14 @@ class FurnaceController():
         self.bg_stream_task_enable = bool(int(options.get('background_stream_task_enable', False)))
         self.pid_frequency = int(options.get('pid_frequency', 50))
 
+        maximum_temperature = int(options.get('maximum_temperature', 1500))
+        maximum_temperature_step = int(options.get('maximum_temperature_step', 150))
+        maximum_autosp_rate = int(options.get('maximum_autosp_rate', 8))
+
+        logging.debug(f"maximum_temperature: {maximum_temperature}")
+        logging.debug(f"maximum_temperature: {maximum_temperature_step}")
+        logging.debug(f"maximum_temperature: {maximum_autosp_rate}")
+
         self.allow_solo_acquisition = bool(int(options.get('allow_furnace_only_acquisition', 0)))
 
         self.ip = options.get('ip', '192.168.0.159')
@@ -94,10 +102,10 @@ class FurnaceController():
         self.acquiring = False
 
         self.tc_manager = ThermocoupleManager(options)
-        self.pid_a = PID(modAddr.addresses_pid_a, pid_defaults)
-        self.pid_b = PID(modAddr.addresses_pid_b, pid_defaults)
+        self.pid_a = PID(modAddr.addresses_pid_a, pid_defaults, maximum_temperature, maximum_temperature_step)
+        self.pid_b = PID(modAddr.addresses_pid_b, pid_defaults, maximum_temperature, maximum_temperature_step)
         self.gradient = Gradient(modAddr.gradient_addresses)
-        self.aspc = AutoSetPointControl(modAddr.aspc_addresses)
+        self.aspc = AutoSetPointControl(modAddr.aspc_addresses, maximum_autosp_rate)
 
         self._initialise_clients(value=None)
 
