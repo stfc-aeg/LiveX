@@ -61,7 +61,7 @@ function AutoSetPointControl(props){
                   buttonText={furnaceEndPoint.data.autosp?.heating}
                   style={floatingInputStyle}
                   disabled={connectedPuttingDisable}>
-                    {(heating_metadata.allowed_values).map(
+                    {(heating_metadata?.allowed_values ?? []).map(
                       (selection, index) => (
                         <option value={selection} key={index}>
                           {selection}
