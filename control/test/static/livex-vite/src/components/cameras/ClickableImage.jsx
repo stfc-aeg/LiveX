@@ -5,7 +5,6 @@ function ClickableImage(props){
     - id is a string for the purpose of the image. This is used for the canvas - if you have more
       than one ClickableImage on a single page, you will need a unique id for its canvas.
     - endpoint is used to send selected coordinates, index refers to image path of multiple cameras
-    - 'imgSrc' is the image data. this could be from an endpoint e.g.: liveDataEndpoint?.image.data
     - coordsPath is the path the coordinates should be written to, no trailing or leading slashes
     - coordsParam is the parameter you are updating. The 'final' part of the address
     - maximiseAxis is 'x' or 'y' and overrides user selection to the bounds of that axis
@@ -185,10 +184,9 @@ function ClickableImage(props){
 
     // Only insert polygon tags if there's enough entries in the array
     return (
-
       <div>
         {imgData ? (
-          <div style={{position:'relative', display:'inline-block',
+          <div style={{position:'relative', display:'block',
           width:'100%', height:'auto'}}>
             <svg
               id={svgId}
@@ -215,7 +213,8 @@ function ClickableImage(props){
               style={{
               display:'block',
               width:'100%',
-              height:'auto'
+              height:'auto',
+              minHeight:'18px'  // height of 'no image found' icon. prevent 'flickering' when no img
               }}
               alt="Live camera feed"
               />

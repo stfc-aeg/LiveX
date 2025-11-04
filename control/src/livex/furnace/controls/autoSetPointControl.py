@@ -7,7 +7,7 @@ class AutoSetPointControl():
     """This class provides the ParameterTree for the auto set point control controls for LiveX.
     It stores relevant values and provides functions to write to the modbus server on the PLC."""
 
-    def __init__(self, addresses):
+    def __init__(self, addresses, maximum_rate):
         self.addresses = addresses
 
         self.enable = False
@@ -19,7 +19,7 @@ class AutoSetPointControl():
             'enable': (lambda: self.enable, self.set_enable),
             'heating': (lambda: self.heating, self.set_heating,
                         {'allowed_values': ['heating', 'cooling']}),
-            'rate': (lambda: self.rate, self.set_rate, {'min': 0}),
+            'rate': (lambda: self.rate, self.set_rate, {'min': 0, 'max': maximum_rate}),
             'midpt_temp': (lambda: self.midpt, None)
         })
 

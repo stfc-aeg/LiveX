@@ -121,7 +121,7 @@ function Trigger(props) {
                             type="number"
                             fullpath={'acquisition/frame_target'}
                             event_type="enter"
-                            disabled={timeFrameValue==='time' || timeFrameValue==='free'}
+                            disabled={timeFrameValue==='free'}
                             style={{
                               border: timeFrameValue==='frame' ? '1px solid #00cc00' : undefined
                             }}

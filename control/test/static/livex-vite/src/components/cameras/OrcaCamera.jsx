@@ -1,4 +1,5 @@
 import React from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import { Container, Stack } from 'react-bootstrap';
@@ -14,7 +15,6 @@ import ClickableImage from './ClickableImage';
 
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndPointButton = WithEndpoint(Button);
-const EndPointSelect = WithEndpoint(Form.Select);
 
 function OrcaCamera(props) {
     const {endpoint} = props;
@@ -37,6 +37,52 @@ function OrcaCamera(props) {
     const commonImageResolutions = [
         10, 25, 50, 75, 100
     ];
+
+  const [fitMode, setFitMode] = useState(false);
+  const [fitHeightFactor, setFitHeightFactor] = useState(7); // default 70vh
+  const [aspectRatio, setAspectRatio] = useState(null);
+
+  const wrapperRef = useRef(null);
+
+  // measure image to get its aspect ratio
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    const img = wrapper.querySelector("img");
+    if (!img) return;
+
+    const updateAspect = () => {
+      if (img.naturalWidth && img.naturalHeight) {
+        setAspectRatio(img.naturalWidth / img.naturalHeight);
+      }
+    };
+
+    // wait for image to load
+    img.addEventListener("load", updateAspect);
+    updateAspect();
+
+    return () => img.removeEventListener("load", updateAspect);
+  }, [liveViewData]);
+
+  // compute container style
+  const fitStyle =
+    fitMode && aspectRatio
+      ? {
+          height: `${fitHeightFactor * 10}vh`,
+          width: `${fitHeightFactor*10 * aspectRatio}vh`,
+          maxWidth: "100%",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }
+      : {
+          width: "100%",
+          height: "auto",
+          display: "flex",
+          justifyContent: "center",
+        };
+
 
     /* The titlecard buttons have variable output, display, and colour, depending on the camera status.
     Example, when the camera isn't connected, you can connect. If it's connected, you can disconnect.
@@ -140,18 +186,45 @@ function OrcaCamera(props) {
                 </EndPointFormControl>
               </InputGroup>
               </Stack>
-              <TitleCard title={`${endpoint?.data[name]?.camera_name} preview`}>
+              <TitleCard title={
                 <Row>
-                  <ClickableImage
-                    id={`image-${name}`}
-                    endpoint={liveViewEndPoint}
-                    imgPath={`_image/${name}/image`}
-                    coordsPath={`${name}/image`}
-                    coordsParam="zoom"
-                    valuesAsPercentages={true}>
-                  </ClickableImage>
-                  </Row>
-                  <Row>
+                  <Col xs={4} className='d-flex align-items-center' style={{fontSize:'1.3rem'}}>
+                    {`${endpoint?.data[name]?.camera_name} preview`}
+                  </Col>
+                  <Col xs={8} className='d-flex justify-content-end'>
+                    <Form.Text>Fix height scale</Form.Text>
+                    <Form.Range
+                      min={1}
+                      max={10}
+                      step={1}
+                      value={fitHeightFactor}
+                      onChange={(e) => setFitHeightFactor(Number(e.target.value))}
+                      style={{ width: "120px" }}
+                    />
+                    <Button
+                      variant={fitMode?"danger":"primary"}
+                      onClick={()=>setFitMode(!fitMode)}>
+                        {fitMode?"Auto image height":"Fix image height"}
+                    </Button>
+                  </Col>
+                </Row>}>
+                <Row className={fitMode?"justify-content-center":null}>
+                  <div ref={wrapperRef} style={fitMode?{
+                    ...fitStyle,
+                    lineHeight:0, verticalAlign:'top'
+                    }:null}>
+                    <ClickableImage
+                      id={`image-${name}`}
+                      endpoint={liveViewEndPoint}
+                      imgPath={`_image/${name}/image`}
+                      coordsPath={`${name}/image`}
+                      coordsParam="zoom"
+                      valuesAsPercentages={true}>
+                    </ClickableImage>
+                  </div>
+
+                </Row>
+                <Row>
                   <ClickableImage
                     id={`histogram-${name}`}
                     endpoint={liveViewEndPoint}
@@ -165,35 +238,45 @@ function OrcaCamera(props) {
                   </ClickableImage>
                 </Row>
                 <Row className="mt-3">
-                  <Col xs={12} sm={6} 
-                    style={{
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      display:'flex'
-                    }}>
-                    <EndPointButton
-                      endpoint={liveViewEndPoint}
-                      fullpath={`${name}/image/clip_range_value`}
-                      event_type="click"
-                      value={[0, 65535]}
-                      variant="primary">
-                      Reset Clipping Range to 100%
-                    </EndPointButton>
+                  <Col xs={12} sm={6} style={{justifyContent:'center'}}>
+                    <Row style={{justifyContent:'center'}}>
+                        <EndPointButton className="mb-3 w-75"
+                          endpoint={liveViewEndPoint}
+                          fullpath={`${name}/image/autoclip`}
+                          value={liveViewData?.image?.autoclip ? false : true}
+                          variant={liveViewData?.image.autoclip ? 'danger' : 'primary'}>
+                          {liveViewData?.image?.autoclip ? "Disable Autoclip" : "Enable Autoclip"}
+                        </EndPointButton>
+                    </Row>
+                    <FloatingLabel className="mb-3"
+                    label="Autoclip %">
+                      <EndPointFormControl
+                          endpoint={liveViewEndPoint}
+                          type="number"
+                          fullpath={`${name}/image/autoclip_percent`}
+                          disabled={connectedPuttingDisable}>
+                      </EndPointFormControl>
+                    </FloatingLabel>
                   </Col>
-                  <Col xs={12} sm={6} 
-                    style={{
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      display:'flex'
-                    }}>
-                    <EndPointButton
-                      endpoint={liveViewEndPoint}
-                      fullpath={`${name}/image/zoom`}
-                      event_type="click"
-                      value={[[0, 100], [0, 100]]}
-                      variant="primary">
-                        Reset Zoom to Full Image
-                    </EndPointButton>
+                  <Col xs={12} sm={6}>
+                      <Row style={{justifyContent:'center'}}>
+                        <EndPointButton className="mt-2 mb-3 w-75"
+                          endpoint={liveViewEndPoint}
+                          fullpath={`${name}/image/clip_range_value`}
+                          value={[0, 65535]}
+                          variant="primary">
+                          Reset Clipping Range
+                        </EndPointButton>
+                      </Row>
+                      <Row style={{justifyContent:'center'}}>
+                        <EndPointButton className="w-75"
+                          endpoint={liveViewEndPoint}
+                          fullpath={`${name}/image/zoom`}
+                          value={[[0, 100], [0, 100]]}
+                          variant="primary">
+                            Reset Zoom
+                        </EndPointButton>
+                      </Row>
                   </Col>
                 </Row>
                 <Row className="mt-3">

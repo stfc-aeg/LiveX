@@ -95,6 +95,12 @@ class LiveDataController(BaseController):
                     "zoom": (lambda proc=proc: [
                         proc.zoom['x_lower'], proc.zoom['x_upper'], proc.zoom['y_lower'], proc.zoom['y_upper']],
                         partial(self.set_zoom_boundaries, processor=proc)),
+                    "autoclip": (lambda proc=proc: proc.autoclip,
+                                 partial(self.set_autoclip, processor=proc)),
+                    "autoclip_percent": (lambda proc=proc: proc.autoclip_percent,
+                                 partial(self.set_autoclip_percent, processor=proc),
+                                 {'min': 0, 'max': 100}
+                    )
                 }
             }
             self.tree[name] = tree
@@ -186,7 +192,9 @@ class LiveDataController(BaseController):
             "size_y": processor.size_y,
             "colour": processor.colour,
             "clipping": processor.clipping,
-            "zoom": processor.zoom
+            "zoom": processor.zoom,
+            "autoclip": processor.autoclip,
+            "autoclip_percent": processor.autoclip_percent,
         }
         processor.pipe_parent.send(params)
 
@@ -364,4 +372,20 @@ class LiveDataController(BaseController):
         processor.zoom['percent']['y_lower'] = new_y_low
         processor.zoom['percent']['y_upper'] = new_y_high
 
+        self._update_render_info(processor)
+
+    def set_autoclip(self, value, processor):
+        """Set whether autoclip is enabled.
+        :param value: boolean representing whether autoclip is enabled.
+        :param processor: LiveDataProcessor object
+        """
+        processor.autoclip = bool(value)
+        self._update_render_info(processor)
+
+    def set_autoclip_percent(self, value, processor):
+        """Set the autoclip percentage.
+        :param value: integer representing the percentage of pixels to include in autoclip.
+        :param processor: LiveDataProcessor object
+        """
+        processor.autoclip_percent = int(value)
         self._update_render_info(processor)

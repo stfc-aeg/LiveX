@@ -19,6 +19,8 @@ def d25_test_acquisition(
     aspc = furnace.aspc
     interval = furnace.bg_read_task_interval
 
+    print("Setting parameters")
+
     # Heat up furnace and maintain that temperature for a time
     gradient.set_enable(False)
     for heater in heaters:
@@ -29,11 +31,12 @@ def d25_test_acquisition(
         print("Thermal gradient enabled")
         gradient.set_distance(gradient_distance)
         gradient.set_wanted(gradient_k_mm)
-        gradient.set_high(False)  # In this script, assume A is always higher
+        gradient.set_high('A')  # In this script, assume A is always higher
         gradient.set_enable(True)
 
+    print("Starting heat ramp to target temperature")
     aspc.set_rate(heat_rate)
-    aspc.set_heating(True)
+    aspc.set_heating('heating')
     aspc.set_enable(True)
 
     # Wait until temperature at least reaches target temperature
@@ -54,7 +57,7 @@ def d25_test_acquisition(
     livex.start_acquisition(['furnace', 'widefov', 'narrowfov'])
     time.sleep(3)
 
-    aspc.set_heating(False)
+    aspc.set_heating('cooling')
     aspc.set_rate(first_cool_rate)
     aspc.set_enable(True)
 
