@@ -106,5 +106,29 @@
         "default": 0.0,
         "persist": false,
         "user_input": false
+    },
+    "furnace_framerate": {
+        "label": "Furnace frame rate",
+        "default": 10,
+        "persist": true,
+        "user_input": false
+    },
+    "widefov_framerate": {
+        "label": "Widefov frame rate",
+        "default": 10,
+        "persist": true,
+        "user_input": false
+    },
+    "narrowfov_framerate": {
+        "label": "Narrowfov frame rate",
+        "default": 10,
+        "persist": true,
+        "user_input": false
+    },
+    "sequence_id": {
+        "label": "Controlling sequence ID",
+        "default": null,
+        "persist": false,
+        "user_input": false
     }
 }
