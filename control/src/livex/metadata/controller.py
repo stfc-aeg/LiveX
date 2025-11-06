@@ -18,6 +18,7 @@ from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from .hdf_writer import HdfMetadataWriter
 from .markdown_writer import MarkdownMetaWriter
+from .yaml_writer import YamlMetadataWriter
 from .types import MetadataField, ParamDict
 
 
@@ -57,6 +58,10 @@ class MetadataController(BaseController):
         self.markdown_path = "/tmp"
         self.markdown_file = "metadata.md"
         self.markdown_write = False
+
+        self.yaml_path = "/tmp"
+        self.yaml_file = "metadata.yaml"
+        self.yaml_write = False
 
         # Build a default parameter tree
         self._build_tree()
@@ -234,6 +239,11 @@ class MetadataController(BaseController):
                     "file": _attr_accessor("markdown_file"),
                     "write": _attr_accessor("markdown_write"),
                 },
+                "yaml": {
+                    "path": _attr_accessor("yaml_path"),
+                    "file": _attr_accessor("yaml_file"),
+                    "write": _attr_accessor("yaml_write")
+                },
                 "fields": ParameterTree(
                     {
                         key: self.metadata[key].build_accessor()
@@ -272,3 +282,17 @@ class MetadataController(BaseController):
             self.markdown_template, self.markdown_path, self.markdown_file
         ) as markdown:
             markdown.write(metadata)
+
+    def _write_yaml(self) -> None:
+        """Write metadata fields to a YAML file.
+        
+        This method writes metadata to a YAML file. The path and name of the file are obtained from
+        attributes mapped into the parameter tree of the controller.
+        """
+        self.yaml_write = False
+
+        # Build a dict of the current metadata values
+        metadata = {key: field.value for key, field in self.metadata.items()}
+
+        with YamlMetadataWriter(self.yaml_path, self.yaml_file) as yaml:
+            yaml.write(metadata)
