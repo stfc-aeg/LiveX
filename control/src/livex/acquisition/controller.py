@@ -1,8 +1,6 @@
 import logging
 from datetime import datetime
 
-from functools import partial
-
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from livex.base_controller import BaseController
@@ -50,6 +48,10 @@ class LiveXController(BaseController):
                 'md': {
                     'filename': None,
                     'filepath': self.furnace_filepath
+                },
+                'yaml': {
+                    'filename': None,
+                    'filepath': self.furnace_filepath
                 }
             }
         }
@@ -71,7 +73,7 @@ class LiveXController(BaseController):
         else:
             logging.warning("Munir adapter not found.")
 
-        self.furnace = adapters["furnace"].controller if 'furnace' in self.adapters else logging.warning("Furnace adapter not found.")
+        self.furnace = self.adapters["furnace"].controller if 'furnace' in self.adapters else logging.warning("Furnace adapter not found.")
 
         if 'trigger' in self.adapters:
             self.trigger = adapters["trigger"].controller
@@ -158,6 +160,10 @@ class LiveXController(BaseController):
         self.filepaths['metadata']['md']['filename'] = filename
         self.filepaths['metadata']['md']['filepath'] = f"{self.furnace_filepath}/logs/acquisitions"
 
+        filename = build_filename('metadata', 'yaml')
+        self.filepaths['metadata']['yaml']['filename'] = filename
+        self.filepaths['metadata']['yaml']['filepath'] = "."
+
         # Cameras
         for camera in self.orca.cameras:
             name = camera.name
@@ -169,6 +175,8 @@ class LiveXController(BaseController):
         iac_set(self.metadata, 'hdf', 'path', self.filepaths['metadata']['hdf5']['filepath'])
         iac_set(self.metadata, 'markdown', 'file', self.filepaths['metadata']['md']['filename'])
         iac_set(self.metadata, 'markdown', 'path', self.filepaths['metadata']['md']['filepath'])
+        iac_set(self.metadata, 'yaml', 'file', self.filepaths['metadata']['yaml']['filename'])
+        iac_set(self.metadata, 'yaml', 'path', self.filepaths['metadata']['yaml']['filepath'])
 
     def start_acquisition(self, acquisitions=[]):
         """Start an acquisition. Disable timers, configure all values, then start timers simultaneously.
@@ -278,7 +286,7 @@ class LiveXController(BaseController):
 
         # Write other metadata information
         iac_set(self.metadata, 'fields/thermal_gradient_kmm', 'value', self.furnace.gradient.wanted)
-        iac_set(self.metadata, 'fields/thermal_gradient_distance', 'value', self.furnace.gradient.distance),
+        iac_set(self.metadata, 'fields/thermal_gradient_distance', 'value', self.furnace.gradient.distance)
         iac_set(self.metadata, 'fields/cooling_rate', 'value', self.furnace.aspc.rate)
 
         # Stop time
@@ -286,11 +294,14 @@ class LiveXController(BaseController):
         stop_time = now.strftime("%d/%m/%Y, %H:%M:%S")
         iac_set(self.metadata, 'fields/stop_time', 'value', stop_time)
 
-        # Write out markdown metadata - data matches h5 at this point
-        iac_set(self.metadata, 'markdown', 'write', True)
+        # # Write out markdown metadata - data matches h5 at this point
+        # iac_set(self.metadata, 'markdown', 'write', True)
 
-        # Write metadata hdf to file afterwards, only md needs doing first
-        iac_set(self.metadata, 'hdf', 'write', True)
+        # # Write metadata hdf to file afterwards, only md needs doing first
+        # iac_set(self.metadata, 'hdf', 'write', True)
+
+        # Write YAML hdf with all static data
+        iac_set(self.metadata, 'yaml', 'write', True)
 
         # Reenable timers
         self.trigger.set_all_timers(

@@ -47,18 +47,20 @@ class YamlMetadataWriter:
         """
         try:
             os.makedirs(self.file_path, exist_ok=True)
-            
-            # Look at existing file if it's there, if you want to append
-            # If not appending, the file will be overwritten when you write
-            if os.path.exists(self.full_path):
-                with open(self.full_path, "r") as f:
-                    existing_data = yaml.safe_load(f) or {}
-                    if "metadata" in existing_data:
-                        # Move data currently in there under a header
-                        existing_data["previous"] = existing_data.pop("metadata")
-                    self.data = existing_data
-            else:
-                self.data = {}
+
+            base_name, ext = os.path.splitext(self.file_name)
+            hopeful_path = self.full_path
+            counter = 1
+
+            while os.path.exists(hopeful_path):
+                new_name = f"{base_name}_{counter}{ext}"  # Append an incrementing counter
+                hopeful_path = os.path.join(self.file_path, new_name)
+                counter += 1
+
+            self.full_path = hopeful_path
+            self.data = {}
+
+            logging.debug(f"YAML writer will output to: {self.full_path}")
 
         except (OSError, IOError) as error:
             error_msg = f"Failed to creature YAML Metadata writer: {error}"
@@ -93,5 +95,5 @@ class YamlMetadataWriter:
         This method writes the metadata to the class data attribute to be written on context exit.
         :param metadata: dict of metadata fields to write into file
         """
-        self.data["metadata"] = metadata
+        self.data.update(metadata)
         logging.debug(f"Wrote metadata for group metadata to YAML file {self.full_path}")

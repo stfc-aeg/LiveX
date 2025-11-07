@@ -142,6 +142,9 @@ class MetadataController(BaseController):
         # If the markdown write parameter has been set, write metadata to a markdown file
         if self.markdown_write:
             self._write_markdown()
+        
+        if self.yaml_write:
+            self._write_yaml()
 
     def _load_config(self, metadata_config: str, raise_error: bool = True) -> None:
         """Load metadata configuration from a file.
