@@ -41,18 +41,8 @@ class LiveXController(BaseController):
                 'filepath': None
             },
             'metadata': {
-                'hdf5': {
-                    'filename': None,
-                    'filepath': None
-                },
-                'md': {
-                    'filename': None,
-                    'filepath': self.furnace_filepath
-                },
-                'yaml': {
-                    'filename': None,
-                    'filepath': self.furnace_filepath
-                }
+                'filename': None,
+                'filepath': self.furnace_filepath
             }
         }
 
@@ -151,18 +141,9 @@ class LiveXController(BaseController):
         self.filepaths['furnace']['filepath'] = self.furnace_filepath
 
         # Metadata
-        filename = build_filename('metadata', 'h5')
-        self.filepaths['metadata']['hdf5']['filename'] = filename
-        self.filepaths['metadata']['hdf5']['filepath'] = self.furnace_filepath
-        # Metadata markdown
-
-        filename = build_filename('metadata', 'md')
-        self.filepaths['metadata']['md']['filename'] = filename
-        self.filepaths['metadata']['md']['filepath'] = f"{self.furnace_filepath}/logs/acquisitions"
-
         filename = build_filename('metadata', 'yaml')
-        self.filepaths['metadata']['yaml']['filename'] = filename
-        self.filepaths['metadata']['yaml']['filepath'] = "."
+        self.filepaths['metadata']['filename'] = filename
+        self.filepaths['metadata']['filepath'] = self.furnace_filepath
 
         # Cameras
         for camera in self.orca.cameras:
@@ -293,12 +274,6 @@ class LiveXController(BaseController):
         now = datetime.now()
         stop_time = now.strftime("%d/%m/%Y, %H:%M:%S")
         iac_set(self.metadata, 'fields/stop_time', 'value', stop_time)
-
-        # # Write out markdown metadata - data matches h5 at this point
-        # iac_set(self.metadata, 'markdown', 'write', True)
-
-        # # Write metadata hdf to file afterwards, only md needs doing first
-        # iac_set(self.metadata, 'hdf', 'write', True)
 
         # Write YAML hdf with all static data
         iac_set(self.metadata, 'yaml', 'write', True)
