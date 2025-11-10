@@ -60,7 +60,11 @@ class YamlMetadataWriter:
             self.full_path = hopeful_path
             self.data = {}
 
-            logging.debug(f"YAML writer will output to: {self.full_path}")
+            if counter > 1:  # Did we have a namespace collision
+                logging.debug(
+                    f"Namespace collision: Metadata YAML will be written to: {self.full_path}"
+                )
+
 
         except (OSError, IOError) as error:
             error_msg = f"Failed to creature YAML Metadata writer: {error}"

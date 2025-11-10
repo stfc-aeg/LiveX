@@ -152,12 +152,8 @@ class LiveXController(BaseController):
             self.filepaths[name]["filepath"] = self.options.get(f"{name}_filepath", self.furnace_filepath)
         # Set values in metadata adapter
         iac_set(self.metadata, 'fields/experiment_id', 'value', experiment_id)
-        iac_set(self.metadata, 'hdf', 'file', self.filepaths['metadata']['hdf5']['filename'])
-        iac_set(self.metadata, 'hdf', 'path', self.filepaths['metadata']['hdf5']['filepath'])
-        iac_set(self.metadata, 'markdown', 'file', self.filepaths['metadata']['md']['filename'])
-        iac_set(self.metadata, 'markdown', 'path', self.filepaths['metadata']['md']['filepath'])
-        iac_set(self.metadata, 'yaml', 'file', self.filepaths['metadata']['yaml']['filename'])
-        iac_set(self.metadata, 'yaml', 'path', self.filepaths['metadata']['yaml']['filepath'])
+        iac_set(self.metadata, 'yaml', 'file', self.filepaths['metadata']['filename'])
+        iac_set(self.metadata, 'yaml', 'path', self.filepaths['metadata']['filepath'])
 
     def start_acquisition(self, acquisitions=[]):
         """Start an acquisition. Disable timers, configure all values, then start timers simultaneously.
@@ -275,7 +271,7 @@ class LiveXController(BaseController):
         stop_time = now.strftime("%d/%m/%Y, %H:%M:%S")
         iac_set(self.metadata, 'fields/stop_time', 'value', stop_time)
 
-        # Write YAML hdf with all static data
+        # Write YAML with all static data
         iac_set(self.metadata, 'yaml', 'write', True)
 
         # Reenable timers
@@ -316,8 +312,7 @@ class LiveXController(BaseController):
         """Set parameters in the controller.
 
         This method sets parameters in the controller parameter tree. If the parameters to write
-        metadata to HDF and/or markdown have been set during the call, the appropriate write
-        action is executed.
+        metadata have been set during the call, the appropriate write action is executed.
 
         :param path: path to set parameters at
         :param data: dictionary of parameters to set

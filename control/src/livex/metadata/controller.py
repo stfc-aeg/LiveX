@@ -26,7 +26,7 @@ class MetadataController(BaseController):
     """MetadataController - controller class for LiveX metadata.
 
     This class implements the controller for the LiveX metadata adapter. It manages metadata fields,
-    their state and output of metadata to HDF and markdown files.
+    their state and output of metadata to YAML (with allowance of HDF and markdown) files.
     """
 
     def __init__(self, options):
