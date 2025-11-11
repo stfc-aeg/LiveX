@@ -114,8 +114,8 @@ void manageComms()
   if (elapsedTime > INTERVAL_TIMEOUT)
   {
     Serial.println("Timeout: no connection. Disabling PID behaviour (write 0).");
-    modbus_server.coilWrite(MOD_PID_ENABLE_A_COIL, 0);
-    modbus_server.coilWrite(MOD_PID_ENABLE_B_COIL, 0);
+    modbus_server.coilWrite(MOD_PID_UPPER_ENABLE_COIL, 0);
+    modbus_server.coilWrite(MOD_PID_LOWER_ENABLE_COIL, 0);
     // Reset timer so writing doesn't occur every single loop
     connectionTimer = millis();
   }
@@ -123,8 +123,8 @@ void manageComms()
 
 void updateSetPoints()
 {
-  PID_A.baseSetPoint = modbus_server.combineHoldingRegisters(MOD_SETPOINT_A_HOLD);
-  PID_B.baseSetPoint = modbus_server.combineHoldingRegisters(MOD_SETPOINT_B_HOLD);
+  PID_A.baseSetPoint = modbus_server.combineHoldingRegisters(MOD_SETPOINT_UPPER_HOLD);
+  PID_B.baseSetPoint = modbus_server.combineHoldingRegisters(MOD_SETPOINT_LOWER_HOLD);
   // When setpoints are updated, thermal gradient will also need adjusting as modifiers will change
 
   thermalGradient();
