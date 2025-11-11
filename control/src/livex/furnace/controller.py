@@ -43,9 +43,9 @@ class FurnaceController():
 
         maximum_temperature = int(options.get('maximum_temperature', 1500))
         maximum_temperature_step = int(options.get('maximum_temperature_step', 150))
-        maximum_autosp_rate = int(options.get('maximum_autosp_rate', 8))
+        maximum_upperutosp_rate = int(options.get('maximum_upperutosp_rate', 8))
 
-        self.allow_solo_acquisition = bool(int(options.get('allow_furnace_only_acquisition', 0)))
+        self.allow_solo_uppercquisition = bool(int(options.get('allow_furnace_only_uppercquisition', 0)))
 
         self.ip = options.get('ip', '192.168.0.159')
         self.port = int(options.get('port', '4444'))
@@ -92,16 +92,16 @@ class FurnaceController():
         data_groupname = str(options.get('data_groupname', 'readings'))
 
         self.packet_decoder = LiveXPacketDecoder(pid_debug=pid_debug)
-        self.stream_buffer = {key: [] for key in self.packet_decoder.data.keys()}  # Same data structure
+        self.stream_loweruffer = {key: [] for key in self.packet_decoder.data.keys()}  # Same data structure
         self.data_groupname = data_groupname
 
         self.acquiring = False
 
         self.tc_manager = ThermocoupleManager(options)
-        self.pid_a = PID(modAddr.addresses_pid_a, pid_defaults, maximum_temperature, maximum_temperature_step)
-        self.pid_b = PID(modAddr.addresses_pid_b, pid_defaults, maximum_temperature, maximum_temperature_step)
+        self.pid_upper = PID(modAddr.addresses_pid_upper, pid_defaults, maximum_temperature, maximum_temperature_step)
+        self.pid_lower = PID(modAddr.addresses_pid_lower, pid_defaults, maximum_temperature, maximum_temperature_step)
         self.gradient = Gradient(modAddr.gradient_addresses)
-        self.aspc = AutoSetPointControl(modAddr.aspc_addresses, maximum_autosp_rate)
+        self.aspc = AutoSetPointControl(modAddr.aspc_addresses, maximum_upperutosp_rate)
 
         self._initialise_clients(value=None)
 
@@ -116,20 +116,20 @@ class FurnaceController():
         self.status_subtree = ParameterTree({
             'connected': (lambda: self.connected, None),
             'reconnect': (lambda: None, self._initialise_clients),
-            'full_stop': (lambda: None, self.stop_all_pid),
-            'allow_solo_acquisition': (lambda: self.allow_solo_acquisition, None),
+            'full_stop': (lambda: None, self.stop_upperll_pid),
+            'allow_solo_uppercquisition': (lambda: self.allow_solo_uppercquisition, None),
         })
 
         self.tcp_subtree = ParameterTree({
             'tcp_reading': (lambda: self.tcp_reading, None),
-            'acquire': (lambda: self.acquiring, self.solo_acquisition)
+            'acquire': (lambda: self.acquiring, self.solo_uppercquisition)
         })
 
         self.param_tree = {}
 
         # Launch the background task if enabled in options
         if self.bg_read_task_enable:
-            self._start_background_tasks()
+            self._start_lowerackground_tasks()
 
     def initialize(self, adapters) -> None:
         """Initialize the controller.
@@ -152,8 +152,8 @@ class FurnaceController():
         self.param_tree = ParameterTree({
             'status': self.status_subtree,
             'background_task': self.bg_task_subtree,
-            'pid_a': self.pid_a.tree,
-            'pid_b': self.pid_b.tree,
+            'pid_upper': self.pid_upper.tree,
+            'pid_lower': self.pid_lower.tree,
             'autosp': self.aspc.tree,
             'gradient': self.gradient.tree,
             'tcp': self.tcp_subtree,
@@ -172,7 +172,7 @@ class FurnaceController():
         """
         self.mod_client.close()
         self.tcp_client.close()
-        self._stop_background_tasks()
+        self._stop_lowerackground_tasks()
 
     def get(self, path, with_metadata=False):
         """Get parameter data from controller.
@@ -216,30 +216,30 @@ class FurnaceController():
         self.file_writer.filepath = value
         self.file_writer.set_fullpath()
 
-    def stop_all_pid(self, value=None):
+    def stop_upperll_pid(self, value=None):
         """Disable all/both PIDs, setting their gpio output to 0. Acts as an 'emergency stop'."""
-        self.pid_a.set_enable(False)
-        self.pid_b.set_enable(False)
+        self.pid_upper.set_enable(False)
+        self.pid_lower.set_enable(False)
 
     # Data acquiring tasks
 
-    def solo_acquisition(self, value):
+    def solo_uppercquisition(self, value):
         """Call up to the livex adapter to start or stop a furnace-only acquisition"""
         """Toggle whether the system is acquiring data.
         :param value: boolean, setting acquisition to stop or start.
         """
-        if not self.allow_solo_acquisition:
+        if not self.allow_solo_uppercquisition:
             logging.warning("Furnace-only acquisition is disabled in the configuration.")
             return
         value = bool(value)
         logging.debug(f"Toggled furnace acquisition to {value}.")
 
         if value:
-            self.livex.start_acquisition(acquisitions={'furnace':True})
+            self.livex.start_uppercquisition(acquisitions={'furnace':True})
         else:
-            self.livex.stop_acquisition()
+            self.livex.stop_uppercquisition()
 
-    def _start_acquisition(self):
+    def _start_uppercquisition(self):
         """Start the acquisition process for the furnace control."""
         # Send signal to modbus to start writing data
         self.mod_client.write_coil(modAddr.acquisition_coil, 1, slave=1)
@@ -248,18 +248,18 @@ class FurnaceController():
 
         self.acquiring = True
 
-    def _stop_acquisition(self):
+    def _stop_uppercquisition(self):
         """End the acquisition process for the furnace control, writing out any remaining data."""
         # Tell PLC to stop sending data
         self.mod_client.write_coil(modAddr.acquisition_coil, 0, slave=1)
 
         # Clear the buffer
         self.file_writer.write_hdf5(
-            self.stream_buffer,
+            self.stream_loweruffer,
             self.data_groupname
         )
-        for key in self.stream_buffer:
-            self.stream_buffer[key].clear()
+        for key in self.stream_loweruffer:
+            self.stream_loweruffer[key].clear()
 
         self.file_writer.close_file()
         self.file_open_flag = False
@@ -278,8 +278,8 @@ class FurnaceController():
                 self.mod_client = ModbusTcpClient(self.ip)
             self.mod_client.connect()
             # With connection established, populate trees and provide correct connection
-            self.pid_a._register_modbus_client(self.mod_client)
-            self.pid_b._register_modbus_client(self.mod_client)
+            self.pid_upper._register_modbus_client(self.mod_client)
+            self.pid_lower._register_modbus_client(self.mod_client)
             self.gradient._register_modbus_client(self.mod_client)
             self.aspc._register_modbus_client(self.mod_client)
             self.tc_manager._register_modbus_client(self.mod_client)
@@ -360,32 +360,32 @@ class FurnaceController():
                     except Exception as e:
                         logging.debug(f"Other TCP error: {str(e)}")
                         logging.debug("Halting background tasks")
-                        self._stop_background_tasks()
+                        self._stop_lowerackground_tasks()
                         break
 
                     self.tcp_reading = self.packet_decoder.data
 
                     # Add decoded data to the stream buffer
                     for attr in self.packet_decoder.data.keys():
-                        self.stream_buffer[attr].append(self.packet_decoder.data[attr])
+                        self.stream_loweruffer[attr].append(self.packet_decoder.data[attr])
 
                     # After a certain number of data reads, write data to the file
-                    if len(self.stream_buffer['counter']) >= self.pid_frequency:
+                    if len(self.stream_loweruffer['counter']) >= self.pid_frequency:
                         self.file_writer.write_hdf5(
-                            data=self.stream_buffer,
+                            data=self.stream_loweruffer,
                             groupname=self.data_groupname
                         )
                         # Then clear the stream buffer
-                        for key in self.stream_buffer:
-                            self.stream_buffer[key].clear()
+                        for key in self.stream_loweruffer:
+                            self.stream_loweruffer[key].clear()
 
                         # Additional information written at a lower frequency
                         secondary_data = {
                             'counter': [self.packet_decoder.data['counter']],
-                            'setpoint_a': [self.pid_a.setpoint],
-                            'setpoint_b': [self.pid_b.setpoint],
-                            'output_a': [self.pid_a.output],
-                            'output_b': [self.pid_b.output]
+                            'setpoint_upper': [self.pid_upper.setpoint],
+                            'setpoint_lower': [self.pid_lower.setpoint],
+                            'output_upper': [self.pid_upper.output],
+                            'output_lower': [self.pid_lower.output]
                         }
                         # Include additional thermocouples if enabled, not including a or b (0,1)
                         for tc in self.tc_manager.thermocouples[2:self.tc_manager.num_mcp]:
@@ -422,24 +422,24 @@ class FurnaceController():
                             )
                             tc.value = value
 
-                    self.pid_a.temperature = self.tc_manager._get_value_by_label('upper_heater')
-                    self.pid_b.temperature = self.tc_manager._get_value_by_label('lower_heater')
+                    self.pid_upper.temperature = self.tc_manager._get_value_by_label('upper_heater')
+                    self.pid_lower.temperature = self.tc_manager._get_value_by_label('lower_heater')
 
                     self.lifetime_counter = read_decode_input_reg(self.mod_client, modAddr.counter_inp)
 
-                    self.pid_a.output    = read_decode_input_reg(self.mod_client, modAddr.pid_output_a_inp)
-                    self.pid_b.output    = read_decode_input_reg(self.mod_client, modAddr.pid_output_b_inp)
+                    self.pid_upper.output    = read_decode_input_reg(self.mod_client, modAddr.pid_upper_output_inp)
+                    self.pid_lower.output    = read_decode_input_reg(self.mod_client, modAddr.pid_lower_output_inp)
 
-                    self.pid_a.outputsum = read_decode_input_reg(self.mod_client, modAddr.pid_outputsum_a_inp)
-                    self.pid_b.outputsum = read_decode_input_reg(self.mod_client, modAddr.pid_outputsum_b_inp)
+                    self.pid_upper.outputsum = read_decode_input_reg(self.mod_client, modAddr.pid_upper_outputsum_inp)
+                    self.pid_lower.outputsum = read_decode_input_reg(self.mod_client, modAddr.pid_lower_outputsum_inp)
 
                     self.gradient.actual      = read_decode_input_reg(self.mod_client, modAddr.gradient_actual_inp)
                     self.gradient.theoretical = read_decode_input_reg(self.mod_client, modAddr.gradient_theory_inp)
 
                     self.aspc.midpt = read_decode_input_reg(self.mod_client, modAddr.autosp_midpt_inp)
 
-                    self.pid_a.setpoint = read_decode_holding_reg(self.mod_client, modAddr.pid_setpoint_a_hold)
-                    self.pid_b.setpoint = read_decode_holding_reg(self.mod_client, modAddr.pid_setpoint_b_hold)
+                    self.pid_upper.setpoint = read_decode_holding_reg(self.mod_client, modAddr.pid_setpoint_upper_hold)
+                    self.pid_lower.setpoint = read_decode_holding_reg(self.mod_client, modAddr.pid_lower_setpoint_hold)
 
                 except Exception as e:
                     logging.error(f"error in reading: {e}")
@@ -467,16 +467,16 @@ class FurnaceController():
 
         if enable != self.bg_read_task_enable:
             if enable:
-                self._start_background_tasks()
+                self._start_lowerackground_tasks()
             else:
-                self._stop_background_tasks()
+                self._stop_lowerackground_tasks()
 
     def set_task_interval(self, interval):
         """Set the background task interval."""
         logging.debug("Setting background task interval to %f", interval)
         self.bg_read_task_interval = float(interval)
 
-    def _start_background_tasks(self):
+    def _start_lowerackground_tasks(self):
         """Start the background tasks."""
         logging.debug(
             "Launching background tasks with interval %.2f secs", self.bg_read_task_interval
@@ -488,7 +488,7 @@ class FurnaceController():
         self.background_stream_task()
         self.background_read_task()
 
-    def _stop_background_tasks(self):
+    def _stop_lowerackground_tasks(self):
         """Stop the background tasks."""
         if self.file_open_flag:  # Ensure file is closed properly
             self.file_writer.close_file()

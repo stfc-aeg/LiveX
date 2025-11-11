@@ -47,15 +47,15 @@ function FurnacePage(props){
           <PidControl
             furnaceEndPoint={furnaceEndPoint}
             connectedPuttingDisable={connectedPuttingDisable}
-            title="Upper Heater (A) Controls"
-            pid="pid_a">
+            title="Upper Heater Controls"
+            pid="pid_upper">
           </PidControl>
 
           <PidControl
             furnaceEndPoint={furnaceEndPoint}
             connectedPuttingDisable={connectedPuttingDisable}
-            title="Lower Heater (B) Controls"
-            pid="pid_b">
+            title="Lower Heater Controls"
+            pid="pid_lower">
           </PidControl>
 
           {

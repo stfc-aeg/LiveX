@@ -21,8 +21,8 @@ class modAddr():
 
 
     # Coils start at 00001-09999
-    pid_enable_a_coil     = 1
-    pid_enable_b_coil     = 2
+    pid_upper_enable_coil     = 1
+    pid_lower_enable_coil     = 2
     gradient_enable_coil  = 3
     autosp_enable_coil    = 4
     autosp_heating_coil   = 5
@@ -37,10 +37,10 @@ class modAddr():
 
     # Input registers (read-only, from device) start at 30001-39999
     counter_inp      = 30001
-    pid_output_a_inp = 30003
-    pid_output_b_inp = 30005
-    pid_outputsum_a_inp = 30007
-    pid_outputsum_b_inp = 30009
+    pid_upper_output_inp = 30003
+    pid_lower_output_inp = 30005
+    pid_upper_outputsum_inp = 30007
+    pid_lower_outputsum_inp = 30009
 
     thermocouple_a_inp = 30011
     thermocouple_b_inp = 30013
@@ -55,15 +55,15 @@ class modAddr():
     autosp_midpt_inp        = 30029
 
     # Holding registers (read/write) start at 40001-49999
-    pid_setpoint_a_hold = 40001
-    pid_kp_a_hold       = 40003
-    pid_ki_a_hold       = 40005
-    pid_kd_a_hold       = 40007
+    pid_setpoint_upper_hold = 40001
+    pid_kp_upper_hold       = 40003
+    pid_ki_upper_hold       = 40005
+    pid_kd_upper_hold       = 40007
 
-    pid_setpoint_b_hold = 40009
-    pid_kp_b_hold       = 40011
-    pid_ki_b_hold       = 40013
-    pid_kd_b_hold       = 40015
+    pid_lower_setpoint_hold = 40009
+    pid_lower_kp_hold       = 40011
+    pid_lower_ki_hold       = 40013
+    pid_lower_kd_hold       = 40015
 
     furnace_freq_hold   = 40017
 
@@ -89,26 +89,26 @@ class modAddr():
     tcidx_5_type_hold           = 40049
 
     # Addresses for controls
-    addresses_pid_a = {
-        'enable': pid_enable_a_coil,
-        'setpoint': pid_setpoint_a_hold,
-        'kp': pid_kp_a_hold,
-        'ki': pid_ki_a_hold,
-        'kd': pid_kd_a_hold,
-        'output': pid_output_a_inp,
-        'outputsum': pid_outputsum_a_inp,
+    addresses_pid_upper = {
+        'enable': pid_upper_enable_coil,
+        'setpoint': pid_setpoint_upper_hold,
+        'kp': pid_kp_upper_hold,
+        'ki': pid_ki_upper_hold,
+        'kd': pid_kd_upper_hold,
+        'output': pid_upper_output_inp,
+        'outputsum': pid_upper_outputsum_inp,
         'thermocouple': thermocouple_a_inp,
         'setpoint_update': setpoint_update_coil
     }
 
-    addresses_pid_b = {
-        'enable': pid_enable_b_coil,
-        'setpoint': pid_setpoint_b_hold,
-        'kp': pid_kp_b_hold,
-        'ki': pid_ki_b_hold,
-        'kd': pid_kd_b_hold,
-        'output': pid_output_b_inp,
-        'outputsum': pid_outputsum_b_inp,
+    addresses_pid_lower = {
+        'enable': pid_lower_enable_coil,
+        'setpoint': pid_lower_setpoint_hold,
+        'kp': pid_lower_kp_hold,
+        'ki': pid_lower_ki_hold,
+        'kd': pid_lower_kd_hold,
+        'output': pid_lower_output_inp,
+        'outputsum': pid_lower_outputsum_inp,
         'thermocouple': thermocouple_b_inp,
         'setpoint_update': setpoint_update_coil
     }

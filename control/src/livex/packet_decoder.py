@@ -16,11 +16,17 @@ class LiveXPacketDecoder(struct.Struct):
         # this should match the order of the object send via TCP in TaskPid on the hardware
         self.all_keys = [
             'counter',
-            'temperature_a', 'output_a', 'kp_a', 'ki_a', 'kd_a', 'lastInput_a', 'outputSum_a', 'setpoint_a',
-            'temperature_b', 'output_b', 'kp_b', 'ki_b', 'kd_b', 'lastInput_b', 'outputSum_b', 'setpoint_a'
+            'temperature_upper', 'output_upper', 'kp_upper', 'ki_upper', 'kd_upper', 'lastInput_upper', 'outputSum_upper', 'setpoint_upper',
+            'temperature_lower', 'output_lower', 'kp_lower', 'ki_lower', 'kd_lower', 'lastInput_lower', 'outputSum_lower', 'setpoint_upper'
         ]
+        # self.all_keys = [
+        #     'counter',
+        #     'temperature_a', 'output_a', 'kp_a', 'ki_a', 'kd_a', 'lastInput_a', 'outputSum_a', 'setpoint_a',
+        #     'temperature_b', 'output_b', 'kp_b', 'ki_b', 'kd_b', 'lastInput_b', 'outputSum_b', 'setpoint_a'
+        # ]
+
         # keys for non-debug data
-        self.selected_keys = ['counter', 'temperature_a', 'temperature_b']
+        self.selected_keys = ['counter', 'temperature_upper', 'temperature_lower']
         # for pulling the selected values out of the unpacked reading
         self.selected_indexes = [self.all_keys.index(key) for key in self.selected_keys]
 
