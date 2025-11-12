@@ -71,6 +71,7 @@ volatile int interruptCounter = 0;
 
 // Communicated via modbus
 float interruptFrequency = 10;
+float upperLimit = 1500.0;  // Maximum temperature setpoint
 
 void IRAM_ATTR pidFlagOnTimer()
 {

@@ -207,7 +207,20 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
     // Check auto set point control and modify the base setpoint if it and the PID is enabled
     if (enabled && modbus_server.readBool(MOD_AUTOSP_ENABLE_COIL))
     {
-      PID->baseSetPoint = PID->baseSetPoint + PID->autospRate;
+      // Only increase temperature if it would remain below or at the setpoint limit
+      if (PID->baseSetPoint + PID->autospRate <= upperLimit)
+      {
+        PID->baseSetPoint = PID->baseSetPoint + PID->autospRate;
+      }
+      else  // Otherwise turn it off
+      {
+        modbus_server.coilWrite(MOD_AUTOSP_ENABLE_COIL, 0);
+        if (DEBUG)
+        {
+          Serial.println("Upper limit reached, disabling auto set point control.");
+        }
+      }
+      
     }
 
     // Write the current setpoint to the register

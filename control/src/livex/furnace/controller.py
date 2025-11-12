@@ -41,9 +41,9 @@ class FurnaceController():
         self.bg_stream_task_enable = bool(int(options.get('background_stream_task_enable', False)))
         self.pid_frequency = int(options.get('pid_frequency', 50))
 
-        maximum_temperature = int(options.get('maximum_temperature', 1500))
-        maximum_temperature_step = int(options.get('maximum_temperature_step', 150))
-        maximum_autosp_rate = int(options.get('maximum_autosp_rate', 8))
+        self.max_setpoint = int(options.get('max_setpoint', 1500))
+        self.max_setpoint_increase = int(options.get('max_setpoint_increase', 150))
+        max_autosp_rate = int(options.get('max_autosp_rate', 8))
 
         self.allow_solo_acquisition = bool(int(options.get('allow_furnace_only_acquisition', 0)))
 
@@ -98,10 +98,10 @@ class FurnaceController():
         self.acquiring = False
 
         self.tc_manager = ThermocoupleManager(options)
-        self.pid_upper = PID(modAddr.addresses_pid_upper, pid_defaults, maximum_temperature, maximum_temperature_step)
-        self.pid_lower = PID(modAddr.addresses_pid_lower, pid_defaults, maximum_temperature, maximum_temperature_step)
+        self.pid_upper = PID(modAddr.addresses_pid_upper, pid_defaults, self.max_setpoint, self.max_setpoint_increase)
+        self.pid_lower = PID(modAddr.addresses_pid_lower, pid_defaults, self.max_setpoint, self.max_setpoint_increase)
         self.gradient = Gradient(modAddr.gradient_addresses)
-        self.aspc = AutoSetPointControl(modAddr.aspc_addresses, maximum_autosp_rate)
+        self.aspc = AutoSetPointControl(modAddr.aspc_addresses, max_autosp_rate)
 
         self._initialise_clients(value=None)
 
@@ -154,6 +154,8 @@ class FurnaceController():
             'background_task': self.bg_task_subtree,
             'pid_upper': self.pid_upper.tree,
             'pid_lower': self.pid_lower.tree,
+            'max_setpoint_increase': (lambda:
+                self.max_setpoint_increase, self.set_max_setpoint_increase, {'min':1}),
             'autosp': self.aspc.tree,
             'gradient': self.gradient.tree,
             'tcp': self.tcp_subtree,
@@ -163,6 +165,17 @@ class FurnaceController():
             },
             'thermocouples': self.tc_manager.tree
         })
+
+    def set_max_setpoint_increase(self, value):
+        """Set the maximum setpoint increase for both PID objects.
+
+        This method sets the max_setpoint_increase attribute for both PID objects,
+        which is why it is in the furnace instead of PID controller class.
+        :param value: value to set the max_setpoint_increase to
+        """
+        self.max_setpoint_increase = value
+        self.pid_upper.max_setpoint_increase = self.max_setpoint_increase
+        self.pid_lower.max_setpoint_increase = self.max_setpoint_increase
 
     def cleanup(self):
         """Clean up the FurnaceController instance.
@@ -283,6 +296,10 @@ class FurnaceController():
             self.gradient._register_modbus_client(self.mod_client)
             self.aspc._register_modbus_client(self.mod_client)
             self.tc_manager._register_modbus_client(self.mod_client)
+
+            write_modbus_float(self.mod_client, self.max_setpoint_increase, modAddr.setpoint_step_hold)
+            write_modbus_float(self.mod_client, self.max_setpoint, modAddr.setpoint_limit_hold)
+            write_coil(self.mod_client, modAddr.setpoint_update_coil, True)
 
             self.connected = True
         except Exception as e:

@@ -62,6 +62,7 @@ extern volatile bool pidFlag;
 
 // PID operation - main, taskComms
 extern float interruptFrequency;
+extern float upperLimit;
 
 // debugging tool
 extern volatile int interruptCounter;

@@ -88,6 +88,9 @@ class modAddr():
     tcidx_4_type_hold           = 40049
     tcidx_5_type_hold           = 40049
 
+    setpoint_limit_hold         = 40051
+    setpoint_step_hold          = 40053
+
     # Addresses for controls
     addresses_pid_upper = {
         'enable': pid_upper_enable_coil,
@@ -98,7 +101,9 @@ class modAddr():
         'output': pid_upper_output_inp,
         'outputsum': pid_upper_outputsum_inp,
         'thermocouple': thermocouple_a_inp,
-        'setpoint_update': setpoint_update_coil
+        'setpoint_update': setpoint_update_coil,
+        'max_setpoint': setpoint_limit_hold,
+        'max_setpoint_step': setpoint_step_hold
     }
 
     addresses_pid_lower = {
@@ -110,7 +115,9 @@ class modAddr():
         'output': pid_lower_output_inp,
         'outputsum': pid_lower_outputsum_inp,
         'thermocouple': thermocouple_b_inp,
-        'setpoint_update': setpoint_update_coil
+        'setpoint_update': setpoint_update_coil,
+        'max_setpoint': setpoint_limit_hold,
+        'max_setpoint_step': setpoint_step_hold
     }
 
     gradient_addresses = {
