@@ -92,7 +92,7 @@ class FurnaceController():
         data_groupname = str(options.get('data_groupname', 'readings'))
 
         self.packet_decoder = LiveXPacketDecoder(pid_debug=pid_debug)
-        self.stream_loweruffer = {key: [] for key in self.packet_decoder.data.keys()}  # Same data structure
+        self.stream_buffer= {key: [] for key in self.packet_decoder.data.keys()}  # Same data structure
         self.data_groupname = data_groupname
 
         self.acquiring = False
@@ -129,7 +129,7 @@ class FurnaceController():
 
         # Launch the background task if enabled in options
         if self.bg_read_task_enable:
-            self._start_lowerackground_tasks()
+            self._start_background_tasks()
 
     def initialize(self, adapters) -> None:
         """Initialize the controller.
@@ -172,7 +172,7 @@ class FurnaceController():
         """
         self.mod_client.close()
         self.tcp_client.close()
-        self._stop_lowerackground_tasks()
+        self._stop_background_tasks()
 
     def get(self, path, with_metadata=False):
         """Get parameter data from controller.
@@ -255,11 +255,11 @@ class FurnaceController():
 
         # Clear the buffer
         self.file_writer.write_hdf5(
-            self.stream_loweruffer,
+            self.stream_buffer,
             self.data_groupname
         )
-        for key in self.stream_loweruffer:
-            self.stream_loweruffer[key].clear()
+        for key in self.stream_buffer:
+            self.stream_buffer[key].clear()
 
         self.file_writer.close_file()
         self.file_open_flag = False
@@ -360,24 +360,24 @@ class FurnaceController():
                     except Exception as e:
                         logging.debug(f"Other TCP error: {str(e)}")
                         logging.debug("Halting background tasks")
-                        self._stop_lowerackground_tasks()
+                        self._stop_background_tasks()
                         break
 
                     self.tcp_reading = self.packet_decoder.data
 
                     # Add decoded data to the stream buffer
                     for attr in self.packet_decoder.data.keys():
-                        self.stream_loweruffer[attr].append(self.packet_decoder.data[attr])
+                        self.stream_buffer[attr].append(self.packet_decoder.data[attr])
 
                     # After a certain number of data reads, write data to the file
-                    if len(self.stream_loweruffer['counter']) >= self.pid_frequency:
+                    if len(self.stream_buffer['counter']) >= self.pid_frequency:
                         self.file_writer.write_hdf5(
-                            data=self.stream_loweruffer,
+                            data=self.stream_buffer,
                             groupname=self.data_groupname
                         )
                         # Then clear the stream buffer
-                        for key in self.stream_loweruffer:
-                            self.stream_loweruffer[key].clear()
+                        for key in self.stream_buffer:
+                            self.stream_buffer[key].clear()
 
                         # Additional information written at a lower frequency
                         secondary_data = {
@@ -467,16 +467,16 @@ class FurnaceController():
 
         if enable != self.bg_read_task_enable:
             if enable:
-                self._start_lowerackground_tasks()
+                self._start_background_tasks()
             else:
-                self._stop_lowerackground_tasks()
+                self._stop_background_tasks()
 
     def set_task_interval(self, interval):
         """Set the background task interval."""
         logging.debug("Setting background task interval to %f", interval)
         self.bg_read_task_interval = float(interval)
 
-    def _start_lowerackground_tasks(self):
+    def _start_background_tasks(self):
         """Start the background tasks."""
         logging.debug(
             "Launching background tasks with interval %.2f secs", self.bg_read_task_interval
@@ -488,7 +488,7 @@ class FurnaceController():
         self.background_stream_task()
         self.background_read_task()
 
-    def _stop_lowerackground_tasks(self):
+    def _stop_background_tasks(self):
         """Stop the background tasks."""
         if self.file_open_flag:  # Ensure file is closed properly
             self.file_writer.close_file()
