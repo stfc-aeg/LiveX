@@ -234,23 +234,23 @@ void fillPidBuffer(BufferObject& obj)
     obj.counter = counter;
     // PID_A calculations
     float error = PID_A.setPoint - PID_A.input;
-    obj.temperature_a = PID_A.input;
-    obj.lastInput_a = PID_A.myPID_.GetLastInput(); 
-    obj.output_a = PID_A.output;
-    obj.outputSum_a = PID_A.myPID_.GetOutputSum();
-    obj.kp_a = PID_A.myPID_.GetKp() * error;
-    obj.ki_a = PID_A.myPID_.GetKi() * error;
-    obj.kd_a = PID_A.myPID_.GetKd() * (PID_A.input - PID_A.myPID_.GetLastInput());
-    obj.setpoint_a = PID_A.setPoint;
+    obj.temperature_upper = PID_A.input;
+    obj.lastInput_upper = PID_A.myPID_.GetLastInput(); 
+    obj.output_upper = PID_A.output;
+    obj.outputSum_upper = PID_A.myPID_.GetOutputSum();
+    obj.kp_upper = PID_A.myPID_.GetKp() * error;
+    obj.ki_upper = PID_A.myPID_.GetKi() * error;
+    obj.kd_upper = PID_A.myPID_.GetKd() * (PID_A.input - PID_A.myPID_.GetLastInput());
+    obj.setpoint_upper = PID_A.setPoint;
 
     // PID_B calculations
     error = PID_B.setPoint - PID_B.input;
-    obj.temperature_b = PID_B.input;
-    obj.lastInput_b = PID_B.myPID_.GetLastInput();
-    obj.output_b = PID_B.output;
-    obj.outputSum_b = PID_B.myPID_.GetOutputSum();
-    obj.kp_b = PID_B.myPID_.GetKp() * error;
-    obj.ki_b = PID_B.myPID_.GetKi() * error;
-    obj.kd_b = PID_B.myPID_.GetKd() * (PID_B.input - PID_B.myPID_.GetLastInput());
-    obj.setpoint_b = PID_B.setPoint;
+    obj.temperature_lower = PID_B.input;
+    obj.lastInput_lower = PID_B.myPID_.GetLastInput();
+    obj.output_lower = PID_B.output;
+    obj.outputSum_lower = PID_B.myPID_.GetOutputSum();
+    obj.kp_lower = PID_B.myPID_.GetKp() * error;
+    obj.ki_lower = PID_B.myPID_.GetKi() * error;
+    obj.kd_lower = PID_B.myPID_.GetKd() * (PID_B.input - PID_B.myPID_.GetLastInput());
+    obj.setpoint_lower = PID_B.setPoint;
 }
