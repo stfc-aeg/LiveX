@@ -43,7 +43,7 @@ class FurnaceController():
 
         maximum_temperature = int(options.get('maximum_temperature', 1500))
         maximum_temperature_step = int(options.get('maximum_temperature_step', 150))
-        maximum_utosp_rate = int(options.get('maximum_autosp_rate', 8))
+        maximum_autosp_rate = int(options.get('maximum_autosp_rate', 8))
 
         self.allow_solo_acquisition = bool(int(options.get('allow_furnace_only_acquisition', 0)))
 
