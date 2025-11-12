@@ -43,9 +43,9 @@ class FurnaceController():
 
         maximum_temperature = int(options.get('maximum_temperature', 1500))
         maximum_temperature_step = int(options.get('maximum_temperature_step', 150))
-        maximum_upperutosp_rate = int(options.get('maximum_upperutosp_rate', 8))
+        maximum_utosp_rate = int(options.get('maximum_autosp_rate', 8))
 
-        self.allow_solo_uppercquisition = bool(int(options.get('allow_furnace_only_uppercquisition', 0)))
+        self.allow_solo_acquisition = bool(int(options.get('allow_furnace_only_acquisition', 0)))
 
         self.ip = options.get('ip', '192.168.0.159')
         self.port = int(options.get('port', '4444'))
@@ -101,7 +101,7 @@ class FurnaceController():
         self.pid_upper = PID(modAddr.addresses_pid_upper, pid_defaults, maximum_temperature, maximum_temperature_step)
         self.pid_lower = PID(modAddr.addresses_pid_lower, pid_defaults, maximum_temperature, maximum_temperature_step)
         self.gradient = Gradient(modAddr.gradient_addresses)
-        self.aspc = AutoSetPointControl(modAddr.aspc_addresses, maximum_upperutosp_rate)
+        self.aspc = AutoSetPointControl(modAddr.aspc_addresses, maximum_autosp_rate)
 
         self._initialise_clients(value=None)
 
@@ -116,13 +116,13 @@ class FurnaceController():
         self.status_subtree = ParameterTree({
             'connected': (lambda: self.connected, None),
             'reconnect': (lambda: None, self._initialise_clients),
-            'full_stop': (lambda: None, self.stop_upperll_pid),
-            'allow_solo_uppercquisition': (lambda: self.allow_solo_uppercquisition, None),
+            'full_stop': (lambda: None, self.stop_all_pid),
+            'allow_solo_aquisition': (lambda: self.allow_solo_acquisition, None),
         })
 
         self.tcp_subtree = ParameterTree({
             'tcp_reading': (lambda: self.tcp_reading, None),
-            'acquire': (lambda: self.acquiring, self.solo_uppercquisition)
+            'acquire': (lambda: self.acquiring, self.solo_acquisition)
         })
 
         self.param_tree = {}
@@ -216,30 +216,30 @@ class FurnaceController():
         self.file_writer.filepath = value
         self.file_writer.set_fullpath()
 
-    def stop_upperll_pid(self, value=None):
+    def stop_all_pid(self, value=None):
         """Disable all/both PIDs, setting their gpio output to 0. Acts as an 'emergency stop'."""
         self.pid_upper.set_enable(False)
         self.pid_lower.set_enable(False)
 
     # Data acquiring tasks
 
-    def solo_uppercquisition(self, value):
+    def solo_acquisition(self, value):
         """Call up to the livex adapter to start or stop a furnace-only acquisition"""
         """Toggle whether the system is acquiring data.
         :param value: boolean, setting acquisition to stop or start.
         """
-        if not self.allow_solo_uppercquisition:
+        if not self.allow_solo_acquisition:
             logging.warning("Furnace-only acquisition is disabled in the configuration.")
             return
         value = bool(value)
         logging.debug(f"Toggled furnace acquisition to {value}.")
 
         if value:
-            self.livex.start_uppercquisition(acquisitions={'furnace':True})
+            self.livex.start_acquisition(acquisitions={'furnace':True})
         else:
-            self.livex.stop_uppercquisition()
+            self.livex.stop_acquisition()
 
-    def _start_uppercquisition(self):
+    def _start_acquisition(self):
         """Start the acquisition process for the furnace control."""
         # Send signal to modbus to start writing data
         self.mod_client.write_coil(modAddr.acquisition_coil, 1, slave=1)
@@ -248,7 +248,7 @@ class FurnaceController():
 
         self.acquiring = True
 
-    def _stop_uppercquisition(self):
+    def _stop_acquisition(self):
         """End the acquisition process for the furnace control, writing out any remaining data."""
         # Tell PLC to stop sending data
         self.mod_client.write_coil(modAddr.acquisition_coil, 0, slave=1)
