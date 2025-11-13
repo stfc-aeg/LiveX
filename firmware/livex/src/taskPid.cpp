@@ -208,7 +208,7 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
     if (enabled && modbus_server.readBool(MOD_AUTOSP_ENABLE_COIL))
     {
       // Only increase temperature if it would remain below or at the setpoint limit
-      if (PID->baseSetPoint + PID->autospRate <= upperLimit)
+      if (PID->baseSetPoint + PID->autospRate <= setpointLimit)
       {
         PID->baseSetPoint = PID->baseSetPoint + PID->autospRate;
       }

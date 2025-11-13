@@ -123,25 +123,21 @@ void manageComms()
 
 void updateSetPoints()
 {
-  // Check new setpoints are within acceptable step limit
+  // Check new setpoints are within acceptable step and maximum limits
   // N.B. this limit only applies to increases, for safety and cooling
+  setpointLimit = modbus_server.combineHoldingRegisters(MOD_SETPOINT_LIMIT_HOLD);
   float newUpperSp = modbus_server.combineHoldingRegisters(MOD_SETPOINT_UPPER_HOLD);
   float newLowerSp = modbus_server.combineHoldingRegisters(MOD_SETPOINT_LOWER_HOLD);
   float maxStep = modbus_server.combineHoldingRegisters(MOD_SETPOINT_STEP_HOLD);
-  if ((newUpperSp - PID_A.baseSetPoint) <= maxStep)
+  // Use new setpoint only if it's below the maximum and not increased too much from the last one
+  if (((newUpperSp - PID_A.baseSetPoint) <= maxStep) && newUpperSp <= setpointLimit)
   {
     PID_A.baseSetPoint = newUpperSp;
   }
-  if ((newLowerSp - PID_A.baseSetPoint) <= maxStep)
+  if (((newLowerSp - PID_A.baseSetPoint) <= maxStep) && newLowerSp <= setpointLimit)
   {
     PID_B.baseSetPoint = newLowerSp;
   }
-
-  // Get the temperature limit and reduce the setpoints to be within it
-  // Gradient subtracts from base, so adding the limit here is fine
-  upperLimit = modbus_server.combineHoldingRegisters(MOD_SETPOINT_LIMIT_HOLD);
-  if (PID_A.baseSetPoint > upperLimit) { PID_A.baseSetPoint = upperLimit; }
-  if (PID_B.baseSetPoint > upperLimit) { PID_B.baseSetPoint = upperLimit; }
 
   // When setpoints are updated, thermal gradient will also need adjusting as modifiers will change
   thermalGradient();
