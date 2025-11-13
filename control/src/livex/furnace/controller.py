@@ -183,6 +183,14 @@ class FurnaceController():
         This method stops the background tasks, allowing the adapter state to be cleaned up
         correctly.
         """
+        # Set PLC limits back down and ensure things are disabled
+        for pid in [self.pid_upper, self.pid_lower]:
+            pid.set_enable(False)
+            pid.set_setpoint(0)
+        self.autosp.set_enable(False)
+        self.gradient.set_enable(False)
+        write_modbus_float(self.mod_client, 0, modAddr.setpoint_limit_hold)
+
         self.mod_client.close()
         self.tcp_client.close()
         self._stop_background_tasks()
