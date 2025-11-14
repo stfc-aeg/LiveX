@@ -46,6 +46,8 @@ class LiveXController(BaseController):
             }
         }
 
+        self.furnace_filepath = "."
+
     def initialize(self, adapters):
         """Initialize the controller.
 

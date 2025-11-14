@@ -7,7 +7,7 @@ class PID():
     It stores the values, and provides functions to write to the modbus server on the PLC.
     """
 
-    def __init__(self, addresses, pid_defaults, max_setpoint, max_setpoint_increase):
+    def __init__(self, addresses, pid_defaults, max_setpoint, max_setpoint_increase, furnace_controller):
         """Initialise the PID class with addresses, creating the Parameter Tree and its
         required parameters to be populated when a modbus connection is established via the 
         controller.
@@ -28,6 +28,8 @@ class PID():
         self.output = 0.1
         self.outputsum = 0.1
         self.temperature = 0.1
+
+        self.furnace_controller = furnace_controller
 
         self.tree = ParameterTree({
             'enable': (lambda: self.enable, self.set_enable),
@@ -77,7 +79,6 @@ class PID():
         if (value - self.setpoint) > self.max_setpt_step:
             # Limit is increase-only, safety considerations and cooling has no thermal shock risk
             raise LiveXError("Temperature step size exceeds limit.")
-
         self.setpoint = value
         write_modbus_float(
             self.client, value, self.addresses['setpoint']
@@ -85,6 +86,7 @@ class PID():
         write_coil(
             self.client, self.addresses['setpoint_update'], True
         )
+        self.furnace_controller.add_event('setpoint_upper', self.setpoint)
 
     def set_proportional(self, value):
         """Set the proportional term of the PID."""
@@ -115,3 +117,4 @@ class PID():
             write_coil(self.client, self.addresses['enable'], 1)
         else:
             write_coil(self.client, self.addresses['enable'], 0)
+        self.furnace_controller.add_event('pid_upper_enable', self.enable)

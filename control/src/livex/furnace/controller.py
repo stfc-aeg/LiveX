@@ -80,7 +80,9 @@ class FurnaceController():
         # Set the background task counters to zero
         self.background_thread_counter = 0
 
-        self.file_writer = FileWriter(self.log_directory, self.log_filename, {'timestamps': 'S'})
+        self.file_writer = FileWriter(self.log_directory, self.log_filename, 
+            dtypes={'timestamps': 'S', 'key': 'str', 'event_key': 'str', 'event_value': 'str'}
+        )
         
         # File is not open by default in case of multiple acquisitions per software run
         self.file_open_flag = False
@@ -89,19 +91,20 @@ class FurnaceController():
 
         # Create packet decoder and stream buffer for TCP values sent by PLC
         # If pid_debug is true (and set in the PLC as well), this is a range of PID behaviour data
-        data_groupname = str(options.get('data_groupname', 'readings'))
+        data_groupname = str(options.get('data_groupname', 'fast_data'))
 
         self.packet_decoder = LiveXPacketDecoder(pid_debug=pid_debug)
         self.stream_buffer= {key: [] for key in self.packet_decoder.data.keys()}  # Same data structure
+        self.event_buffer = []
         self.data_groupname = data_groupname
 
         self.acquiring = False
 
         self.tc_manager = ThermocoupleManager(options)
-        self.pid_upper = PID(modAddr.addresses_pid_upper, pid_defaults, self.max_setpoint, self.max_setpoint_increase)
-        self.pid_lower = PID(modAddr.addresses_pid_lower, pid_defaults, self.max_setpoint, self.max_setpoint_increase)
-        self.gradient = Gradient(modAddr.gradient_addresses)
-        self.aspc = AutoSetPointControl(modAddr.aspc_addresses, max_autosp_rate)
+        self.pid_upper = PID(modAddr.addresses_pid_upper, pid_defaults, self.max_setpoint, self.max_setpoint_increase, self)
+        self.pid_lower = PID(modAddr.addresses_pid_lower, pid_defaults, self.max_setpoint, self.max_setpoint_increase, self)
+        self.gradient = Gradient(modAddr.gradient_addresses, self)
+        self.aspc = AutoSetPointControl(modAddr.aspc_addresses, max_autosp_rate, self)
 
         self._initialise_clients(value=None)
 
@@ -117,7 +120,7 @@ class FurnaceController():
             'connected': (lambda: self.connected, None),
             'reconnect': (lambda: None, self._initialise_clients),
             'full_stop': (lambda: None, self.stop_all_pid),
-            'allow_solo_aquisition': (lambda: self.allow_solo_acquisition, None),
+            'allow_solo_acquisition': (lambda: self.allow_solo_acquisition, None),
         })
 
         self.tcp_subtree = ParameterTree({
@@ -183,14 +186,6 @@ class FurnaceController():
         This method stops the background tasks, allowing the adapter state to be cleaned up
         correctly.
         """
-        # Set PLC limits back down and ensure things are disabled
-        for pid in [self.pid_upper, self.pid_lower]:
-            pid.set_enable(False)
-            pid.set_setpoint(0)
-        self.autosp.set_enable(False)
-        self.gradient.set_enable(False)
-        write_modbus_float(self.mod_client, 0, modAddr.setpoint_limit_hold)
-
         self.mod_client.close()
         self.tcp_client.close()
         self._stop_background_tasks()
@@ -227,8 +222,8 @@ class FurnaceController():
 
     def _set_filename(self, value):
         """Set the filewriter's filename and update its path."""
-        if not value.endswith('.hdf5'):
-            value += '.hdf5'
+        if not value.endswith('.h5'):
+            value += '.h5'
         self.file_writer.filename = value
         self.file_writer.set_fullpath()
 
@@ -353,6 +348,17 @@ class FurnaceController():
 
         write_modbus_float(self.mod_client, freq, modAddr.furnace_freq_hold)
         write_coil(self.mod_client, modAddr.freq_aspc_update_coil, True)
+    
+    def add_event(self, key, value):
+        """Add an event to the event data buffer to be written out later.
+        :param key: key of the new value
+        :param value: the new value
+        """
+        if not self.acquiring:
+            return
+        frame = self.packet_decoder.data['frame']
+        # Values are strings as you cannot have multiple data types in one field
+        self.event_buffer.append({'event_frame': frame, 'event_key': key, 'event_value': str(value)})
 
     @run_on_executor
     def background_stream_task(self):
@@ -363,9 +369,9 @@ class FurnaceController():
             if self.mocking:
                 if self.acquiring:
                     try:
-                        counter, temp = self.tcp_client.recv(self.packet_decoder.size)
+                        frame, temp = self.tcp_client.recv(self.packet_decoder.size)
 
-                        logging.debug(f"Mock acquisition data: temperature {temp} at reading {counter}")
+                        logging.debug(f"Mock acquisition data: temperature {temp} at reading {frame}")
                     except Exception as e:
                         logging.debug(f"Mock acquisition error: {e}")
 
@@ -376,7 +382,7 @@ class FurnaceController():
                 if self.acquiring:
                     try:
                         reading = self.tcp_client.recv(self.packet_decoder.size)
-                        logging.debug(self.packet_decoder.data['counter'])
+                        logging.debug(self.packet_decoder.data['frame'])
                         self.tcp_reading = self.packet_decoder.unpack(reading)
 
                     except socket.timeout:
@@ -395,7 +401,7 @@ class FurnaceController():
                         self.stream_buffer[attr].append(self.packet_decoder.data[attr])
 
                     # After a certain number of data reads, write data to the file
-                    if len(self.stream_buffer['counter']) >= self.pid_frequency:
+                    if len(self.stream_buffer['frame']) >= self.pid_frequency:
                         self.file_writer.write_hdf5(
                             data=self.stream_buffer,
                             groupname=self.data_groupname
@@ -406,7 +412,7 @@ class FurnaceController():
 
                         # Additional information written at a lower frequency
                         secondary_data = {
-                            'counter': [self.packet_decoder.data['counter']],
+                            'frame': [self.packet_decoder.data['frame']],
                             'setpoint_upper': [self.pid_upper.setpoint],
                             'setpoint_lower': [self.pid_lower.setpoint],
                             'output_upper': [self.pid_upper.output],
@@ -420,8 +426,22 @@ class FurnaceController():
 
                         self.file_writer.write_hdf5(
                             data=secondary_data,
-                            groupname="secondary_readings"
+                            groupname="slow_data"
                         )
+
+                        # Write out the event buffer once per second too
+                        # List-of-dicts format won't work, so convert it to dict-of-lists
+                        if self.event_buffer:
+                            batch = {
+                                "event_frame": [e["event_frame"] for e in self.event_buffer],
+                                "event_key":   [e["event_key"]   for e in self.event_buffer],
+                                "event_value": [e["event_value"] for e in self.event_buffer]
+                            }
+                            self.file_writer.write_hdf5(
+                                data=batch,
+                                groupname="event_data"
+                            )
+                            self.event_buffer.clear()
 
                 time.sleep(self.bg_stream_task_interval)
 

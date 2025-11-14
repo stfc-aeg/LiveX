@@ -231,7 +231,7 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
 // Take a BufferObject and populate it with PID attributes.
 void fillPidBuffer(BufferObject& obj)
 {
-    obj.counter = counter;
+    obj.frame = counter;
     // PID_A calculations
     float error = PID_A.setPoint - PID_A.input;
     obj.temperature_upper = PID_A.input;

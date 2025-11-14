@@ -8,7 +8,7 @@ class Gradient():
     It stores relevant values and provides functions to write to the modbus server on the PLC.
     """
 
-    def __init__(self, addresses):
+    def __init__(self, addresses, furnace_controller):
         self.addresses = addresses
 
         self.enable       = False
@@ -17,6 +17,8 @@ class Gradient():
         self.actual       = 0
         self.theoretical  = 0
         self.high         = 'A'
+
+        self.furnace_controller = furnace_controller
 
         self.tree = ParameterTree({
             'enable': (lambda: self.enable, self.set_enable),
@@ -57,18 +59,21 @@ class Gradient():
             write_coil(self.client, self.addresses['enable'], 1)
 
         write_coil(self.client, self.addresses['update'], 1)
+        self.furnace_controller.add_event('gradient_enable', self.enable)
 
     def set_distance(self, value):
         """Set the distance value for the thermal gradient."""
         self.distance = value
         write_modbus_float(self.client, value, self.addresses['distance'])
         write_coil(self.client, self.addresses['update'], 1)
+        self.furnace_controller.add_event('gradient_distance', self.distance)
 
     def set_wanted(self, value):
         """Set the desired temperature change per mm for the thermal gradient."""
         self.wanted = value
         write_modbus_float(self.client, value, self.addresses['wanted'])
         write_coil(self.client, self.addresses['update'], 1)
+        self.furnace_controller.add_event('gradient_wanted', self.wanted)
 
     def set_high(self, value):
         """Set the boolean for thermal gradient high heater."""
@@ -79,3 +84,4 @@ class Gradient():
         elif value == 'A':  # 0, heater A
             write_coil(self.client, self.addresses['high'], 0)
         write_coil(self.client, self.addresses['update'], 1)
+        self.furnace_controller.add_event('gradient_high', self.high)

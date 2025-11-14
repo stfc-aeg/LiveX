@@ -5,7 +5,7 @@
 
 struct BufferObject
 {
-    float counter;
+    float frame;
     // PID A attributes
     float temperature_upper;
     float output_upper;
