@@ -29,6 +29,9 @@ class PID():
         self.outputsum = 0.1
         self.temperature = 0.1
 
+        self.override_percent = 0
+        self.override_enable = False
+
         self.furnace_controller = furnace_controller
 
         self.tree = ParameterTree({
@@ -39,8 +42,29 @@ class PID():
             'derivative': (lambda: self.kd, self.set_derivative),
             'temperature': (lambda: self.temperature, None),
             'output': (lambda: self.output, None),
-            'outputsum': (lambda: self.outputsum, None)
+            'outputsum': (lambda: self.outputsum, None),
+            'override': {
+                'percent_out': (lambda: self.override_percent, self.set_override_percent,
+                                {'min': 0, 'max': 100}),
+                'enable': (lambda: self.override_enable, self.set_override_enable)
+            }
         })
+
+    def set_override_percent(self, value):
+        """Set the % output on the PID override."""
+        if not self.furnace_controller.allow_pid_override:
+            logging.warning("Pid override options are disabled in the configuration.")
+            return
+        self.override_percent = value
+        write_modbus_float(self.client, self.override_percent, self.addresses['output_override'])
+    
+    def set_override_enable(self, value):
+        """Turn on the manual PID override."""
+        if not self.furnace_controller.allow_pid_override:
+            logging.warning("Pid override options are disabled in the configuration.")
+            return
+        self.override_enable = bool(value)
+        write_coil(self.client, self.addresses['output_override_enable'], self.override_enable)
 
     def _register_modbus_client(self, client):
         """Keep internal reference to the Modbus client and attempt to use it to get parameters."""

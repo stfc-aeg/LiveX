@@ -34,6 +34,8 @@ class modAddr():
     freq_aspc_update_coil = 11
     setpoint_update_coil  = 12
     tc_type_update_coil   = 13
+    output_override_upper_coil  = 14
+    output_override_lower_coil  = 15
 
     # Input registers (read-only, from device) start at 30001-39999
     counter_inp      = 30001
@@ -91,6 +93,9 @@ class modAddr():
     setpoint_limit_hold         = 40051
     setpoint_step_hold          = 40053
 
+    output_override_upper_hold  = 40055
+    output_override_lower_hold  = 40057
+
     # Addresses for controls
     addresses_pid_upper = {
         'enable': pid_upper_enable_coil,
@@ -102,6 +107,8 @@ class modAddr():
         'outputsum': pid_upper_outputsum_inp,
         'thermocouple': thermocouple_a_inp,
         'setpoint_update': setpoint_update_coil,
+        'output_override': output_override_upper_hold,
+        'output_override_enable': output_override_upper_coil,
         'max_setpoint': setpoint_limit_hold,
         'max_setpoint_step': setpoint_step_hold
     }
@@ -116,6 +123,8 @@ class modAddr():
         'outputsum': pid_lower_outputsum_inp,
         'thermocouple': thermocouple_b_inp,
         'setpoint_update': setpoint_update_coil,
+        'output_override': output_override_lower_hold,
+        'output_override_enable': output_override_lower_coil,
         'max_setpoint': setpoint_limit_hold,
         'max_setpoint_step': setpoint_step_hold
     }

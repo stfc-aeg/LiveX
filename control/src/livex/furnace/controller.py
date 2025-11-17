@@ -46,6 +46,7 @@ class FurnaceController():
         max_autosp_rate = int(options.get('max_autosp_rate', 8))
 
         self.allow_solo_acquisition = bool(int(options.get('allow_furnace_only_acquisition', 0)))
+        self.allow_pid_override = bool(int(options.get('allow_pid_override', 0)))
 
         self.ip = options.get('ip', '192.168.0.159')
         self.port = int(options.get('port', '4444'))
@@ -121,6 +122,7 @@ class FurnaceController():
             'reconnect': (lambda: None, self._initialise_clients),
             'full_stop': (lambda: None, self.stop_all_pid),
             'allow_solo_acquisition': (lambda: self.allow_solo_acquisition, None),
+            'allow_pid_override': (lambda: self.allow_pid_override, None)
         })
 
         self.tcp_subtree = ParameterTree({

@@ -3,8 +3,9 @@
 // Full definitions below core task
 // void thermalGradient();
 // void autoSetPointControl();
-void runPID(String pid);
+void runPID(PIDEnum pid);
 void fillPidBuffer(BufferObject& obj);
+void runOverride(PIDEnum pid);
 
 // Task to be run on core 0 to control devices.
 // This includes the PID operation, motor driving, and calculation of thermal gradient and auto set point control.
@@ -93,8 +94,11 @@ void Core0PIDTask(void * pvParameters)
       }
       // Semaphore needed for all PID runs as gradient/ASPC calculations are used
       xSemaphoreTake(gradientAspcMutex, portMAX_DELAY);
-      runPID(A);
-      runPID(B);
+
+      bool override_upper = modbus_server.coilRead(MOD_OUTPUT_OVERRIDE_UPPER_COIL);
+      bool override_lower = modbus_server.coilRead(MOD_OUTPUT_OVERRIDE_LOWER_COIL);
+      if (override_upper) { runOverride(A); } else { runPID(A); }
+      if (override_lower) { runOverride(B); } else { runPID(B); }
 
       // These calculations need to occur whenever the temperatures are read
       // Actual temperature difference
@@ -118,6 +122,30 @@ void Core0PIDTask(void * pvParameters)
       would be good, then it can be driven and run secondarily to the pidFlag. 
     */
   }
+}
+
+// Override a PID's output to a register-specified value
+// Override does not respect inversion or output scaler for simplicity
+void runOverride(PIDEnum pid = PIDEnum::UNKNOWN)
+{
+  PIDAddresses addr;
+  switch (pid)
+  {
+    case PIDEnum::A:
+      addr = pidA_addr;
+      break;
+    case PIDEnum::B:
+      addr = pidB_addr;
+      break;
+    default:
+      Serial.println("Improper runOverride call, no PID specified");
+      return;
+  }
+
+  // Divide by 100 because reg value is a % and it needs to be normalised to 0-1
+  float out_percent = modbus_server.combineHoldingRegisters(addr.modOutputOverrideHold);
+  float out_bits = POWER_OUTPUT_BITS * out_percent/100;
+  gpio.analogWrite(addr.outputPin, out_bits);
 }
 
 // Run a specified PID (A or B) then apply gradient, ASPC, new PID terms, etc.
