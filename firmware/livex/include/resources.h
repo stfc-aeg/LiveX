@@ -64,6 +64,9 @@ extern volatile bool pidFlag;
 extern float interruptFrequency;
 extern float setpointLimit;
 
+// Power - main, taskComms, taskPid
+extern float power_output_scale;
+
 // debugging tool
 extern volatile int interruptCounter;
 

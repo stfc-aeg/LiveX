@@ -48,6 +48,10 @@ class FurnaceController():
         self.allow_solo_acquisition = bool(int(options.get('allow_furnace_only_acquisition', 0)))
         self.allow_pid_override = bool(int(options.get('allow_pid_override', 0)))
 
+        self.power_output_scale = float(options.get('power_output_scale', 1))
+        if self.power_output_scale < 0: self.power_output_scale = 0
+        elif self.power_output_scale > 1: self.power_output_scale = 1
+
         self.ip = options.get('ip', '192.168.0.159')
         self.port = int(options.get('port', '4444'))
 
@@ -304,6 +308,7 @@ class FurnaceController():
 
             write_modbus_float(self.mod_client, self.max_setpoint_increase, modAddr.setpoint_step_hold)
             write_modbus_float(self.mod_client, self.max_setpoint, modAddr.setpoint_limit_hold)
+            write_modbus_float(self.mod_client, self.power_output_scale, modAddr.power_output_scale)
             write_coil(self.mod_client, modAddr.setpoint_update_coil, True)
 
             self.connected = True

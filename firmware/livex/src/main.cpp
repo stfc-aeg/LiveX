@@ -75,6 +75,8 @@ volatile int interruptCounter = 0;
 float interruptFrequency = 10;
 float setpointLimit = 30.0;  // Maximum temperature setpoint
 
+float power_output_scale = POWER_OUTPUT_SCALE;
+
 void IRAM_ATTR pidFlagOnTimer()
 {
   pidFlag = true;
@@ -112,6 +114,7 @@ void setup()
   // Software needs to know how many thermocouples are active
   modbus_server.floatToInputRegisters(MOD_NUM_MCP_INP, num_mcp);
   modbus_server.floatToHoldingRegisters(MOD_SETPOINT_LIMIT_HOLD, setpointLimit);
+  modbus_server.floatToHoldingRegisters(MOD_POWER_OUTPUT_SCALE, power_output_scale);
   // Write default indices for active thermocouples, assume in order
   for (int i=0; i<num_mcp; i++)
   {

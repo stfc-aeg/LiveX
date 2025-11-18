@@ -216,7 +216,7 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
     // The value output is still 0->4095 bits representing 0->10V
     // But we want to scale this down to 80% of the available range
     float out = POWER_OUTPUT_BITS * PID->output / PID_OUTPUT_LIMIT;
-    out = out * POWER_OUTPUT_SCALE;
+    out = out * power_output_scale;
 
     // Write PID output. When PID is not enabled, 
     modbus_server.floatToInputRegisters(addr.modPidOutputInp, PID->output);

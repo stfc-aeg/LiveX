@@ -32,6 +32,7 @@
 // MAX # of bits written to relevant power output channel. Min is 0.
 #define POWER_OUTPUT_BITS 4095
 // Scale the output value (0->1*POWER_OUTPUT_BITS) by a 0.1 value. e.g. 0.8 for 80% output
+// This is the default and is only reset to this when the device is reflashed
 #define POWER_OUTPUT_SCALE 1
 // PID Output is the higher end of the range for this. temporarily moved up here for convenience
 #define PID_OUTPUT_LIMIT 100
@@ -121,6 +122,7 @@
 
 #define MOD_OUTPUT_OVERRIDE_UPPER_HOLD 40055
 #define MOD_OUTPUT_OVERRIDE_LOWER_HOLD 40057
+#define MOD_POWER_OUTPUT_SCALE 40059
 
 #define PIN_PWM_UPPER A0_5
 #define PIN_PWM_LOWER A0_6
