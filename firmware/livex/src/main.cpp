@@ -73,7 +73,7 @@ volatile int interruptCounter = 0;
 
 // Communicated via modbus
 float interruptFrequency = 10;
-float setpointLimit = 30.0;  // Maximum temperature setpoint
+float setpointLimit = DEFAULT_SETPOINT_LIMIT;  // Maximum temperature setpoint
 
 float power_output_scale = POWER_OUTPUT_SCALE;
 
@@ -113,8 +113,11 @@ void setup()
 
   // Software needs to know how many thermocouples are active
   modbus_server.floatToInputRegisters(MOD_NUM_MCP_INP, num_mcp);
+  // Also write in some safe defaults to be overridden when adapter is started
   modbus_server.floatToHoldingRegisters(MOD_SETPOINT_LIMIT_HOLD, setpointLimit);
+  modbus_server.floatToHoldingRegisters(MOD_SETPOINT_STEP_HOLD, DEFAULT_SETPOINT_STEP_LIMIT);
   modbus_server.floatToHoldingRegisters(MOD_POWER_OUTPUT_SCALE, power_output_scale);
+
   // Write default indices for active thermocouples, assume in order
   for (int i=0; i<num_mcp; i++)
   {

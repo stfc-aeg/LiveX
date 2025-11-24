@@ -17,7 +17,7 @@
 #define LOG_INTERRUPTS_INTERVAL 50
 
 // Timeout (no modbus connection) in ms
-#define INTERVAL_TIMEOUT 10000
+#define INTERVAL_TIMEOUT 5000
 
 // For the internal timer. Set to 50Hz here, other rates should be managed via external trigger.
 #define TIMER_PID 20000
@@ -28,6 +28,9 @@
 #define PID_KP_DEFAULT       0.3  // From testing, these values seem coherent/safe
 #define PID_KI_DEFAULT       0.02
 #define PID_KD_DEFAULT       0.0
+
+#define DEFAULT_SETPOINT_LIMIT      1500
+#define DEFAULT_SETPOINT_STEP_LIMIT 250
 
 // MAX # of bits written to relevant power output channel. Min is 0.
 #define POWER_OUTPUT_BITS 4095
