@@ -216,7 +216,7 @@ class MockPLC:
         incrementing its counter once per loop, until the background task enable is set to false.
         """
         # Get gradient/setpoints
-        pid_base_sp = self.client.registers[modAddr.pid_setpoint_a_hold]
+        pid_base_sp = self.client.registers[modAddr.pid_setpoint_upper_hold]
 
         wanted = self.client.registers[modAddr.gradient_wanted_hold]
         distance = self.client.registers[modAddr.gradient_distance_hold]
@@ -231,7 +231,7 @@ class MockPLC:
             autosp_rate = -autosp_rate
 
         # Check enable - if not, exit
-        if not self.client.registers[modAddr.pid_enable_a_coil]:
+        if not self.client.registers[modAddr.pid_upper_enable_coil]:
             self.output = 0
             self.outputSum = 0
             self.calculate_temp_change()
@@ -252,9 +252,9 @@ class MockPLC:
             self.calculate_temp_change()
 
             # Do temp calcs - get values, make something up
-            kp = self.client.registers[modAddr.pid_kp_a_hold]
-            ki = self.client.registers[modAddr.pid_ki_a_hold]
-            kd = self.client.registers[modAddr.pid_kd_a_hold]
+            kp = self.client.registers[modAddr.pid_kp_upper_hold]
+            ki = self.client.registers[modAddr.pid_ki_upper_hold]
+            kd = self.client.registers[modAddr.pid_kd_upper_hold]
 
             error = pid_sp - self.temp
             dInput = self.temp - self.prev_temp
@@ -275,14 +275,14 @@ class MockPLC:
                 self.output = self.outmin
 
             # Write output
-            self.client.registers[modAddr.pid_output_a_inp] = self.output
-            self.client.registers[modAddr.pid_outputsum_a_inp] = self.outputSum
+            self.client.registers[modAddr.pid_upper_output_inp] = self.output
+            self.client.registers[modAddr.pid_upper_outputsum_inp] = self.outputSum
 
             # If ASPC
             if self.client.registers[modAddr.autosp_enable_coil]:
                 pid_base_sp += autosp_rate
             # 'Write' new setpoint back to register
-            self.client.registers[modAddr.pid_setpoint_a_hold] = pid_base_sp
+            self.client.registers[modAddr.pid_setpoint_upper_hold] = pid_base_sp
 
 
 class MockTCPClient:

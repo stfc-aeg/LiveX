@@ -16,12 +16,12 @@ void ModbusServerController::initialiseModbus()
   // Configure and intialise modbus coils/registers
   // Addresses follow Modbus convention for register type: 1, 30001, 40001.
   configureInputRegisters(MOD_COUNTER_INP, MOD_NUM_INP);
-  configureHoldingRegisters(MOD_SETPOINT_A_HOLD, MOD_NUM_HOLD);
-  configureCoils(MOD_PID_ENABLE_A_COIL, MOD_NUM_COIL);
+  configureHoldingRegisters(MOD_SETPOINT_UPPER_HOLD, MOD_NUM_HOLD);
+  configureCoils(MOD_PID_UPPER_ENABLE_COIL, MOD_NUM_COIL);
 
   // Default enable values for each control
-  coilWrite(MOD_PID_ENABLE_A_COIL, 0);
-  coilWrite(MOD_PID_ENABLE_B_COIL, 0);
+  coilWrite(MOD_PID_UPPER_ENABLE_COIL, 0);
+  coilWrite(MOD_PID_LOWER_ENABLE_COIL, 0);
 
   coilWrite(MOD_GRADIENT_ENABLE_COIL, 0);
   coilWrite(MOD_GRADIENT_HIGH_COIL, 0);

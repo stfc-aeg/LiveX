@@ -46,6 +46,8 @@ class LiveXController(BaseController):
             }
         }
 
+        self.furnace_filepath = "."
+
     def initialize(self, adapters):
         """Initialize the controller.
 
@@ -241,6 +243,10 @@ class LiveXController(BaseController):
             # Turn off acquisition coil
             self.furnace._stop_acquisition()
 
+            # Write needed metadata
+            iac_set(self.metadata, 'fields/furnace_framerate', 'value',
+                self.trigger_manager.frequencies['furnace'])
+
         # Cams stop capturing, num-frames to 0, start again
         # Move camera(s) to capture state
         for camera in self.orca.cameras:
@@ -253,6 +259,14 @@ class LiveXController(BaseController):
                 camera.set_config(value=0, param='num_frames')
                 self.munir.munir_managers[camera.name].stop_acquisition()
                 camera.send_command('capture')
+
+                # Write frequency and exposure into metadata
+                iac_set(self.metadata, f'fields/{camera.name}_framerate', 'value',
+                    self.trigger_manager.frequencies[name]
+                )
+                iac_set(self.metadata, f'fields/{camera.name}_exposure', 'value',
+                    camera.config['exposure_time']
+                )
 
         # Post-acquisition, targets are 0 for monitoring
         # Previous targets are lost as updating target restarts timer

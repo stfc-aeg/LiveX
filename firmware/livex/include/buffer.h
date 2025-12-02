@@ -5,25 +5,25 @@
 
 struct BufferObject
 {
-    float counter;
+    float frame;
     // PID A attributes
-    float temperature_a;
-    float output_a;
-    float kp_a;
-    float ki_a;
-    float kd_a;
-    float lastInput_a;
-    float outputSum_a;
-    float setpoint_a;
+    float temperature_upper;
+    float output_upper;
+    float kp_upper;
+    float ki_upper;
+    float kd_upper;
+    float lastInput_upper;
+    float outputSum_upper;
+    float setpoint_upper;
     // PID B attributes
-    float temperature_b;
-    float output_b;
-    float kp_b;
-    float ki_b;
-    float kd_b;
-    float lastInput_b;
-    float outputSum_b;
-    float setpoint_b;
+    float temperature_lower;
+    float output_lower;
+    float kp_lower;
+    float ki_lower;
+    float kd_lower;
+    float lastInput_lower;
+    float outputSum_lower;
+    float setpoint_lower;
 };
 
 template<typename T>

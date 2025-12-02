@@ -110,7 +110,7 @@ function PidControl(props) {
                     <FloatingLabel label="Max Increase">
                       <EndPointFormControl
                         endpoint={furnaceEndPoint}
-                        fullpath={pid+"/max_temp_step"}
+                        fullpath={"max_setpoint_increase"}
                         disabled={connectedPuttingDisable}
                         style={floatingInputStyle}
                       />

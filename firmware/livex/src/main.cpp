@@ -20,27 +20,29 @@ SemaphoreHandle_t gradientAspcMutex;
 
 // addresses for PID objects
 PIDAddresses pidA_addr = {
-  PIN_PWM_A,
-  MOD_SETPOINT_A_HOLD,
-  MOD_PID_OUTPUT_A_INP,
-  MOD_PID_OUTPUTSUM_A_INP,
-  MOD_PID_ENABLE_A_COIL,
+  PIN_PWM_UPPER,
+  MOD_SETPOINT_UPPER_HOLD,
+  MOD_PID_UPPER_OUTPUT_INP,
+  MOD_PID_UPPER_OUTPUTSUM_INP,
+  MOD_PID_UPPER_ENABLE_COIL,
   MOD_HEATERTC_A_INP,
-  MOD_KP_A_HOLD,
-  MOD_KI_A_HOLD,
-  MOD_KD_A_HOLD
+  MOD_KP_UPPER_HOLD,
+  MOD_KI_UPPER_HOLD,
+  MOD_KD_UPPER_HOLD,
+  MOD_OUTPUT_OVERRIDE_UPPER_HOLD
 };
 
 PIDAddresses pidB_addr = {
-  PIN_PWM_B,
-  MOD_SETPOINT_B_HOLD,
-  MOD_PID_OUTPUT_B_INP,
-  MOD_PID_OUTPUTSUM_B_INP,
-  MOD_PID_ENABLE_B_COIL,
+  PIN_PWM_LOWER,
+  MOD_SETPOINT_LOWER_HOLD,
+  MOD_PID_LOWER_OUTPUT_INP,
+  MOD_PID_LOWER_OUTPUTSUM_INP,
+  MOD_PID_LOWER_ENABLE_COIL,
   MOD_HEATERTC_B_INP,
-  MOD_KP_B_HOLD,
-  MOD_KI_B_HOLD,
-  MOD_KD_B_HOLD
+  MOD_KP_LOWER_HOLD,
+  MOD_KI_LOWER_HOLD,
+  MOD_KD_LOWER_HOLD,
+  MOD_OUTPUT_OVERRIDE_LOWER_HOLD
 };
 
 PIDController PID_A(pidA_addr);
@@ -71,6 +73,9 @@ volatile int interruptCounter = 0;
 
 // Communicated via modbus
 float interruptFrequency = 10;
+float setpointLimit = DEFAULT_SETPOINT_LIMIT;  // Maximum temperature setpoint
+
+float power_output_scale = POWER_OUTPUT_SCALE;
 
 void IRAM_ATTR pidFlagOnTimer()
 {
@@ -108,6 +113,11 @@ void setup()
 
   // Software needs to know how many thermocouples are active
   modbus_server.floatToInputRegisters(MOD_NUM_MCP_INP, num_mcp);
+  // Also write in some safe defaults to be overridden when adapter is started
+  modbus_server.floatToHoldingRegisters(MOD_SETPOINT_LIMIT_HOLD, setpointLimit);
+  modbus_server.floatToHoldingRegisters(MOD_SETPOINT_STEP_HOLD, DEFAULT_SETPOINT_STEP_LIMIT);
+  modbus_server.floatToHoldingRegisters(MOD_POWER_OUTPUT_SCALE, power_output_scale);
+
   // Write default indices for active thermocouples, assume in order
   for (int i=0; i<num_mcp; i++)
   {
@@ -121,8 +131,8 @@ void setup()
 
   gpio.init();
   // PID
-  gpio.pinMode(PIN_PWM_A, OUTPUT);
-  gpio.pinMode(PIN_PWM_B, OUTPUT);
+  gpio.pinMode(PIN_PWM_UPPER, OUTPUT);
+  gpio.pinMode(PIN_PWM_LOWER, OUTPUT);
   // Motor direction/speed outputs
   gpio.pinMode(PIN_MOTOR_DIRECTION, OUTPUT);
   gpio.pinMode(PIN_MOTOR_PWM, OUTPUT);

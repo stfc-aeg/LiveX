@@ -21,6 +21,7 @@ struct PIDAddresses
   int modKpHold;
   int modKiHold;
   int modKdHold;
+  int modOutputOverrideHold;
 };
 
 

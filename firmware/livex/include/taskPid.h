@@ -7,5 +7,6 @@ void Core0PIDTask(void * pvParameters);
 void thermalGradient();
 void autoSetPointControl();
 void runPID(PIDEnum pid);
+void runOverride(PIDEnum pid);
 
 #endif

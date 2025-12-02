@@ -3,8 +3,9 @@
 // Full definitions below core task
 // void thermalGradient();
 // void autoSetPointControl();
-void runPID(String pid);
+void runPID(PIDEnum pid);
 void fillPidBuffer(BufferObject& obj);
+void runOverride(PIDEnum pid);
 
 // Task to be run on core 0 to control devices.
 // This includes the PID operation, motor driving, and calculation of thermal gradient and auto set point control.
@@ -93,8 +94,11 @@ void Core0PIDTask(void * pvParameters)
       }
       // Semaphore needed for all PID runs as gradient/ASPC calculations are used
       xSemaphoreTake(gradientAspcMutex, portMAX_DELAY);
-      runPID(A);
-      runPID(B);
+
+      bool override_upper = modbus_server.coilRead(MOD_OUTPUT_OVERRIDE_UPPER_COIL);
+      bool override_lower = modbus_server.coilRead(MOD_OUTPUT_OVERRIDE_LOWER_COIL);
+      if (override_upper) { runOverride(A); } else { runPID(A); }
+      if (override_lower) { runOverride(B); } else { runPID(B); }
 
       // These calculations need to occur whenever the temperatures are read
       // Actual temperature difference
@@ -118,6 +122,30 @@ void Core0PIDTask(void * pvParameters)
       would be good, then it can be driven and run secondarily to the pidFlag. 
     */
   }
+}
+
+// Override a PID's output to a register-specified value
+// Override does not respect inversion or output scaler for simplicity
+void runOverride(PIDEnum pid = PIDEnum::UNKNOWN)
+{
+  PIDAddresses addr;
+  switch (pid)
+  {
+    case PIDEnum::A:
+      addr = pidA_addr;
+      break;
+    case PIDEnum::B:
+      addr = pidB_addr;
+      break;
+    default:
+      Serial.println("Improper runOverride call, no PID specified");
+      return;
+  }
+
+  // Divide by 100 because reg value is a % and it needs to be normalised to 0-1
+  float out_percent = modbus_server.combineHoldingRegisters(addr.modOutputOverrideHold);
+  float out_bits = POWER_OUTPUT_BITS * out_percent/100;
+  gpio.analogWrite(addr.outputPin, out_bits);
 }
 
 // Run a specified PID (A or B) then apply gradient, ASPC, new PID terms, etc.
@@ -188,7 +216,7 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
     // The value output is still 0->4095 bits representing 0->10V
     // But we want to scale this down to 80% of the available range
     float out = POWER_OUTPUT_BITS * PID->output / PID_OUTPUT_LIMIT;
-    out = out * POWER_OUTPUT_SCALE;
+    out = out * power_output_scale;
 
     // Write PID output. When PID is not enabled, 
     modbus_server.floatToInputRegisters(addr.modPidOutputInp, PID->output);
@@ -207,7 +235,20 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
     // Check auto set point control and modify the base setpoint if it and the PID is enabled
     if (enabled && modbus_server.readBool(MOD_AUTOSP_ENABLE_COIL))
     {
-      PID->baseSetPoint = PID->baseSetPoint + PID->autospRate;
+      // Only increase temperature if it would remain below or at the setpoint limit
+      if (PID->baseSetPoint + PID->autospRate <= setpointLimit)
+      {
+        PID->baseSetPoint = PID->baseSetPoint + PID->autospRate;
+      }
+      else  // Otherwise turn it off
+      {
+        modbus_server.coilWrite(MOD_AUTOSP_ENABLE_COIL, 0);
+        if (DEBUG)
+        {
+          Serial.println("Upper limit reached, disabling auto set point control.");
+        }
+      }
+      
     }
 
     // Write the current setpoint to the register
@@ -218,26 +259,26 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
 // Take a BufferObject and populate it with PID attributes.
 void fillPidBuffer(BufferObject& obj)
 {
-    obj.counter = counter;
+    obj.frame = counter;
     // PID_A calculations
     float error = PID_A.setPoint - PID_A.input;
-    obj.temperature_a = PID_A.input;
-    obj.lastInput_a = PID_A.myPID_.GetLastInput(); 
-    obj.output_a = PID_A.output;
-    obj.outputSum_a = PID_A.myPID_.GetOutputSum();
-    obj.kp_a = PID_A.myPID_.GetKp() * error;
-    obj.ki_a = PID_A.myPID_.GetKi() * error;
-    obj.kd_a = PID_A.myPID_.GetKd() * (PID_A.input - PID_A.myPID_.GetLastInput());
-    obj.setpoint_a = PID_A.setPoint;
+    obj.temperature_upper = PID_A.input;
+    obj.lastInput_upper = PID_A.myPID_.GetLastInput(); 
+    obj.output_upper = PID_A.output;
+    obj.outputSum_upper = PID_A.myPID_.GetOutputSum();
+    obj.kp_upper = PID_A.myPID_.GetKp() * error;
+    obj.ki_upper = PID_A.myPID_.GetKi() * error;
+    obj.kd_upper = PID_A.myPID_.GetKd() * (PID_A.input - PID_A.myPID_.GetLastInput());
+    obj.setpoint_upper = PID_A.setPoint;
 
     // PID_B calculations
     error = PID_B.setPoint - PID_B.input;
-    obj.temperature_b = PID_B.input;
-    obj.lastInput_b = PID_B.myPID_.GetLastInput();
-    obj.output_b = PID_B.output;
-    obj.outputSum_b = PID_B.myPID_.GetOutputSum();
-    obj.kp_b = PID_B.myPID_.GetKp() * error;
-    obj.ki_b = PID_B.myPID_.GetKi() * error;
-    obj.kd_b = PID_B.myPID_.GetKd() * (PID_B.input - PID_B.myPID_.GetLastInput());
-    obj.setpoint_b = PID_B.setPoint;
+    obj.temperature_lower = PID_B.input;
+    obj.lastInput_lower = PID_B.myPID_.GetLastInput();
+    obj.output_lower = PID_B.output;
+    obj.outputSum_lower = PID_B.myPID_.GetOutputSum();
+    obj.kp_lower = PID_B.myPID_.GetKp() * error;
+    obj.ki_lower = PID_B.myPID_.GetKi() * error;
+    obj.kd_lower = PID_B.myPID_.GetKd() * (PID_B.input - PID_B.myPID_.GetLastInput());
+    obj.setpoint_lower = PID_B.setPoint;
 }

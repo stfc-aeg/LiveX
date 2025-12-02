@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { WithEndpoint } from 'odin-react';
+import { TitleCard, WithEndpoint } from 'odin-react';
 import Button from 'react-bootstrap/Button';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
@@ -11,6 +11,7 @@ import ThermalGradient from './ThermalGradient';
 import AutoSetPointControl from './AutoSetPointControl';
 import InfoPanel from './InfoPanel';
 import FurnaceRecording from './FurnaceRecording';
+import PidOverride from './PidOverride';
 
 function FurnacePage(props){
     const {furnaceEndPoint} = props;
@@ -47,16 +48,47 @@ function FurnacePage(props){
           <PidControl
             furnaceEndPoint={furnaceEndPoint}
             connectedPuttingDisable={connectedPuttingDisable}
-            title="Upper Heater (A) Controls"
-            pid="pid_a">
+            title="Upper Heater Controls"
+            pid="pid_upper">
           </PidControl>
 
           <PidControl
             furnaceEndPoint={furnaceEndPoint}
             connectedPuttingDisable={connectedPuttingDisable}
-            title="Lower Heater (B) Controls"
-            pid="pid_b">
+            title="Lower Heater Controls"
+            pid="pid_lower">
           </PidControl>
+
+          {
+            furnaceEndPoint.data.status?.allow_pid_override ?
+            <TitleCard
+              title="Manual PID Override">
+                <Row>
+                  <label>
+                    PID Override sets the output to a percentage of its maximum (0-10V), it does not require the PID to be enabled to use.
+                  </label>
+                </Row>
+                <Row>
+                  <Col>
+                    <PidOverride
+                      furnaceEndPoint={furnaceEndPoint}
+                      connectedPuttingDisable={connectedPuttingDisable}
+                      title="Upper PID"
+                      pid="pid_upper"
+                    />
+                  </Col>
+                  <Col>
+                    <PidOverride
+                      furnaceEndPoint={furnaceEndPoint}
+                      connectedPuttingDisable={connectedPuttingDisable}
+                      title="Lower PID"
+                      pid="pid_lower"
+                    />
+                  </Col>
+                </Row>
+            </TitleCard> :
+            <></>
+          }
 
           {
             furnaceEndPoint.data.status?.allow_solo_acquisition ?

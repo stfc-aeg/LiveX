@@ -20,10 +20,10 @@ class CONNECTIONS(Enum):
 class Thermocouple:
     label: str  # User-defined 'name' for the thermocouple
     connection: CONNECTIONS
-    addr: int = None  # modbus address in modAddr attribute
-    val_addr: int = None  # address that thermocouple value should be read from
-    index: int = None  # Index in the PLC
-    value: float = None  # Value read from PLC
+    addr: int = 0  # modbus address in modAddr attribute
+    val_addr: int = 0  # address that thermocouple value should be read from
+    index: int = 0  # Index in the PLC
+    value: float = 0  # Value read from PLC
 
 class ThermocoupleManager:
     """Manage the state of thermocouples: their values and the associated hardware index."""
