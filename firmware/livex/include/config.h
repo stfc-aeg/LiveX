@@ -29,8 +29,8 @@
 #define PID_KI_DEFAULT       0.02
 #define PID_KD_DEFAULT       0.0
 
-#define DEFAULT_SETPOINT_LIMIT      1500
-#define DEFAULT_SETPOINT_STEP_LIMIT 250
+#define DEFAULT_SETPOINT_LIMIT      30
+#define DEFAULT_SETPOINT_STEP_LIMIT 30
 
 // MAX # of bits written to relevant power output channel. Min is 0.
 #define POWER_OUTPUT_BITS 4095
