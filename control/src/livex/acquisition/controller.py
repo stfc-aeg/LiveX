@@ -10,6 +10,7 @@ from livex.util import (
     iac_set
 )
 from livex.acquisition.trigger_manager import TriggerManager
+from livex.acquisition.sequencer_yaml_writer import YamlSequencerWriter
 
 class LiveXController(BaseController):
     """LiveXController - class that manages the other adapters for LiveX."""
@@ -80,6 +81,13 @@ class LiveXController(BaseController):
             logging.debug("Livex controller registering context with sequencer")
             self.adapters['sequencer'].add_context('livex', self)
 
+            # Add a new logger
+            self.sequencer = self.adapters['sequencer']
+            self.sequencer.command_sequencer.manager.register_external_logger(self.log_sequence_message)
+
+            self.sequencer.command_sequencer.manager.register_external_execute_hook(self.open_sequencer_file)
+            self.sequencer.command_sequencer.manager.register_external_end_hook(self.close_sequencer_file)
+
         # With adapters initialised, IAC can be used to get any more needed info
 
         # Write furnace timer to go for readings
@@ -100,6 +108,35 @@ class LiveXController(BaseController):
 
         # Reconstruct tree with relevant adapter references
         self._build_tree()
+
+    def open_sequencer_file(self, sequence_name, args, kwargs):
+        """Prepare the file information for the sequencer log."""
+        logging.warning("Preparing sequencer log file details")
+
+        # Make filename
+        self.sequencer_filename = "sequence_log_test.yaml"
+        self.sequencer_filepath = "."
+
+        # Parameters
+        self.sequencer_data = {
+            "parameters": dict(kwargs),
+            "messages": []
+        }
+
+    def log_sequence_message(self, message):
+        """Log a message from the sequencer to a dictionary to be written to YAML."""
+        entry = {
+            'timestamp': datetime.now(),
+            'msg': message
+        }
+        self.sequencer_data['messages'].append(entry)
+
+    def close_sequencer_file(self, sequence_name, args, kwargs):
+        """Write sequencer output to the sequencer YAML log file."""
+        logging.warning("Writing to sequencer file")
+
+        with YamlSequencerWriter(self.sequencer_filepath, self.sequencer_filename) as yaml:
+            yaml.write(self.sequencer_data)
 
     def _build_tree(self):
         """Construct the parameter tree once adapters have been initialised."""
