@@ -138,8 +138,14 @@
         "user_input": false
     },
     "sequence_id": {
-        "label": "Controlling sequence ID",
-        "default": null,
+        "label": "Controlling sequence execution ID",
+        "default": 1,
+        "persist": true,
+        "user_input": false
+    },
+    "sequence_name": {
+        "label": "Controlling sequence name",
+        "default": "None",
         "persist": false,
         "user_input": false
     }

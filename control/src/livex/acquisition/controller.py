@@ -29,6 +29,9 @@ class LiveXController(BaseController):
         self.widefov_filepath = options.get('widefov_filepath', '/tmp')
         self.narrowfov_filepath = options.get('narrowfov_filepath', '/tmp')
 
+        self.sequencer_filepath = options.get('sequencer_filepath', '/tmp')
+        self.executing_sequence = False
+
         self.acquiring = False
         # Which 'devices' are doing this acquisition. Set in start_acquisition
         self.current_acquisition = []
@@ -82,11 +85,11 @@ class LiveXController(BaseController):
             self.adapters['sequencer'].add_context('livex', self)
 
             # Add a new logger
-            self.sequencer = self.adapters['sequencer']
-            self.sequencer.command_sequencer.manager.register_external_logger(self.log_sequence_message)
+            self.sequencer = self.adapters['sequencer'].command_sequencer.manager
+            self.sequencer.register_external_logger(self.log_sequence_message)
 
-            self.sequencer.command_sequencer.manager.register_external_execute_hook(self.open_sequencer_file)
-            self.sequencer.command_sequencer.manager.register_external_end_hook(self.close_sequencer_file)
+            self.sequencer.register_external_execute_hook(self.prepare_sequencer_file)
+            self.sequencer.register_external_end_hook(self.write_sequencer_file)
 
         # With adapters initialised, IAC can be used to get any more needed info
 
@@ -109,19 +112,30 @@ class LiveXController(BaseController):
         # Reconstruct tree with relevant adapter references
         self._build_tree()
 
-    def open_sequencer_file(self, sequence_name, args, kwargs):
+    def prepare_sequencer_file(self, sequence_name, args, kwargs):
         """Prepare the file information for the sequencer log."""
-        logging.warning("Preparing sequencer log file details")
+        logging.debug("Preparing sequencer log file details")
 
         # Make filename
-        self.sequencer_filename = "sequence_log_test.yaml"
-        self.sequencer_filepath = "."
+        self.sequence_id = iac_get(self.metadata, 'fields/sequence_id/value', param='value')
+        iac_set(self.metadata, 'fields/sequence_id', 'value', self.sequence_id+1)
+        iac_set(self.metadata, 'fields/sequence_name', 'value', sequence_name)
+
+        padded_seq_id = str(self.sequence_id).rjust(4, '0')
+        self.sequencer_filename = f"sequence_{padded_seq_id}_{sequence_name}.yaml"
 
         # Parameters
         self.sequencer_data = {
+            "metadata": {"name": sequence_name, "id": self.sequence_id},
             "parameters": dict(kwargs),
             "messages": []
         }
+
+        start_time = datetime.now()
+        self.sequencer_data['metadata'].update({'start_time': start_time.strftime("%d/%m/%Y, %H:%M:%S")})
+
+        # For the purpose of acquisition logging
+        self.executing_sequence = True
 
     def log_sequence_message(self, message):
         """Log a message from the sequencer to a dictionary to be written to YAML."""
@@ -131,12 +145,17 @@ class LiveXController(BaseController):
         }
         self.sequencer_data['messages'].append(entry)
 
-    def close_sequencer_file(self, sequence_name, args, kwargs):
+    def write_sequencer_file(self, sequence_name, args, kwargs):
         """Write sequencer output to the sequencer YAML log file."""
-        logging.warning("Writing to sequencer file")
+        logging.debug("Writing to sequencer file")
+
+        stop_time = datetime.now()
+        self.sequencer_data['metadata'].update({'stop_time': stop_time.strftime("%d/%m/%Y, %H:%M:%S")})
 
         with YamlSequencerWriter(self.sequencer_filepath, self.sequencer_filename) as yaml:
             yaml.write(self.sequencer_data)
+
+        self.executing_sequence = False
 
     def _build_tree(self):
         """Construct the parameter tree once adapters have been initialised."""
@@ -259,6 +278,15 @@ class LiveXController(BaseController):
         start_time = now.strftime("%d/%m/%Y, %H:%M:%S")
         iac_set(self.metadata, 'fields/start_time', 'value', start_time)
 
+        if self.executing_sequence:
+            iac_set(self.metadata, 'fields/sequence_id', 'value', self.sequence_id)
+
+            acq_num = iac_get(self.metadata, 'fields/acquisition_num/value', param='value')
+            self.log_sequence_message(f"Beginning acquisition {acq_num}.")
+        else:  # No sequence currently
+            iac_set(self.metadata, 'fields/sequence_name', 'value', 'None')
+            iac_set(self.metadata, 'fields/sequence_id', 'value', 'None')
+
         # Enable timer coils simultaneously
         self.trigger.set_all_timers(
             {'enable': True,
@@ -322,8 +350,18 @@ class LiveXController(BaseController):
         stop_time = now.strftime("%d/%m/%Y, %H:%M:%S")
         iac_set(self.metadata, 'fields/stop_time', 'value', stop_time)
 
-        # Write YAML with all static data
-        iac_set(self.metadata, 'yaml', 'write', True)
+        # Writing metadata with or without sequence info
+        if not self.executing_sequence:
+            # When not running a sequence, don't include sequence info in acquisition metadata
+            sequence_id = iac_get(self.metadata, 'fields/sequence_id/value', param='value')
+            iac_set(self.metadata, 'fields/sequence_name', 'value', 'None')
+            iac_set(self.metadata, 'fields/sequence_id', 'value', 'None')
+            iac_set(self.metadata, 'yaml', 'write', True)
+            # Then set it back once data is written
+            iac_set(self.metadata, 'fields/sequence_id', 'value', sequence_id)
+        else:
+            # During sequence, sequence name and id are set in prepare_sequencer_file
+            iac_set(self.metadata, 'yaml', 'write', True)
 
         # Reenable timers
         self.trigger.set_all_timers(
