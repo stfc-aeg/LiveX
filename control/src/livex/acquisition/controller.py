@@ -88,8 +88,8 @@ class LiveXController(BaseController):
             self.sequencer = self.adapters['sequencer'].command_sequencer.manager
             self.sequencer.register_external_logger(self.log_sequence_message)
 
-            self.sequencer.register_external_execute_hook(self.prepare_sequencer_file)
-            self.sequencer.register_external_end_hook(self.write_sequencer_file)
+            self.sequencer.register_sequence_start_hook(self.prepare_sequencer_file)
+            self.sequencer.register_sequence_finish_hook(self.write_sequencer_file)
 
         # With adapters initialised, IAC can be used to get any more needed info
 
