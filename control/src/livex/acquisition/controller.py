@@ -1,8 +1,6 @@
 import logging
 from datetime import datetime
 
-from functools import partial
-
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from livex.base_controller import BaseController
@@ -12,6 +10,7 @@ from livex.util import (
     iac_set
 )
 from livex.acquisition.trigger_manager import TriggerManager
+from livex.acquisition.sequencer_yaml_writer import YamlSequencerWriter
 
 class LiveXController(BaseController):
     """LiveXController - class that manages the other adapters for LiveX."""
@@ -30,6 +29,9 @@ class LiveXController(BaseController):
         self.widefov_filepath = options.get('widefov_filepath', '/tmp')
         self.narrowfov_filepath = options.get('narrowfov_filepath', '/tmp')
 
+        self.sequencer_filepath = options.get('sequencer_filepath', '/tmp')
+        self.executing_sequence = False
+
         self.acquiring = False
         # Which 'devices' are doing this acquisition. Set in start_acquisition
         self.current_acquisition = []
@@ -43,16 +45,12 @@ class LiveXController(BaseController):
                 'filepath': None
             },
             'metadata': {
-                'hdf5': {
-                    'filename': None,
-                    'filepath': None
-                },
-                'md': {
-                    'filename': None,
-                    'filepath': self.furnace_filepath
-                }
+                'filename': None,
+                'filepath': self.furnace_filepath
             }
         }
+
+        self.furnace_filepath = "."
 
     def initialize(self, adapters):
         """Initialize the controller.
@@ -71,7 +69,7 @@ class LiveXController(BaseController):
         else:
             logging.warning("Munir adapter not found.")
 
-        self.furnace = adapters["furnace"].controller if 'furnace' in self.adapters else logging.warning("Furnace adapter not found.")
+        self.furnace = self.adapters["furnace"].controller if 'furnace' in self.adapters else logging.warning("Furnace adapter not found.")
 
         if 'trigger' in self.adapters:
             self.trigger = adapters["trigger"].controller
@@ -85,6 +83,13 @@ class LiveXController(BaseController):
         if 'sequencer' in self.adapters:
             logging.debug("Livex controller registering context with sequencer")
             self.adapters['sequencer'].add_context('livex', self)
+
+            # Add a new logger
+            self.sequencer = self.adapters['sequencer'].command_sequencer.manager
+            self.sequencer.register_external_logger(self.log_sequence_message)
+
+            self.sequencer.register_sequence_start_hook(self.prepare_sequencer_file)
+            self.sequencer.register_sequence_finish_hook(self.write_sequencer_file)
 
         # With adapters initialised, IAC can be used to get any more needed info
 
@@ -106,6 +111,51 @@ class LiveXController(BaseController):
 
         # Reconstruct tree with relevant adapter references
         self._build_tree()
+
+    def prepare_sequencer_file(self, sequence_name, args, kwargs):
+        """Prepare the file information for the sequencer log."""
+        logging.debug("Preparing sequencer log file details")
+
+        # Make filename
+        self.sequence_id = iac_get(self.metadata, 'fields/sequence_id/value', param='value')
+        iac_set(self.metadata, 'fields/sequence_id', 'value', self.sequence_id+1)
+        iac_set(self.metadata, 'fields/sequence_name', 'value', sequence_name)
+
+        padded_seq_id = str(self.sequence_id).rjust(4, '0')
+        self.sequencer_filename = f"sequence_{padded_seq_id}_{sequence_name}.yaml"
+
+        # Parameters
+        self.sequencer_data = {
+            "metadata": {"name": sequence_name, "id": self.sequence_id},
+            "parameters": dict(kwargs),
+            "messages": []
+        }
+
+        start_time = datetime.now()
+        self.sequencer_data['metadata'].update({'start_time': start_time.strftime("%d/%m/%Y, %H:%M:%S")})
+
+        # For the purpose of acquisition logging
+        self.executing_sequence = True
+
+    def log_sequence_message(self, message):
+        """Log a message from the sequencer to a dictionary to be written to YAML."""
+        entry = {
+            'timestamp': datetime.now(),
+            'msg': message
+        }
+        self.sequencer_data['messages'].append(entry)
+
+    def write_sequencer_file(self, sequence_name, args, kwargs):
+        """Write sequencer output to the sequencer YAML log file."""
+        logging.debug("Writing to sequencer file")
+
+        stop_time = datetime.now()
+        self.sequencer_data['metadata'].update({'stop_time': stop_time.strftime("%d/%m/%Y, %H:%M:%S")})
+
+        with YamlSequencerWriter(self.sequencer_filepath, self.sequencer_filename) as yaml:
+            yaml.write(self.sequencer_data)
+
+        self.executing_sequence = False
 
     def _build_tree(self):
         """Construct the parameter tree once adapters have been initialised."""
@@ -149,14 +199,9 @@ class LiveXController(BaseController):
         self.filepaths['furnace']['filepath'] = self.furnace_filepath
 
         # Metadata
-        filename = build_filename('metadata', 'h5')
-        self.filepaths['metadata']['hdf5']['filename'] = filename
-        self.filepaths['metadata']['hdf5']['filepath'] = self.furnace_filepath
-        # Metadata markdown
-
-        filename = build_filename('metadata', 'md')
-        self.filepaths['metadata']['md']['filename'] = filename
-        self.filepaths['metadata']['md']['filepath'] = f"{self.furnace_filepath}/logs/acquisitions"
+        filename = build_filename('metadata', 'yaml')
+        self.filepaths['metadata']['filename'] = filename
+        self.filepaths['metadata']['filepath'] = self.furnace_filepath
 
         # Cameras
         for camera in self.orca.cameras:
@@ -165,10 +210,8 @@ class LiveXController(BaseController):
             self.filepaths[name]["filepath"] = self.options.get(f"{name}_filepath", self.furnace_filepath)
         # Set values in metadata adapter
         iac_set(self.metadata, 'fields/experiment_id', 'value', experiment_id)
-        iac_set(self.metadata, 'hdf', 'file', self.filepaths['metadata']['hdf5']['filename'])
-        iac_set(self.metadata, 'hdf', 'path', self.filepaths['metadata']['hdf5']['filepath'])
-        iac_set(self.metadata, 'markdown', 'file', self.filepaths['metadata']['md']['filename'])
-        iac_set(self.metadata, 'markdown', 'path', self.filepaths['metadata']['md']['filepath'])
+        iac_set(self.metadata, 'yaml', 'file', self.filepaths['metadata']['filename'])
+        iac_set(self.metadata, 'yaml', 'path', self.filepaths['metadata']['filepath'])
 
     def start_acquisition(self, acquisitions=[]):
         """Start an acquisition. Disable timers, configure all values, then start timers simultaneously.
@@ -235,6 +278,15 @@ class LiveXController(BaseController):
         start_time = now.strftime("%d/%m/%Y, %H:%M:%S")
         iac_set(self.metadata, 'fields/start_time', 'value', start_time)
 
+        if self.executing_sequence:
+            iac_set(self.metadata, 'fields/sequence_id', 'value', self.sequence_id)
+
+            acq_num = iac_get(self.metadata, 'fields/acquisition_num/value', param='value')
+            self.log_sequence_message(f"Beginning acquisition {acq_num}.")
+        else:  # No sequence currently
+            iac_set(self.metadata, 'fields/sequence_name', 'value', 'None')
+            iac_set(self.metadata, 'fields/sequence_id', 'value', 'None')
+
         # Enable timer coils simultaneously
         self.trigger.set_all_timers(
             {'enable': True,
@@ -256,6 +308,10 @@ class LiveXController(BaseController):
             # Turn off acquisition coil
             self.furnace._stop_acquisition()
 
+            # Write needed metadata
+            iac_set(self.metadata, 'fields/furnace_framerate', 'value',
+                self.trigger_manager.frequencies['furnace'])
+
         # Cams stop capturing, num-frames to 0, start again
         # Move camera(s) to capture state
         for camera in self.orca.cameras:
@@ -269,6 +325,14 @@ class LiveXController(BaseController):
                 self.munir.munir_managers[camera.name].stop_acquisition()
                 camera.send_command('capture')
 
+                # Write frequency and exposure into metadata
+                iac_set(self.metadata, f'fields/{camera.name}_framerate', 'value',
+                    self.trigger_manager.frequencies[name]
+                )
+                iac_set(self.metadata, f'fields/{camera.name}_exposure', 'value',
+                    camera.config['exposure_time']
+                )
+
         # Post-acquisition, targets are 0 for monitoring
         # Previous targets are lost as updating target restarts timer
         targets = {}
@@ -278,7 +342,7 @@ class LiveXController(BaseController):
 
         # Write other metadata information
         iac_set(self.metadata, 'fields/thermal_gradient_kmm', 'value', self.furnace.gradient.wanted)
-        iac_set(self.metadata, 'fields/thermal_gradient_distance', 'value', self.furnace.gradient.distance),
+        iac_set(self.metadata, 'fields/thermal_gradient_distance', 'value', self.furnace.gradient.distance)
         iac_set(self.metadata, 'fields/cooling_rate', 'value', self.furnace.aspc.rate)
 
         # Stop time
@@ -286,11 +350,18 @@ class LiveXController(BaseController):
         stop_time = now.strftime("%d/%m/%Y, %H:%M:%S")
         iac_set(self.metadata, 'fields/stop_time', 'value', stop_time)
 
-        # Write out markdown metadata - data matches h5 at this point
-        iac_set(self.metadata, 'markdown', 'write', True)
-
-        # Write metadata hdf to file afterwards, only md needs doing first
-        iac_set(self.metadata, 'hdf', 'write', True)
+        # Writing metadata with or without sequence info
+        if not self.executing_sequence:
+            # When not running a sequence, don't include sequence info in acquisition metadata
+            sequence_id = iac_get(self.metadata, 'fields/sequence_id/value', param='value')
+            iac_set(self.metadata, 'fields/sequence_name', 'value', 'None')
+            iac_set(self.metadata, 'fields/sequence_id', 'value', 'None')
+            iac_set(self.metadata, 'yaml', 'write', True)
+            # Then set it back once data is written
+            iac_set(self.metadata, 'fields/sequence_id', 'value', sequence_id)
+        else:
+            # During sequence, sequence name and id are set in prepare_sequencer_file
+            iac_set(self.metadata, 'yaml', 'write', True)
 
         # Reenable timers
         self.trigger.set_all_timers(
@@ -330,8 +401,7 @@ class LiveXController(BaseController):
         """Set parameters in the controller.
 
         This method sets parameters in the controller parameter tree. If the parameters to write
-        metadata to HDF and/or markdown have been set during the call, the appropriate write
-        action is executed.
+        metadata have been set during the call, the appropriate write action is executed.
 
         :param path: path to set parameters at
         :param data: dictionary of parameters to set

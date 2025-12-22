@@ -106,5 +106,47 @@
         "default": 0.0,
         "persist": false,
         "user_input": false
+    },
+    "furnace_framerate": {
+        "label": "Furnace frame rate",
+        "default": 0.0,
+        "persist": false,
+        "user_input": false
+    },
+    "widefov_framerate": {
+        "label": "WideFOV frame rate",
+        "default": 0.0,
+        "persist": false,
+        "user_input": false
+    },
+    "narrowfov_framerate": {
+        "label": "NarrowFOV frame rate",
+        "default": 0.0,
+        "persist": false,
+        "user_input": false
+    },
+    "widefov_exposure": {
+        "label": "WideFOV exposure time",
+        "default": 0.0,
+        "persist": false,
+        "user_input": false
+    },
+    "narrowfov_exposure": {
+        "label": "NarrowFOV exposure time",
+        "default": 0.0,
+        "persist": false,
+        "user_input": false
+    },
+    "sequence_id": {
+        "label": "Controlling sequence execution ID",
+        "default": 1,
+        "persist": true,
+        "user_input": false
+    },
+    "sequence_name": {
+        "label": "Controlling sequence name",
+        "default": "None",
+        "persist": false,
+        "user_input": false
     }
 }

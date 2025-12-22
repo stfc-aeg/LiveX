@@ -168,10 +168,7 @@ class LiveDataController(BaseController):
     def set(self, path, data):
         """Set parameters in the controller.
 
-        This method sets parameters in the controller parameter tree. If the parameters to write
-        metadata to HDF and/or markdown have been set during the call, the appropriate write
-        action is executed.
-
+        This method sets parameters in the controller parameter tree.
         :param path: path to set parameters at
         :param data: dictionary of parameters to set
         """

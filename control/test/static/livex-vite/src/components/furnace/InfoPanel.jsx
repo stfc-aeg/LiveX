@@ -8,8 +8,8 @@ import { checkNull, usePrevious } from '../../utils';
 function InfoPanel(props) {
     const {furnaceEndPoint} = props;
 
-    const lastInput_a = usePrevious(furnaceEndPoint.data?.pid_a?.temperature);
-    const lastInput_b = usePrevious(furnaceEndPoint.data?.pid_b?.temperature);
+    const lastInput_a = usePrevious(furnaceEndPoint.data?.pid_upper?.temperature);
+    const lastInput_b = usePrevious(furnaceEndPoint.data?.pid_lower?.temperature);
 
     // Fixing the label width of the display labels so that they're consistent
     // ~6px per character.
@@ -81,7 +81,7 @@ function InfoPanel(props) {
               </InputGroup.Text>
               <InputGroup.Text
                 style={labelStyling}>
-                  {checkNull(furnaceEndPoint.data?.pid_a?.output)}
+                  {checkNull(furnaceEndPoint.data?.pid_upper?.output)}
               </InputGroup.Text>
             </InputGroup>
             </Row>
@@ -92,7 +92,7 @@ function InfoPanel(props) {
                 </InputGroup.Text>
                 <InputGroup.Text
                   style={labelStyling}>
-                    {checkNull((furnaceEndPoint.data?.pid_a?.output) * 0.1 * 0.8)}
+                    {checkNull((furnaceEndPoint.data?.pid_upper?.output) * 0.1)}
                 </InputGroup.Text>
               </InputGroup>
             </Row>
@@ -103,8 +103,8 @@ function InfoPanel(props) {
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
                 {checkNull(
-                  furnaceEndPoint.data.pid_a?.proportional
-                  * (furnaceEndPoint.data.pid_a?.setpoint - furnaceEndPoint.data.pid_a?.temperature))}
+                  furnaceEndPoint.data.pid_upper?.proportional
+                  * (furnaceEndPoint.data.pid_upper?.setpoint - furnaceEndPoint.data.pid_upper?.temperature))}
               </InputGroup.Text>
             </InputGroup>
           </Row>
@@ -115,8 +115,8 @@ function InfoPanel(props) {
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
                 {checkNull(
-                  furnaceEndPoint.data.pid_a?.integral
-                  * (furnaceEndPoint.data.pid_a?.setpoint - furnaceEndPoint.data.pid_a?.temperature))}
+                  furnaceEndPoint.data.pid_upper?.integral
+                  * (furnaceEndPoint.data.pid_upper?.setpoint - furnaceEndPoint.data.pid_upper?.temperature))}
               </InputGroup.Text>
             </InputGroup>
           </Row>
@@ -127,8 +127,8 @@ function InfoPanel(props) {
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
               {checkNull(
-                  furnaceEndPoint.data.pid_a?.derivative
-                  * (furnaceEndPoint.data.pid_a?.temperature - lastInput_a))}
+                  furnaceEndPoint.data.pid_upper?.derivative
+                  * (furnaceEndPoint.data.pid_upper?.temperature - lastInput_a))}
               </InputGroup.Text>
             </InputGroup>
           </Row>
@@ -138,7 +138,7 @@ function InfoPanel(props) {
                 Out Sum
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
-              {checkNull(furnaceEndPoint.data.pid_a?.outputsum)}
+              {checkNull(furnaceEndPoint.data.pid_upper?.outputsum)}
               </InputGroup.Text>
             </InputGroup>
           </Row>
@@ -152,7 +152,7 @@ function InfoPanel(props) {
               </InputGroup.Text>
               <InputGroup.Text
                 style={labelStyling}>
-                  {checkNull(furnaceEndPoint.data?.pid_b?.output)}
+                  {checkNull(furnaceEndPoint.data?.pid_lower?.output)}
               </InputGroup.Text>
             </InputGroup>
             </Row>
@@ -163,7 +163,7 @@ function InfoPanel(props) {
                 </InputGroup.Text>
                 <InputGroup.Text
                   style={labelStyling}>
-                    {checkNull((furnaceEndPoint.data?.pid_b?.output) * 0.1 * 0.8)}
+                    {checkNull((furnaceEndPoint.data?.pid_lower?.output) * 0.1)}
                 </InputGroup.Text>
               </InputGroup>
             </Row>
@@ -174,8 +174,8 @@ function InfoPanel(props) {
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
                 {checkNull(
-                  furnaceEndPoint.data.pid_b?.proportional
-                  * (furnaceEndPoint.data.pid_b?.setpoint - furnaceEndPoint.data.pid_b?.temperature))}
+                  furnaceEndPoint.data.pid_lower?.proportional
+                  * (furnaceEndPoint.data.pid_lower?.setpoint - furnaceEndPoint.data.pid_lower?.temperature))}
               </InputGroup.Text>
             </InputGroup>
           </Row>
@@ -186,8 +186,8 @@ function InfoPanel(props) {
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
                 {checkNull(
-                  furnaceEndPoint.data.pid_b?.integral
-                  * (furnaceEndPoint.data.pid_b?.setpoint - furnaceEndPoint.data.pid_b?.temperature))}
+                  furnaceEndPoint.data.pid_lower?.integral
+                  * (furnaceEndPoint.data.pid_lower?.setpoint - furnaceEndPoint.data.pid_lower?.temperature))}
               </InputGroup.Text>
             </InputGroup>
           </Row>
@@ -198,8 +198,8 @@ function InfoPanel(props) {
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
               {checkNull(
-                  furnaceEndPoint.data.pid_b?.derivative
-                  * (furnaceEndPoint.data.pid_b?.temperature - lastInput_b))}
+                  furnaceEndPoint.data.pid_lower?.derivative
+                  * (furnaceEndPoint.data.pid_lower?.temperature - lastInput_b))}
               </InputGroup.Text>
             </InputGroup>
           </Row>
@@ -209,7 +209,7 @@ function InfoPanel(props) {
                 Out Sum
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
-              {checkNull(furnaceEndPoint.data.pid_b?.outputsum)}
+              {checkNull(furnaceEndPoint.data.pid_lower?.outputsum)}
               </InputGroup.Text>
             </InputGroup>
           </Row>

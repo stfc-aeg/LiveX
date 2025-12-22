@@ -7,13 +7,15 @@ class AutoSetPointControl():
     """This class provides the ParameterTree for the auto set point control controls for LiveX.
     It stores relevant values and provides functions to write to the modbus server on the PLC."""
 
-    def __init__(self, addresses, maximum_rate):
+    def __init__(self, addresses, maximum_rate, furnace_controller):
         self.addresses = addresses
 
         self.enable = False
         self.heating = 'heating'
         self.rate = float(0.5)
         self.midpt = 0
+
+        self.furnace_controller = furnace_controller
 
         self.tree = ParameterTree({
             'enable': (lambda: self.enable, self.set_enable),
@@ -48,6 +50,7 @@ class AutoSetPointControl():
         else:
             write_coil(self.client, self.addresses['enable'], 0)
         write_coil(self.client, self.addresses['update'], 1)
+        self.furnace_controller.add_event('autosp_enable', self.enable)
 
     def set_heating(self, value):
         """Set the value for auto set point control heating."""
@@ -59,19 +62,11 @@ class AutoSetPointControl():
             write_coil(self.client, self.addresses['heating'], 0)
         else:
             logging.warning(f"Invalid value for set_heating: {value}. Must be 'heating' or 'cooling'.")
-
-    def _set_heating(self, value):
-        """Set the boolean for auto set point control heating."""
-        self.heating = value
-
-        if value:  # 1, heating
-            write_coil(self.client, self.addresses['heating'], 1)
-        else:      # 0, cooling
-            write_coil(self.client, self.addresses['heating'], 0)   
-        write_coil(self.client, self.addresses['update'], 1)
+        self.furnace_controller.add_event('autosp_heating', self.heating)
 
     def set_rate(self, value):
         """Set the rate value for the auto set point control."""
         self.rate = value
         write_modbus_float(self.client, value, self.addresses['rate'])
         write_coil(self.client, self.addresses['update'], 1)
+        self.furnace_controller.add_event('autosp_rate', self.rate)

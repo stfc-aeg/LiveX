@@ -1,37 +1,37 @@
 {
     "temperature_a": {
         "adapter": "furnace",
-        "get_path": "pid_a/temperature",
+        "get_path": "pid_upper/temperature",
         "interval": 0.2,
         "retention": 300
     },
     "setpoint_a": {
         "adapter": "furnace",
-        "get_path": "pid_a/setpoint",
+        "get_path": "pid_upper/setpoint",
         "interval": 0.2,
         "retention": 300
     },
     "output_a": {
         "adapter": "furnace",
-        "get_path": "pid_a/output",
+        "get_path": "pid_upper/output",
         "interval": 0.2,
         "retention": 300
     },
     "temperature_b": {
         "adapter": "furnace",
-        "get_path": "pid_b/temperature",
+        "get_path": "pid_lower/temperature",
         "interval": 0.2,
         "retention": 300
     },
     "setpoint_b": {
         "adapter": "furnace",
-        "get_path": "pid_b/setpoint",
+        "get_path": "pid_lower/setpoint",
         "interval": 0.2,
         "retention": 300
     },
     "output_b": {
         "adapter": "furnace",
-        "get_path": "pid_b/output",
+        "get_path": "pid_lower/output",
         "interval": 0.2,
         "retention": 300
     }

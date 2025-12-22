@@ -32,8 +32,8 @@ class FileWriter():
 
     def set_fullpath(self):
         """Set the full path of the filewriter."""
-        if not self.filename.endswith('.hdf5'):
-            self.filename += '.hdf5'
+        if not self.filename.endswith('.h5'):
+            self.filename += '.h5'
         self.full_path = os.path.join(self.filepath, self.filename)
 
     def open_file(self, mode="a"):
@@ -60,9 +60,16 @@ class FileWriter():
 
         for key, values in data.items():
 
+            values = [values] if not isinstance(values, (list, tuple, np.ndarray)) else values
+
             # Create array with dtype. If no dtypes specified, defaults to float in all cases
-            dtype = self.dtypes.get(key, 'f') if self.dtypes else 'f'
-            new_data = np.array(values, dtype=dtype)
+            if self.dtypes and key in self.dtypes:
+                dtype = self.dtypes.get(key, 'f')
+                if dtype == "str":
+                    dtype = h5py.string_dtype(encoding='utf-8')
+                new_data = np.array(values, dtype=dtype)
+            else:
+                new_data = np.array(values, dtype='f')
 
             if key in group:
                 dset = group[key]

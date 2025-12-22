@@ -114,8 +114,8 @@ void manageComms()
   if (elapsedTime > INTERVAL_TIMEOUT)
   {
     Serial.println("Timeout: no connection. Disabling PID behaviour (write 0).");
-    modbus_server.coilWrite(MOD_PID_ENABLE_A_COIL, 0);
-    modbus_server.coilWrite(MOD_PID_ENABLE_B_COIL, 0);
+    modbus_server.coilWrite(MOD_PID_UPPER_ENABLE_COIL, 0);
+    modbus_server.coilWrite(MOD_PID_LOWER_ENABLE_COIL, 0);
     // Reset timer so writing doesn't occur every single loop
     connectionTimer = millis();
   }
@@ -123,10 +123,23 @@ void manageComms()
 
 void updateSetPoints()
 {
-  PID_A.baseSetPoint = modbus_server.combineHoldingRegisters(MOD_SETPOINT_A_HOLD);
-  PID_B.baseSetPoint = modbus_server.combineHoldingRegisters(MOD_SETPOINT_B_HOLD);
-  // When setpoints are updated, thermal gradient will also need adjusting as modifiers will change
+  // Check new setpoints are within acceptable step and maximum limits
+  // N.B. this limit only applies to increases, for safety and cooling
+  setpointLimit = modbus_server.combineHoldingRegisters(MOD_SETPOINT_LIMIT_HOLD);
+  float newUpperSp = modbus_server.combineHoldingRegisters(MOD_SETPOINT_UPPER_HOLD);
+  float newLowerSp = modbus_server.combineHoldingRegisters(MOD_SETPOINT_LOWER_HOLD);
+  float maxStep = modbus_server.combineHoldingRegisters(MOD_SETPOINT_STEP_HOLD);
+  // Use new setpoint only if it's below the maximum and not increased too much from the last one
+  if (((newUpperSp - PID_A.baseSetPoint) <= maxStep) && newUpperSp <= setpointLimit)
+  {
+    PID_A.baseSetPoint = newUpperSp;
+  }
+  if (((newLowerSp - PID_A.baseSetPoint) <= maxStep) && newLowerSp <= setpointLimit)
+  {
+    PID_B.baseSetPoint = newLowerSp;
+  }
 
+  // When setpoints are updated, thermal gradient will also need adjusting as modifiers will change
   thermalGradient();
 
   // If gradient is on, we want the setpoints to match, based on the higher heater
@@ -152,6 +165,12 @@ void updateSetPoints()
       Serial.println("new basesetpoints to follow: ");
     }
   }
+
+  // Additional check - has the power output scalar been changed?
+  // Better to have this check in here than with its own flag, as it is updated very very rarely
+  power_output_scale = modbus_server.combineHoldingRegisters(MOD_POWER_OUTPUT_SCALE);
+  if (power_output_scale < 0) { power_output_scale = 0; }
+  else if (power_output_scale > 1) { power_output_scale = 1; }
 
   if (DEBUG)
   {
