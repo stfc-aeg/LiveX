@@ -115,7 +115,7 @@ function FurnacePage(props){
             connectedDisable={connectedDisable}
           />
 
-          <InfoPanel/>
+          <InfoPanel furnaceEndPoint={furnaceEndPoint}/>
         </Col>
     </Row>
     )

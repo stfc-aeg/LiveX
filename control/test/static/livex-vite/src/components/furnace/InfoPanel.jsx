@@ -6,8 +6,7 @@ import { TitleCard, useAdapterEndpoint } from 'odin-react';
 import { checkNull, usePrevious } from '../../utils';
 
 function InfoPanel(props) {
-    const endpoint_url = import.meta.env.VITE_ENDPOINT_URL;
-    const furnaceEndPoint = useAdapterEndpoint('furnace', endpoint_url, 1000);
+    const {furnaceEndPoint} = props;
 
     const lastInput_a = usePrevious(furnaceEndPoint.data?.pid_upper?.temperature);
     const lastInput_b = usePrevious(furnaceEndPoint.data?.pid_lower?.temperature);
