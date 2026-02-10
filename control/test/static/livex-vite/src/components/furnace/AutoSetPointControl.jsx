@@ -16,7 +16,7 @@ const EndPointFormControl = WithEndpoint(Form.Control);
 
 function AutoSetPointControl(props){
     const {furnaceEndPoint} = props;
-    const {connectedPuttingDisable} = props;
+    const {connectedDisable} = props;
 
     const heating_metadata = furnaceEndPoint.metadata.autosp?.heating;
 
@@ -46,7 +46,7 @@ function AutoSetPointControl(props){
                   type="number"
                   fullpath="autosp/rate"
                   event_type="enter"
-                  disabled={connectedPuttingDisable}
+                  disabled={connectedDisable}
                   style={floatingInputStyle}>
                 </EndPointFormControl>
               </FloatingLabel>
@@ -60,7 +60,7 @@ function AutoSetPointControl(props){
                   variant='outline-secondary'
                   buttonText={furnaceEndPoint.data.autosp?.heating}
                   style={floatingInputStyle}
-                  disabled={connectedPuttingDisable}>
+                  disabled={connectedDisable}>
                     {(heating_metadata?.allowed_values ?? []).map(
                       (selection, index) => (
                         <option value={selection} key={index}>

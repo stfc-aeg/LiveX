@@ -17,7 +17,7 @@ const EndPointButton = WithEndpoint(Button);
 
 function PidControl(props) {
     const {furnaceEndPoint} = props;
-    const {connectedPuttingDisable} = props;
+    const {connectedDisable} = props;
     const {title} = props;
     const {pid} = props;
 
@@ -50,7 +50,7 @@ function PidControl(props) {
                       endpoint={furnaceEndPoint}
                       type="number"
                       fullpath={pid+"/proportional"}
-                      disabled={connectedPuttingDisable}
+                      disabled={connectedDisable}
                       style={floatingInputStyle}
                     />
                 </FloatingLabel>
@@ -60,7 +60,7 @@ function PidControl(props) {
                       endpoint={furnaceEndPoint}
                       type="number"
                       fullpath={pid+"/integral"}
-                      disabled={connectedPuttingDisable}
+                      disabled={connectedDisable}
                       style={floatingInputStyle}
                     />
                 </FloatingLabel>
@@ -70,7 +70,7 @@ function PidControl(props) {
                       endpoint={furnaceEndPoint}
                       type="number"
                       fullpath={pid+"/derivative"}
-                      disabled={connectedPuttingDisable}
+                      disabled={connectedDisable}
                       style={floatingInputStyle}
                     />
                 </FloatingLabel>
@@ -84,7 +84,7 @@ function PidControl(props) {
                           endpoint={furnaceEndPoint}
                           type="number"
                           fullpath={pid+"/setpoint"}
-                          disabled={connectedPuttingDisable}
+                          disabled={connectedDisable}
                           style={floatingInputStyle}
                         />
                     </FloatingLabel>
@@ -111,7 +111,7 @@ function PidControl(props) {
                       <EndPointFormControl
                         endpoint={furnaceEndPoint}
                         fullpath={"max_setpoint_increase"}
-                        disabled={connectedPuttingDisable}
+                        disabled={connectedDisable}
                         style={floatingInputStyle}
                       />
                     </FloatingLabel>

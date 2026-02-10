@@ -10,7 +10,6 @@ const EndPointButton = WithEndpoint(Button);
 
 function FurnaceRecording(props) {
     const {furnaceEndPoint} = props;
-    const {connectedPuttingDisable} = props;
 
     // Fixing the label width of the display labels so that they're consistent
     // ~6px per character. 
@@ -58,7 +57,6 @@ function FurnaceRecording(props) {
           fullpath={"tcp/acquire"}
           value={furnaceEndPoint.data.tcp?.acquire ? false : true}
           event_type="click"
-          disable={connectedPuttingDisable}
           variant={furnaceEndPoint.data.tcp?.acquire ? "danger" : "success" }>
           {furnaceEndPoint.data.tcp?.acquire ? "Stop furnace recording" : "Record (only) furnace data"}
         </EndPointButton>

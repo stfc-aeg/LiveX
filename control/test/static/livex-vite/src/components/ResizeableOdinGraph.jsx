@@ -18,12 +18,12 @@ function ResizeableOdinGraph(props) {
         var y = (Array.isArray(data[0]) ? data[0].length : 1);
         // var z = (Array.isArray(data[0]) ? (Array.isArray(data[0][0]) ? data[0][0].length : 1) : 1);
 
-        console.log("(" + x + ", " + y + ")");
+        // console.log("(" + x + ", " + y + ")");
         return {x: x, y: y};
     }
 
     useEffect(() => {
-        console.log("Updating Data");
+        // console.log("Updating Data");
         var data_dims = get_array_dimenions(prop_data);
         var data = [];
         if(type == "scatter" || type == "line")
