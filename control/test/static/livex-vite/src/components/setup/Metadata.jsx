@@ -12,7 +12,6 @@ import TagInput from "./TagInput";
 
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndpointDropdown = WithEndpoint(DropdownSelector);
-const EndpointButton = WithEndpoint(Button);
 
 function Metadata(props) {
 
@@ -41,7 +40,7 @@ function Metadata(props) {
           }
         });
         const additionalPadding = 8; // Extra room for borders
-        return `${maxLength * 10 + additionalPadding}px`;
+        return `${maxLength * 7 + additionalPadding}px`;
       };
 
       const calculatedWidth = calculateLabelWidth(metaJson);
@@ -70,31 +69,6 @@ function Metadata(props) {
                   <InputGroup.Text>
                       {currentValue}
                     </InputGroup.Text>
-                  {key=='acquisition_num' ?
-                  <Col>
-                    <EndpointButton
-                      endpoint={metadataEndPoint}
-                      fullpath={"fields/"+key+"/value"}
-                      value={currentValue+1}
-                      event_type="click"
-                      variant="outline-secondary"
-                    >
-                      +
-                    </EndpointButton>
-                    <EndpointButton
-                      endpoint={metadataEndPoint}
-                      fullpath={"fields/"+key+"/value"}
-                      value={currentValue-1}
-                      event_type="click"
-                      variant="outline-secondary"
-                    >
-                      -
-                    </EndpointButton>
-                  </Col>
-                    :
-                    <></>
-                }
-
                 </InputGroup>
               )
             }
@@ -190,7 +164,7 @@ return(
             Also included in metadata:
           </InputGroup.Text>
           <InputGroup.Text>
-            Thermal gradient (K/mm, distance), ASPC cooling rate, acquisition start/stop
+            Gradient (K/mm, distance), ASPC cooling rate, camera exposure/orientation, trigger rates
           </InputGroup.Text>
         </InputGroup>
     </TitleCard>
