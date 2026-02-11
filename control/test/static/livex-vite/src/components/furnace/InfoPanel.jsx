@@ -2,7 +2,7 @@ import React from 'react';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
-import { TitleCard } from 'odin-react';
+import { TitleCard, useAdapterEndpoint } from 'odin-react';
 import { checkNull, usePrevious } from '../../utils';
 
 function InfoPanel(props) {

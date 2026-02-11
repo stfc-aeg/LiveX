@@ -17,21 +17,22 @@ class LiveDataController(BaseController):
         :param endpoints: list of endpoints in string format.
         """
         logging.debug("Initialising LiveDataController.")
+        self.options = options
 
         # Split on comma, remove whitespace if it exists
         endpoints = [
-            item.strip() for item in options.get('livedata_endpoint', None).split(",")
+            item.strip() for item in self.options.get('livedata_endpoint', None).split(",")
         ]
         self.names = [
-            item.strip() for item in options.get('endpoint_name', None).split(",")
+            item.strip() for item in self.options.get('endpoint_name', None).split(",")
         ]
         # Array of dicts of resolutions
         resolutions = [
             {'x': int(width), 'y': int(height)}  # generate x/y dict
-            for resolution in options.get('camera_resolution', '4096x2304').split(',') # get resolutions
+            for resolution in self.options.get('camera_resolution', '4096x2304').split(',') # get resolutions
             for width, height in [resolution.strip().split("x")] # each resolution split into array
         ]
-        pixel_bytes = options.get('pixel_size', 2)
+        pixel_bytes = self.options.get('pixel_size', 2)
 
         self.tree = {
             '_image': {}
@@ -43,9 +44,9 @@ class LiveDataController(BaseController):
         for i in range(len(endpoints)):
             name = self.names[i]
             resolution = resolutions[i]
-            orientation = options.get(f'{name}_orientation', 'up')
+            orientation = self.options.get(f'{name}_orientation', 'up')
             # mirrors will be 'x', 'y', 'x,y' or ''
-            mirrors = options.get(f'{name}_mirror', '').lower().split(',')
+            mirrors = self.options.get(f'{name}_mirror', '').lower().split(',')
             if mirrors:
                 mirror_x = True if 'x' in mirrors else False
                 mirror_y = True if 'y' in mirrors else False

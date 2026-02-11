@@ -20,7 +20,6 @@ function ClickableImage(props){
 
     const svgId = `canvas-${id}`;  // canvas id
     const maxAxis = maximiseAxis ? maximiseAxis.toLowerCase() : null;
-    const enable = true;  // Could do something with timer
 
     const buttons = {
       left: 0,
@@ -45,11 +44,9 @@ function ClickableImage(props){
 
     useEffect(() => {
         let timer_id;
-        if (enable){
-          timer_id = setInterval(refreshImage, 950);
-        }
+        timer_id = setInterval(refreshImage, 950);
         return () => clearInterval(timer_id);
-    }, [refreshImage, enable]);
+    }, [refreshImage]);
 
     // Initialize some states to keep track of points clicked
     const [startPoint, setStartPoint] = useState([]);
@@ -167,16 +164,16 @@ function ClickableImage(props){
           let xMax = parseFloat(((coords[0][1] / width) * 100).toFixed(2));
           let yMin = parseFloat(((coords[1][0] / height) * 100).toFixed(2));
           let yMax = parseFloat(((coords[1][1] / height) * 100).toFixed(2));
-          console.log("coords:", coords);
+          // console.log("coords:", coords);
           sendData = [[xMin, xMax], [yMin, yMax]];
           // setCoords([[xMin, xMax], [yMin, yMax]]);
-          console.log("percentage data:", sendData);
+          // console.log("percentage data:", sendData);
         }
 
         // Send the coordinate data
         const sendVal = {[coordsParam
         ]: sendData};
-        console.log("sendval:", JSON.stringify(sendVal));
+        // console.log("sendval:", JSON.stringify(sendVal));
         endpoint.put(sendVal, coordsPath);
         setPoints([]);
       }

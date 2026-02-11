@@ -137,6 +137,30 @@
         "persist": false,
         "user_input": false
     },
+    "widefov_orientation": {
+        "label": "WideFOV image orientation",
+        "default": "up",
+        "persist": false,
+        "user_input": false
+    },
+    "narrowfov_orientation": {
+        "label": "NarrowFOV image orientation",
+        "default": "up",
+        "persist": false,
+        "user_input": false
+    },
+    "widefov_resolution": {
+        "label": "WideFOV resolution (microns)",
+        "default": 0,
+        "persist": true,
+        "user_input": true
+    },
+    "narrowfov_resolution": {
+        "label": "NarrowFOV resolution (microns)",
+        "default": 0,
+        "persist": true,
+        "user_input": true
+    },
     "sequence_id": {
         "label": "Controlling sequence execution ID",
         "default": 1,

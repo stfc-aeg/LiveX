@@ -1,56 +1,43 @@
 import React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import Button from 'react-bootstrap/Button';
-import { TitleCard } from 'odin-react';
+import { TitleCard, OdinGraph } from 'odin-react';
 import InputGroup from 'react-bootstrap/InputGroup';
 import ResizeableOdinGraph from '../ResizeableOdinGraph';
 
-// This component, for convenience, assumes the data is in a `monitor/<name>` structure in the
-// ParameterTree. This makes it easy to edit but a little bit dumb.
 function MonitorGraph(props) {
-    const {endpoint, title, seriesData} = props;
+    const {endpoint, title, paths, seriesNames } = props;
 
-    const [data, setData] = useState([]);
-    const [seriesNames, setSeriesNames] = useState([]);
-  
     // Initialise enabled traces outside of useEffect, all to true
     const [enabledTraces, setEnabledTraces] = useState(() =>
-      seriesData.reduce((accum, {seriesName}, index) => {
-        accum[index] = true;
-        return accum;
-      }, {})
+      Object.fromEntries(paths.map((_, i) => [i, true]))
     ); // Which traces should be shown
 
-    useEffect(() => {
-      // Map props data out to be returned in array form
-      const allData = seriesData.map(({dataPath, param}) => {
-        let keys = dataPath.split("/");
-        let dataA = keys.reduce((accum,key) => accum?.[key], endpoint?.data);
-
-        // Ensure dataA[param] exists to avoid errors
-        return dataA?.[param] !== undefined ? [dataA?.[param]] : [];
+    // Look over endpoint.data and follow the paths down it to get the current data
+    const data = useMemo(() => {
+      if (!endpoint?.data) return paths.map(() => []); // same length as paths
+      return paths.map((path) => {
+        const val = path
+          .split("/")
+          .reduce((acc, key) => acc?.[key], endpoint.data);
+        return Array.isArray(val) ? val : []; // always an array
       });
-      const legendData = seriesData.map(({seriesName}) => {
-        return seriesName;
-      })
+    }, [paths, endpoint?.data]);
 
-      // Flatten this (just in case) and set it to be the graph data
-      setData(allData.flat());
-      setSeriesNames(legendData.flat());
-    }, [endpoint.data, seriesData]);
+    // Filter out any data or names that aren't enabled at that index
+    const filteredData = useMemo(() => 
+      data.filter((_, i) => enabledTraces[i]), [data, enabledTraces]);
 
-    const toggleTrace = (index) => {
-      setEnabledTraces((prev) => ({
-        ...prev, // Same data as before in new object
-        [index]: !prev[index] // Toggle the previous value at that index
-      }));
-    };
+    const filteredNames = useMemo(() =>
+      seriesNames.filter((_, i) => enabledTraces[i]), [seriesNames, enabledTraces]);
 
-    // Filter the data based on the 
-    const filteredData = data.filter((_, index) => enabledTraces[index]);
-    const filteredSeriesNames = seriesNames.filter((_, index) => enabledTraces[index]);
+    // Copy the previous enabledTraces, flip the value for the specific trace
+    const toggleTrace = (i) =>
+      setEnabledTraces((prev) => ({...prev, [i]: !prev[i]}));
+
+    // console.log(filteredData)
 
     return (
       <TitleCard title={title}>
@@ -75,10 +62,10 @@ function MonitorGraph(props) {
           <Row>
             <ResizeableOdinGraph
               prop_data={filteredData}
-              series_names={filteredSeriesNames}
+              series_names={filteredNames}
               width={'99%'}
-              responsive={false}>
-            </ResizeableOdinGraph>
+              responsive={false}
+            />
           </Row>
         </Col>
       </TitleCard>

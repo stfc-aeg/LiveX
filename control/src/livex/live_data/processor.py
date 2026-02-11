@@ -19,9 +19,9 @@ class LiveDataProcessor():
 
     orientations = {
         'up': -1,
-        'right': cv2.ROTATE_90_CLOCKWISE,       # 0
-        'down': cv2.ROTATE_180,                 # 1
-        'left': cv2.ROTATE_90_COUNTERCLOCKWISE  # 2
+        'right': cv2.ROTATE_90_COUNTERCLOCKWISE, # 0
+        'down': cv2.ROTATE_180,                  # 1
+        'left': cv2.ROTATE_90_CLOCKWISE          # 2
     }
 
     def __init__(self, endpoint, resolution, pixel_bytes, orientation, mirror_x=False, mirror_y=False, size_x=2048, size_y=1152, colour='greyscale'):
@@ -46,7 +46,7 @@ class LiveDataProcessor():
         self.size_y = size_y
         self.out_dimensions = [size_x, size_y]
 
-        self.orientation = self.orientations.get(orientation, None)
+        self.orientation = self.orientations.get(orientation, 'up')
 
         self.mirror_x = mirror_x
         self.mirror_y = mirror_y

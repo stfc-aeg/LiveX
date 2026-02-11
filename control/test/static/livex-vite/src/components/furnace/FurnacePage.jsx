@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { TitleCard, WithEndpoint } from 'odin-react';
+import { TitleCard, WithEndpoint, useAdapterEndpoint } from 'odin-react';
 import Button from 'react-bootstrap/Button';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
@@ -14,10 +14,13 @@ import FurnaceRecording from './FurnaceRecording';
 import PidOverride from './PidOverride';
 
 function FurnacePage(props){
-    const {furnaceEndPoint} = props;
-    const {connectedPuttingDisable} = props;
+    
+    const endpoint_url = import.meta.env.VITE_ENDPOINT_URL;
 
+    const furnaceEndPoint = useAdapterEndpoint('furnace', endpoint_url, 500);
     const EndPointButton = WithEndpoint(Button);
+
+    const connectedDisable = (!(furnaceEndPoint.data.status?.connected || false))
 
     return (
     <Row>
@@ -28,7 +31,7 @@ function FurnacePage(props){
                 endpoint={furnaceEndPoint}
                 value={true}
                 fullpath="status/reconnect"
-                disabled={!connectedPuttingDisable}
+                disabled={!connectedDisable}
                 variant={furnaceEndPoint.data.status?.connected ? "primary" : "danger"}>
                 {furnaceEndPoint.data.status?.connected ? 'Connected' : 'Reconnect'}
               </EndPointButton>
@@ -38,7 +41,7 @@ function FurnacePage(props){
                 endpoint={furnaceEndPoint}
                 value={true}
                 fullpath="status/full_stop"
-                disabled={connectedPuttingDisable}
+                disabled={connectedDisable}
                 variant='danger'>Disable all outputs
               </EndPointButton>
             </Col>
@@ -47,14 +50,14 @@ function FurnacePage(props){
         <Col xs={12} md={6}>
           <PidControl
             furnaceEndPoint={furnaceEndPoint}
-            connectedPuttingDisable={connectedPuttingDisable}
+            connectedDisable={connectedDisable}
             title="Upper Heater Controls"
             pid="pid_upper">
           </PidControl>
 
           <PidControl
             furnaceEndPoint={furnaceEndPoint}
-            connectedPuttingDisable={connectedPuttingDisable}
+            connectedDisable={connectedDisable}
             title="Lower Heater Controls"
             pid="pid_lower">
           </PidControl>
@@ -72,7 +75,7 @@ function FurnacePage(props){
                   <Col>
                     <PidOverride
                       furnaceEndPoint={furnaceEndPoint}
-                      connectedPuttingDisable={connectedPuttingDisable}
+                      connectedDisable={connectedDisable}
                       title="Upper PID"
                       pid="pid_upper"
                     />
@@ -80,7 +83,7 @@ function FurnacePage(props){
                   <Col>
                     <PidOverride
                       furnaceEndPoint={furnaceEndPoint}
-                      connectedPuttingDisable={connectedPuttingDisable}
+                      connectedDisable={connectedDisable}
                       title="Lower PID"
                       pid="pid_lower"
                     />
@@ -94,7 +97,6 @@ function FurnacePage(props){
             furnaceEndPoint.data.status?.allow_solo_acquisition ?
             <FurnaceRecording
               furnaceEndPoint={furnaceEndPoint}
-              connectedPuttingDisable={connectedPuttingDisable}
             />
             :
             <></>
@@ -105,18 +107,15 @@ function FurnacePage(props){
 
           <ThermalGradient
             furnaceEndPoint={furnaceEndPoint}
-            connectedPuttingDisable={connectedPuttingDisable}>
-          </ThermalGradient>
+            connectedDisable={connectedDisable}
+          />
 
           <AutoSetPointControl
             furnaceEndPoint={furnaceEndPoint}
-            connectedPuttingDisable={connectedPuttingDisable}>
-          </AutoSetPointControl>
+            connectedDisable={connectedDisable}
+          />
 
-          <InfoPanel
-            furnaceEndPoint={furnaceEndPoint}
-            connectedPuttingDisable={connectedPuttingDisable}>
-          </InfoPanel>
+          <InfoPanel furnaceEndPoint={furnaceEndPoint}/>
         </Col>
     </Row>
     )

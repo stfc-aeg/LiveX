@@ -17,7 +17,7 @@ const EndPointFormControl = WithEndpoint(Form.Control);
 
 function ThermalGradient(props){
     const {furnaceEndPoint} = props;
-    const {connectedPuttingDisable} = props;
+    const {connectedDisable} = props;
 
     const high_metadata = furnaceEndPoint.metadata.gradient?.high_heater;
 
@@ -46,7 +46,7 @@ function ThermalGradient(props){
                   endpoint={furnaceEndPoint}
                   type="number"
                   fullpath="gradient/wanted"
-                  disabled={connectedPuttingDisable}
+                  disabled={connectedDisable}
                   style={floatingInputStyle}
                 />
               </FloatingLabel>
@@ -57,7 +57,7 @@ function ThermalGradient(props){
                   type="number"
                   fullpath="gradient/distance"
                   event_type="enter"
-                  disabled={connectedPuttingDisable}
+                  disabled={connectedDisable}
                   style={floatingInputStyle}
                 />
             </FloatingLabel>
@@ -68,7 +68,7 @@ function ThermalGradient(props){
                 fullpath="gradient/high_heater"
                 variant="outline-secondary"
                 buttonText={furnaceEndPoint.data.gradient?.high_heater}
-                disabled={connectedPuttingDisable}
+                disabled={connectedDisable}
                 style={floatingInputStyle}>
                   {(high_metadata?.allowed_values ?? []).map(
                     (selection, index) => (

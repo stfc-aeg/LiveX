@@ -3,44 +3,37 @@ import './App.css';
 // import 'odin-react/dist/index.css'
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
-import Button from 'react-bootstrap/Button';
 
 import FurnacePage from './components/furnace/FurnacePage';
 import { OdinApp } from 'odin-react';
-import { WithEndpoint, useAdapterEndpoint } from 'odin-react';
 import Metadata from './components/setup/Metadata';
 import Cameras from './components/cameras/Cameras';
 import Trigger from './components/setup/Trigger';
-import MonitorGraph from './components/furnace/MonitorGraph';
+import InferencePage from './components/InferencePage.jsx';
+import GraphPage from './components/GraphPage.jsx'
+import SequencerPage from './components/SequencerPage.jsx';
 
 import Motors from './components/motors/Motors.jsx';
 
 // import plotly from 'plotly.js-dist-min';
 
 
-function App(props) {
+function App() {
 
   // axios.defaults.baseURL = process.env.REACT_APP_ENDPOINT_URL;
 
   const endpoint_url = import.meta.env.VITE_ENDPOINT_URL;
 
-  const furnaceEndPoint = useAdapterEndpoint('furnace', endpoint_url, 500);
-  const graphEndPoint = useAdapterEndpoint('graph', endpoint_url, 200);
-  const connectedPuttingDisable = (!(furnaceEndPoint.data.status?.connected || false)) || (furnaceEndPoint.loading === "putting")
-
-  const sequencer_url = endpoint_url + "/sequencer.html";
 
   return (
-    <OdinApp title="LiveX Controls" navLinks={["Metadata and Setup", "Sequencer", "Furnace Control", "Camera Control", "Monitoring", "Motors"]}>
+    <OdinApp title="AIXI Control" navLinks={["Metadata and Setup", "Sequencer", "Furnace Control", "Camera Control", "Monitoring", "Inferencing", "Motors"]}>
       <Row>
         <Col xs={12}>
           <Metadata
             endpoint_url={endpoint_url}
-            connectedPuttingDisable={connectedPuttingDisable}>
-          </Metadata>
+          />
         </Col>
         <Col xs={12}>
           <Trigger
@@ -49,46 +42,30 @@ function App(props) {
         </Col>
       </Row>
       <Row>
-        <h4><a href={sequencer_url} target="_blank">Click here</a> to open sequencer (in new tab)</h4>
+        <SequencerPage endpoint_url={endpoint_url}/>
       </Row>
       <Row>
-        <FurnacePage
-          furnaceEndPoint={furnaceEndPoint}
-          connectedPuttingDisable={connectedPuttingDisable}
-        />
+        <FurnacePage/>
       </Row>
       <Row>
         <Cameras
           endpoint_url={endpoint_url}
-          connectedPuttingDisable={connectedPuttingDisable}>
-        </Cameras>
+        />
       </Row>
       <Row>
-        <Col xs={12} sm={12} lg={12} xl={6} xxl={6}>
-          <MonitorGraph
-            endpoint={graphEndPoint}
-            seriesData={[
-              {dataPath: 'temperature_a', param: 'data', seriesName: "TCA"},
-              {dataPath: 'temperature_b', param: 'data', seriesName: "TCB"},
-              {dataPath: 'setpoint_a', param: 'data', seriesName: "SPA"},
-              {dataPath: 'setpoint_b', param: 'data', seriesName: "SPB"}
-            ]}
-            title={"Temperature and Setpoint Graph"}
-          ></MonitorGraph>
-        </Col>
-        <Col xs={12} sm={12} xl={6} xxl={6}>
-          <MonitorGraph
-            endpoint={graphEndPoint}
-            seriesData={[
-              {dataPath: 'output_a', param: 'data', seriesName: 'POA'},
-              {dataPath: 'output_b', param: 'data', seriesName: 'POB'}
-            ]}
-            title={"PID Output Graph"}
-          ></MonitorGraph>
-        </Col>
+        <GraphPage
+          endpoint_url={endpoint_url}
+        />
       </Row>
       <Row>
-        <Motors endpoint_url={endpoint_url}></Motors>
+        <InferencePage
+          endpoint_url={endpoint_url}
+        />
+      </Row>
+      <Row>
+        <Motors
+          endpoint_url={endpoint_url}
+        />
       </Row>
     </OdinApp>
   );

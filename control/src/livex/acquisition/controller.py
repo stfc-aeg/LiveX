@@ -60,57 +60,66 @@ class LiveXController(BaseController):
 
         :param adapters: dictionary of adapter instances
         """
-        self.adapters = adapters
+        try:
+            self.adapters = adapters
 
-        # These adapters are all necessary so warn if they are not found
-        if 'munir' in self.adapters:
-            self.munir = adapters["munir"].controller
-            self.munir_adapter = adapters["munir"]
-        else:
-            logging.warning("Munir adapter not found.")
+            # These adapters are all necessary so warn if they are not found
+            if 'munir' in self.adapters:
+                self.munir = adapters["munir"].controller
+                self.munir_adapter = adapters["munir"]
+            else:
+                logging.warning("Munir adapter not found.")
 
-        self.furnace = self.adapters["furnace"].controller if 'furnace' in self.adapters else logging.warning("Furnace adapter not found.")
+            self.furnace = self.adapters["furnace"].controller if 'furnace' in self.adapters else logging.warning("Furnace adapter not found.")
 
-        if 'trigger' in self.adapters:
-            self.trigger = adapters["trigger"].controller
-        else:
-            logging.warning("Trigger adapter not found.")
+            if 'trigger' in self.adapters:
+                self.trigger = adapters["trigger"].controller
+            else:
+                logging.warning("Trigger adapter not found.")
 
-        self.orca = adapters["camera"].camera if 'camera' in self.adapters else logging.warning("Camera adapter not found")
-        self.metadata = adapters["metadata"] if 'metadata' in self.adapters else logging.warning("Metadata adapter not found.")
-        # Metadata adapter is likely easier with IAC
+            self.orca = adapters["camera"].camera if 'camera' in self.adapters else logging.warning("Camera adapter not found")
+            self.metadata = adapters["metadata"] if 'metadata' in self.adapters else logging.warning("Metadata adapter not found.")
+            # Metadata adapter is likely easier with IAC
 
-        if 'sequencer' in self.adapters:
-            logging.debug("Livex controller registering context with sequencer")
-            self.adapters['sequencer'].add_context('livex', self)
+            if 'sequencer' in self.adapters:
+                logging.debug("Livex controller registering context with sequencer")
+                self.adapters['sequencer'].add_context('livex', self)
 
-            # Add a new logger
-            self.sequencer = self.adapters['sequencer'].command_sequencer.manager
-            self.sequencer.register_external_logger(self.log_sequence_message)
+                # Add a new logger
+                self.sequencer = self.adapters['sequencer'].command_sequencer.manager
+                self.sequencer.register_logger(self.log_sequence_message)
 
-            self.sequencer.register_sequence_start_hook(self.prepare_sequencer_file)
-            self.sequencer.register_sequence_finish_hook(self.write_sequencer_file)
+                self.sequencer.register_sequence_start_hook(self.prepare_sequencer_file)
+                self.sequencer.register_sequence_finish_hook(self.write_sequencer_file)
 
-        # With adapters initialised, IAC can be used to get any more needed info
+            if 'live_data' in self.adapters:
+                self.live_data = self.adapters['live_data']
 
-        # Write furnace timer to go for readings
-        self.trigger.triggers['furnace'].set_frequency(10)
-        self.trigger.triggers['furnace'].set_enable(True)
-        self.furnace.update_furnace_frequency(10)  # Inform furnace of frequency change, as this is done outside of usual channel
+            if 'inference' in self.adapters:
+                self.inference = self.adapters['inference'].controller
 
-        self.trigger_manager = TriggerManager(
-            self.trigger, self.furnace, self.orca,
-            exposure_lookup_path=self.exposure_lookup_path, ref_trigger=self.ref_trigger
-        )
-        self.trigger_manager.get_frequencies()
-        self.trigger_manager.set_target(self.trigger_manager.acq_frame_target)
+            # With adapters initialised, IAC can be used to get any more needed info
 
-        # Add cameras to self.filepaths for acquisition handling with default
-        for camera in self.orca.cameras:
-            self.filepaths[camera.name] = {'filename': None, 'filepath': self.furnace_filepath}
+            # Write furnace timer to go for readings
+            self.trigger.triggers['furnace'].set_frequency(10)
+            self.trigger.triggers['furnace'].set_enable(True)
+            self.furnace.update_furnace_frequency(10)  # Inform furnace of frequency change, as this is done outside of usual channel
 
-        # Reconstruct tree with relevant adapter references
-        self._build_tree()
+            self.trigger_manager = TriggerManager(
+                self.trigger, self.furnace, self.orca,
+                exposure_lookup_path=self.exposure_lookup_path, ref_trigger=self.ref_trigger
+            )
+            self.trigger_manager.get_frequencies()
+            self.trigger_manager.set_target(self.trigger_manager.acq_frame_target)
+
+            # Add cameras to self.filepaths for acquisition handling with default
+            for camera in self.orca.cameras:
+                self.filepaths[camera.name] = {'filename': None, 'filepath': self.furnace_filepath}
+
+            # Reconstruct tree with relevant adapter references
+            self._build_tree()
+        except Exception as e:
+            logging.error(f"Acquisition initialize failed: {e}")
 
     def prepare_sequencer_file(self, sequence_name, args, kwargs):
         """Prepare the file information for the sequencer log."""
@@ -137,11 +146,13 @@ class LiveXController(BaseController):
         # For the purpose of acquisition logging
         self.executing_sequence = True
 
-    def log_sequence_message(self, message):
+    def log_sequence_message(self, message, level=None):
         """Log a message from the sequencer to a dictionary to be written to YAML."""
+
         entry = {
             'timestamp': datetime.now(),
-            'msg': message
+            'msg': message,
+            'level': level if level else 'info'
         }
         self.sequencer_data['messages'].append(entry)
 
@@ -268,6 +279,17 @@ class LiveXController(BaseController):
                 iac_set(self.munir_adapter, f'subsystems/{camera.name}/', 'args', munir_args)
                 iac_set(self.munir_adapter, 'execute', camera.name, True)
 
+                iac_set(self.metadata, f'fields/{camera.name}_orientation', 'value', self.live_data.options.get(f'{camera.name}_orientation', 'up'))
+                
+        acq_num = iac_get(self.metadata, 'fields/acquisition_num/value', param='value')
+
+        try:
+            # Begin inference
+            for endpoint in self.inference.endpoints:
+                endpoint.start_experiment(experiment_number=acq_num)
+        except Exception as e:
+            logging.error(f"inference error: {e}")
+
         # Move camera(s) to capture state
         for camera in self.orca.cameras:
             if camera.name in self.current_acquisition:
@@ -281,11 +303,10 @@ class LiveXController(BaseController):
         if self.executing_sequence:
             iac_set(self.metadata, 'fields/sequence_id', 'value', self.sequence_id)
 
-            acq_num = iac_get(self.metadata, 'fields/acquisition_num/value', param='value')
             self.log_sequence_message(f"Beginning acquisition {acq_num}.")
         else:  # No sequence currently
             iac_set(self.metadata, 'fields/sequence_name', 'value', 'None')
-            iac_set(self.metadata, 'fields/sequence_id', 'value', 'None')
+            iac_set(self.metadata, 'fields/sequence_id', 'value', -1)
 
         # Enable timer coils simultaneously
         self.trigger.set_all_timers(
@@ -340,6 +361,10 @@ class LiveXController(BaseController):
             targets[name] = trigger.target
             self.trigger_manager.set_target(0)
 
+        # Stop inference
+        for endpoint in self.inference.endpoints:
+            endpoint.stop_experiment()
+
         # Write other metadata information
         iac_set(self.metadata, 'fields/thermal_gradient_kmm', 'value', self.furnace.gradient.wanted)
         iac_set(self.metadata, 'fields/thermal_gradient_distance', 'value', self.furnace.gradient.distance)
@@ -355,7 +380,7 @@ class LiveXController(BaseController):
             # When not running a sequence, don't include sequence info in acquisition metadata
             sequence_id = iac_get(self.metadata, 'fields/sequence_id/value', param='value')
             iac_set(self.metadata, 'fields/sequence_name', 'value', 'None')
-            iac_set(self.metadata, 'fields/sequence_id', 'value', 'None')
+            iac_set(self.metadata, 'fields/sequence_id', 'value', -1)
             iac_set(self.metadata, 'yaml', 'write', True)
             # Then set it back once data is written
             iac_set(self.metadata, 'fields/sequence_id', 'value', sequence_id)

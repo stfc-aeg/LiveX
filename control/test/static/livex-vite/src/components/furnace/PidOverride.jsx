@@ -17,7 +17,7 @@ const EndPointButton = WithEndpoint(Button);
 
 function PidOverride(props) {
     const {furnaceEndPoint} = props;
-    const {connectedPuttingDisable} = props;
+    const {connectedDisable} = props;
     const {title} = props;
     const {pid} = props;
 
@@ -46,7 +46,7 @@ function PidOverride(props) {
               <EndPointFormControl
                   endpoint={furnaceEndPoint}
                   fullpath={pid+"/override/percent_out"}
-                  disabled={connectedPuttingDisable}
+                  disabled={connectedDisable}
                   style={floatingInputStyle}
               />
           </FloatingLabel>

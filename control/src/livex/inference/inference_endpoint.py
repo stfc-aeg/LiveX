@@ -46,20 +46,45 @@ class InferenceEndpoint():
             'reconnect': (lambda: False, self._reconnect)
         }
 
+        self.columnar = []
+        self.equiaxed = []
+        self.alpha = []
+        self.beta = []
+        self.hot_tear = []
+
+        self.tree['probabilities'] = {
+            'columnar': (lambda: self.columnar, None),
+            'equiaxed': (lambda: self.equiaxed, None),
+            'alpha': (lambda: self.alpha, None),
+            'beta': (lambda: self.beta, None),
+            'hot_tear': (lambda: self.hot_tear, None)
+        }
+
+        # Default results
+        self.results = {
+            'inference_enabled': False,
+            'inference_running': False,
+            'last_frame_number': -1,
+            'avg_inference_time_ms': 0.0,
+            'flatfield_file': '',
+            'experiment_number': -1,
+            'recording': False,
+            'num_predictions': 0,
+        }
+
         # Get config
         self.get_results()  # Goes to self.results
-        if self.results:
-            results_tree = {}
+        results_tree = {}
 
-            for key, item in self.results.items():
-                results_tree[key] = (lambda key=key:
-                    self.results[key], None
-                )
+        for key, item in self.results.items():
+            results_tree[key] = (lambda key=key:
+                self.results[key], None
+            )
 
-            results_tree['set_flatfield_num'] = (lambda: self.flatfield_num, self.set_flatfield_num)
+        results_tree['set_flatfield_num'] = (lambda: self.flatfield_num, self.set_flatfield_num)
 
-            results_tree = ParameterTree(results_tree)
-            self.tree['results'] = results_tree
+        results_tree = ParameterTree(results_tree)
+        self.tree['results'] = results_tree
 
         # Background task branch of tree
         self.tree['background_task'] = {
@@ -79,7 +104,6 @@ class InferenceEndpoint():
 
     def set_flatfield_num(self, num):
         """Set the acquisition file number for flatfield correction."""
-        logging.error(f"called set_flatfield_acqnum")
 
         try:
             if num < 0:
@@ -91,8 +115,6 @@ class InferenceEndpoint():
             cmd_msg.attrs.update(config)
             self.inference.send(cmd_msg.encode())
 
-            logging.warning(f"msg: {cmd_msg}")
-
             response = self.await_response(silence_reply=False)
 
             if response:
@@ -101,6 +123,28 @@ class InferenceEndpoint():
                 logging.debug(f"Got no or unexpected response structure from {self.name}:{self.inference.identity}")
         except Exception as e:
             logging.error(f"Error setting ff acq num: {e}")
+
+    def _append_probabilities(self, probabilities, num_probabilities=0):
+        """Append new probabilities to the lists."""
+        for i in range(num_probabilities):
+            res = probabilities[i]
+
+            # Need to trim these to maximum length by removing earliest entries
+            max_length = 3600  # Arbitrary maximum length for now
+
+            self.columnar.append(res['columnar'])
+            self.equiaxed.append(res['equiaxed'])
+            self.alpha.append(res['alpha'])
+            self.beta.append(res['beta'])
+            self.hot_tear.append(res['hot_tear'])
+
+        if len(self.columnar) > max_length:  # If one is longer, they will all be longer
+            diff = len(self.columnar) - max_length
+            self.columnar = self.columnar[diff:]
+            self.equiaxed = self.equiaxed[diff:]
+            self.alpha = self.alpha[diff:]
+            self.beta = self.beta[diff:]
+            self.hot_tear = self.hot_tear[diff:]
 
     def get_results(self, silence_reply=True):
         """Identify if the response is for setting the status or config."""
@@ -111,7 +155,25 @@ class InferenceEndpoint():
             response = self.await_response(silence_reply=silence_reply)
 
             if response and (self.name in response.attrs['params']):
-                self.results = response.attrs['params'][self.name]
+                results = response.attrs['params'][self.name]
+                self.results = {
+                    'inference_enabled': results.get('inference_enabled', False),
+                    'inference_running': results.get('inference_running', False),
+                    'last_frame_number': results.get('last_frame_number', -1),
+                    'avg_inference_time_ms': results.get('avg_inference_time_ms', 0.0),
+                    'flatfield_file': results.get('flatfield_file', ''),
+                    'experiment_number': results.get('experiment_number', -1),
+                    'recording': results.get('recording', False),
+                    'num_predictions': results.get('num_predictions', 0),
+                    'frames_per_second': results.get('frames_per_second', 0),
+                    'active_classes': results.get('active_classes', [])
+                }
+
+                probabilities = results.get('result_buffer', [])
+
+                if probabilities:
+                    self._append_probabilities(probabilities, len(probabilities))
+
             else:
                 logging.debug(f"Got no or unexpected response structure from {self.name}:{self.inference.identity}")
         except Exception as e:  # If there is an error, do not update the status
@@ -137,6 +199,28 @@ class InferenceEndpoint():
             self.error_consecutive += 1
             logging.debug(f"No response received, or error occurred, from {self.inference.identity}")
             return False
+
+    def start_experiment(self, experiment_number):
+        """Send a start_experiment command.
+        :param experiment_number: number of experiment e.g. 0012
+        """
+        cmd_msg = IpcMessage('cmd', msg_val='start_experiment', id=self._next_msg_id())
+        cmd_msg.set_param(param_name='experiment_number', param_value=experiment_number)
+        self.inference.send(cmd_msg.encode())
+
+        try:
+            response = self.await_response(silence_reply=True)
+            if response:
+                if response.get('msg_type', 'ack') == 'nack':
+                    logging.error(f"Error when starting inferencing experiment: {response.attrs['params']['error']}")
+                    # No particular handling of errors but should at least inform on what they are
+        except Exception as e:
+            logging.error(f"Error when starting inferencing experiment: {e}")
+
+    def stop_experiment(self):
+        """Send a stop_experiment command."""
+        cmd_msg = IpcMessage('cmd', msg_val='stop_experiment', id=self._next_msg_id())
+        self.inference.send(cmd_msg.encode())
 
     def _next_msg_id(self):
         """Return the next (incremented) message id."""
