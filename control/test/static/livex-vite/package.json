@@ -10,8 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "odin-react": "github:stfc-aeg/odin-react",
+    "bootstrap": "^5.3.8",
+    "odin-react": "github:stfc-aeg/odin-react#2.0.6",
+    "odin-sequencer-react-ui": "github:stfc-aeg/odin-sequencer-ui",
     "react": "^19.1.0",
+    "react-bootstrap": "^2.10.10",
     "react-dom": "^19.1.0",
     "react-plotly.js": "^2.6.0",
     "react-select": "^5.10.1",
