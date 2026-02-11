@@ -28,7 +28,7 @@ function App() {
 
 
   return (
-    <OdinApp title="LiveX Controls" navLinks={["Metadata and Setup", "Sequencer", "Furnace Control", "Camera Control", "Monitoring", "Inferencing", "Motors"]}>
+    <OdinApp title="AIXI Control" navLinks={["Metadata and Setup", "Sequencer", "Furnace Control", "Camera Control", "Monitoring", "Inferencing", "Motors"]}>
       <Row>
         <Col xs={12}>
           <Metadata
