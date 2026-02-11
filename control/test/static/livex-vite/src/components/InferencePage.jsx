@@ -8,6 +8,9 @@ function InferencePage(props) {
 
     const cameraEndPoint = useAdapterEndpoint('camera', endpoint_url, 1000);
 
+    // Destructuring data and cameras safely
+    const cameras = cameraEndPoint?.data || {} // Fallback to an empty object if no data
+
     return (
       <Row>
         {Object.keys(cameras).map((key) => (
