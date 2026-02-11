@@ -1,9 +1,68 @@
 provides = [
-    'set_uniform_trigger_details', 'read_metadata_values', 'stabilise_at_temperature_a', 'change_img_settings',
+    'abortable_sequence_test', 'logging_sequence_test', 'example_data_sequence', 'set_uniform_trigger_details', 'read_metadata_values', 'stabilise_at_temperature_a', 'change_img_settings',
     'calibrate_encoder_motor_direction', 'move_motor_X_distance_Y_steps'
 ]
 
 import time
+
+def abortable_sequence_test(num_loops=100, loop_delay=0.1):
+
+    set_progress(0, num_loops)
+
+    for i in range(num_loops):
+        if i % 10 == 0:
+            print("Loop count {}".format(i))
+
+        time.sleep(loop_delay)
+        set_progress(i+1, num_loops)
+        if abort_sequence():
+            print("Aborting sequence")
+            break
+
+    print("Sequence complete")
+
+def logging_sequence_test(time_a=1, time_b=2):
+    """Simple sequence to demonstrate logging functionality."""
+    # % string formatting
+    log.debug("Sequence has begun with timer_a set to %d", time_a)
+    log.debug("and timer_b set to %d" % time_b)
+    # string .format()
+    log.info("Starting first timer of {:d} seconds".format(time_a))
+    time.sleep(time_a)
+    # f formatting
+    log.info(f"First timer complete, starting second timer of {time_b} seconds")
+    time.sleep(time_b)
+    log.warning("Sequence is almost complete, ending in one second")
+    time.sleep(1)
+    log.error(f"Pretend that something went wrong here.")
+    print("Print statements default to info level in the sequencer only. Level is otherwise None")
+    print("I also want to quickly test a line with a significant number of characters to see how YAML handles things that might go over one line? Just to be sure, of course. You can never be too careful with these things.")
+    print(f"Sequence complete")
+
+def example_data_sequence(time_a=10, time_b=10, time_c=10):
+    """A sequence to run a few consecutive acquisitions to generate some example data."""
+    livex = get_context('livex')
+
+    # Start first acquisition
+    print(f"Starting first acquisition of duration {time_a} seconds")
+    livex.start_acquisition(acquisitions=['furnace'])
+    time.sleep(time_a)
+    livex.stop_acquisition()
+    print("First acquisition complete, waiting before starting second acquisition")
+    time.sleep(1)
+
+    print(f"Starting second acquisition of duration {time_b} seconds")
+    livex.start_acquisition(acquisitions=['furnace'])
+    time.sleep(time_b)
+    livex.stop_acquisition()
+    print("Second acquisition complete, waiting before starting third acquisition")
+    time.sleep(1)
+
+    print(f"Starting third acquisition of duration {time_c} seconds")
+    livex.start_acquisition(acquisitions=['furnace'])
+    time.sleep(time_c)
+    livex.stop_acquisition()
+    print("Third acquisition complete, sequence finished")
 
 def set_uniform_trigger_details(frequency=50, target=10000):
     """Example script to set all timers to the same frequency."""
