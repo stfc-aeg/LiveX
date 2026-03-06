@@ -50,8 +50,8 @@ void manageComms()
       // PID sampleTime is in milliseconds
       float newSampleTime = floor(1000 / interruptFrequency);
       // Set sample time
-      PID_A.myPID_.SetSampleTime(newSampleTime);
-      PID_A.myPID_.SetSampleTime(newSampleTime);
+      PID_upper.myPID_.SetSampleTime(newSampleTime);
+      PID_lower.myPID_.SetSampleTime(newSampleTime);
 
       if (DEBUG)
       {
@@ -130,13 +130,13 @@ void updateSetPoints()
   float newLowerSp = modbus_server.combineHoldingRegisters(MOD_SETPOINT_LOWER_HOLD);
   float maxStep = modbus_server.combineHoldingRegisters(MOD_SETPOINT_STEP_HOLD);
   // Use new setpoint only if it's below the maximum and not increased too much from the last one
-  if (((newUpperSp - PID_A.baseSetPoint) <= maxStep) && newUpperSp <= setpointLimit)
+  if (((newUpperSp - PID_upper.baseSetPoint) <= maxStep) && newUpperSp <= setpointLimit)
   {
-    PID_A.baseSetPoint = newUpperSp;
+    PID_upper.baseSetPoint = newUpperSp;
   }
-  if (((newLowerSp - PID_A.baseSetPoint) <= maxStep) && newLowerSp <= setpointLimit)
+  if (((newLowerSp - PID_lower.baseSetPoint) <= maxStep) && newLowerSp <= setpointLimit)
   {
-    PID_B.baseSetPoint = newLowerSp;
+    PID_lower.baseSetPoint = newLowerSp;
   }
 
   // When setpoints are updated, thermal gradient will also need adjusting as modifiers will change
@@ -151,12 +151,12 @@ void updateSetPoints()
     {
       // B should match A in this case, to preserve gradient
       // Effectively, ignore inputs to B while gradient is on and high towards A
-      PID_B.baseSetPoint = PID_A.baseSetPoint;
+      PID_lower.baseSetPoint = PID_upper.baseSetPoint;
     }
     if (highIsB) // B is high
     {
       // A matches B this time
-      PID_A.baseSetPoint = PID_B.baseSetPoint;
+      PID_upper.baseSetPoint = PID_lower.baseSetPoint;
     }
     if (DEBUG)
     {
@@ -174,10 +174,10 @@ void updateSetPoints()
 
   if (DEBUG)
   {
-    Serial.print("New baseSetPoint for PID A: ");
-    Serial.println(PID_A.baseSetPoint);
-    Serial.print("New baseSetPoint for PID B: ");
-    Serial.println(PID_B.baseSetPoint);
+    Serial.print("New baseSetPoint for Upper PID: ");
+    Serial.println(PID_upper.baseSetPoint);
+    Serial.print("New baseSetPoint for Lower PID: ");
+    Serial.println(PID_lower.baseSetPoint);
   }
   // Set coil back to 0 to prevent continuously calling this function
   modbus_server.writeBool(MOD_SETPOINT_UPDATE_COIL, 0);
@@ -194,8 +194,8 @@ void thermalGradient()
   float theoretical = wanted * distance;
 
   // Reset modifiers
-  PID_A.gradientModifier = 0;
-  PID_B.gradientModifier = 0;
+  PID_upper.gradientModifier = 0;
+  PID_lower.gradientModifier = 0;
 
   // High heater is A (0) or B (1)?
   bool highIsB = modbus_server.coilRead(MOD_GRADIENT_HIGH_COIL);
@@ -203,11 +203,11 @@ void thermalGradient()
   // If A is high, B should be the theoretical gradient distance below A. Or vice ve
   if (!highIsB)  // 0 = A = false
   {
-    PID_B.gradientModifier = -theoretical;
+    PID_lower.gradientModifier = -theoretical;
   }
   else if (highIsB)  // 1 = B = true
   {
-    PID_A.gradientModifier = -theoretical;
+    PID_upper.gradientModifier = -theoretical;
   }
   // Write relevant values to modbus
   modbus_server.floatToInputRegisters(MOD_GRADIENT_THEORY_INP, theoretical);
@@ -233,14 +233,14 @@ void autoSetPointControl()
 
   // Rate is average K/s, but value depends on PID interval
   rate = rate * (static_cast<float>(1/interruptFrequency)); // e.g.: 0.5 * 20x10^3/1000x10^3 = 0.01 = 50 times per second
-  PID_A.autospRate = rate;
-  PID_B.autospRate = rate;
+  PID_upper.autospRate = rate;
+  PID_lower.autospRate = rate;
 
   // Get img per degree
   float imgPerDegree = modbus_server.combineHoldingRegisters(MOD_AUTOSP_IMGDEGREE_HOLD);
 
   // Calculate midpoint. Fabs in case B is higher temp
-  float midpoint = fabs((PID_A.input + PID_B.input) / 2);
+  float midpoint = fabs((PID_upper.input + PID_lower.input) / 2);
   modbus_server.floatToInputRegisters(MOD_AUTOSP_MIDPT_INP, midpoint);
 
   // Reset 'value updated' coil to not repeatedly fire this function

@@ -19,7 +19,7 @@ FifoBuffer<BufferObject> buffer(256);
 SemaphoreHandle_t gradientAspcMutex;
 
 // addresses for PID objects
-PIDAddresses pidA_addr = {
+PIDAddresses pidUpper_addr = {
   PIN_PWM_UPPER,
   MOD_SETPOINT_UPPER_HOLD,
   MOD_PID_UPPER_OUTPUT_INP,
@@ -32,7 +32,7 @@ PIDAddresses pidA_addr = {
   MOD_OUTPUT_OVERRIDE_UPPER_HOLD
 };
 
-PIDAddresses pidB_addr = {
+PIDAddresses pidLower_addr = {
   PIN_PWM_LOWER,
   MOD_SETPOINT_LOWER_HOLD,
   MOD_PID_LOWER_OUTPUT_INP,
@@ -45,8 +45,8 @@ PIDAddresses pidB_addr = {
   MOD_OUTPUT_OVERRIDE_LOWER_HOLD
 };
 
-PIDController PID_A(pidA_addr);
-PIDController PID_B(pidB_addr);
+PIDController PID_upper(pidUpper_addr);
+PIDController PID_lower(pidLower_addr);
 
 EthernetClient modbusClient;
 EthernetClient streamClient;
@@ -108,8 +108,8 @@ void setup()
   initialiseEthernet(modbusEthServer, mac, ip, PIN_SPI_SS_ETHERNET_LIB);
   initialiseInterrupts(&pidFlagTimer);
   initialiseThermocouples(mcp, num_mcp, mcp_addr, mcp_type);
-  writePIDDefaults(modbus_server, PID_A);
-  writePIDDefaults(modbus_server, PID_B);
+  writePIDDefaults(modbus_server, PID_upper);
+  writePIDDefaults(modbus_server, PID_lower);
 
   // Software needs to know how many thermocouples are active
   modbus_server.floatToInputRegisters(MOD_NUM_MCP_INP, num_mcp);

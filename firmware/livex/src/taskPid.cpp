@@ -36,8 +36,8 @@ void Core0PIDTask(void * pvParameters)
       if (0<=idx && idx<num_mcp)
       {
         float result = mcp[idx].readThermocouple();
-        PID_A.input = result;
-        modbus_server.floatToInputRegisters(MOD_HEATERTC_UPPER_INP, PID_A.input);
+        PID_upper.input = result;
+        modbus_server.floatToInputRegisters(MOD_HEATERTC_UPPER_INP, PID_upper.input);
       }
 
       // Read B
@@ -45,8 +45,8 @@ void Core0PIDTask(void * pvParameters)
       if (0<=idx && idx<num_mcp)
       {
         float result = mcp[idx].readThermocouple();
-        PID_B.input = result;
-        modbus_server.floatToInputRegisters(MOD_HEATERTC_LOWER_INP, PID_B.input);
+        PID_lower.input = result;
+        modbus_server.floatToInputRegisters(MOD_HEATERTC_LOWER_INP, PID_lower.input);
       }
 
       // Read extra thermocouples only once per second - when counter is multiple of pid frequency
@@ -80,7 +80,6 @@ void Core0PIDTask(void * pvParameters)
         }
 
         // buffer object
-        float error = PID_A.setPoint - PID_A.input;
         BufferObject obj;
         fillPidBuffer(obj); // Convenience/readability function
         // Queue only if there is room in the buffer
@@ -102,10 +101,10 @@ void Core0PIDTask(void * pvParameters)
 
       // These calculations need to occur whenever the temperatures are read
       // Actual temperature difference
-      float actual = fabs(PID_A.input - PID_B.input);
+      float actual = fabs(PID_upper.input - PID_lower.input);
       modbus_server.floatToInputRegisters(MOD_GRADIENT_ACTUAL_INP, actual);
       // Calculate midpoint. Fabs in case B is higher temp
-      float midpoint = fabs((PID_A.input + PID_B.input) / 2);
+      float midpoint = fabs((PID_upper.input + PID_lower.input) / 2);
       modbus_server.floatToInputRegisters(MOD_AUTOSP_MIDPT_INP, midpoint);
       xSemaphoreGive(gradientAspcMutex);
       xSemaphoreGive(gradientAspcMutex);
@@ -132,10 +131,10 @@ void runOverride(PIDEnum pid = PIDEnum::UNKNOWN)
   switch (pid)
   {
     case PIDEnum::A:
-      addr = pidA_addr;
+      addr = pidUpper_addr;
       break;
     case PIDEnum::B:
-      addr = pidB_addr;
+      addr = pidLower_addr;
       break;
     default:
       Serial.println("Improper runOverride call, no PID specified");
@@ -158,12 +157,12 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
   switch (pid)
   {
     case PIDEnum::A:
-      PID = &PID_A;
-      addr = pidA_addr;
+      PID = &PID_upper;
+      addr = pidUpper_addr;
       break;
     case PIDEnum::B:
-      PID = &PID_B;
-      addr = pidB_addr;
+      PID = &PID_lower;
+      addr = pidLower_addr;
       break;
     default:
       Serial.println("Improper runPID call, no PID specified.");
@@ -260,25 +259,25 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
 void fillPidBuffer(BufferObject& obj)
 {
     obj.frame = counter;
-    // PID_A calculations
-    float error = PID_A.setPoint - PID_A.input;
-    obj.temperature_upper = PID_A.input;
-    obj.lastInput_upper = PID_A.myPID_.GetLastInput(); 
-    obj.output_upper = PID_A.output;
-    obj.outputSum_upper = PID_A.myPID_.GetOutputSum();
-    obj.kp_upper = PID_A.myPID_.GetKp() * error;
-    obj.ki_upper = PID_A.myPID_.GetKi() * error;
-    obj.kd_upper = PID_A.myPID_.GetKd() * (PID_A.input - PID_A.myPID_.GetLastInput());
-    obj.setpoint_upper = PID_A.setPoint;
+    // PID_upper calculations
+    float error = PID_upper.setPoint - PID_upper.input;
+    obj.temperature_upper = PID_upper.input;
+    obj.lastInput_upper = PID_upper.myPID_.GetLastInput(); 
+    obj.output_upper = PID_upper.output;
+    obj.outputSum_upper = PID_upper.myPID_.GetOutputSum();
+    obj.kp_upper = PID_upper.myPID_.GetKp() * error;
+    obj.ki_upper = PID_upper.myPID_.GetKi() * error;
+    obj.kd_upper = PID_upper.myPID_.GetKd() * (PID_upper.input - PID_upper.myPID_.GetLastInput());
+    obj.setpoint_upper = PID_upper.setPoint;
 
-    // PID_B calculations
-    error = PID_B.setPoint - PID_B.input;
-    obj.temperature_lower = PID_B.input;
-    obj.lastInput_lower = PID_B.myPID_.GetLastInput();
-    obj.output_lower = PID_B.output;
-    obj.outputSum_lower = PID_B.myPID_.GetOutputSum();
-    obj.kp_lower = PID_B.myPID_.GetKp() * error;
-    obj.ki_lower = PID_B.myPID_.GetKi() * error;
-    obj.kd_lower = PID_B.myPID_.GetKd() * (PID_B.input - PID_B.myPID_.GetLastInput());
-    obj.setpoint_lower = PID_B.setPoint;
+    // PID_lower calculations
+    error = PID_lower.setPoint - PID_lower.input;
+    obj.temperature_lower = PID_lower.input;
+    obj.lastInput_lower = PID_lower.myPID_.GetLastInput();
+    obj.output_lower = PID_lower.output;
+    obj.outputSum_lower = PID_lower.myPID_.GetOutputSum();
+    obj.kp_lower = PID_lower.myPID_.GetKp() * error;
+    obj.ki_lower = PID_lower.myPID_.GetKi() * error;
+    obj.kd_lower = PID_lower.myPID_.GetKd() * (PID_lower.input - PID_lower.myPID_.GetLastInput());
+    obj.setpoint_lower = PID_lower.setPoint;
 }

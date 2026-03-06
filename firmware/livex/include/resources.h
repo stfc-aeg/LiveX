@@ -45,10 +45,10 @@ extern float counter;
 extern bool acquiringFlag;
 
 // PID - main and taskPid
-extern PIDAddresses pidA_addr;
-extern PIDAddresses pidB_addr;
-extern PIDController PID_A;
-extern PIDController PID_B;
+extern PIDAddresses pidUpper_addr;
+extern PIDAddresses pidLower_addr;
+extern PIDController PID_upper;
+extern PIDController PID_lower;
 
 // MCP9600 - main, taskPid
 extern Adafruit_MCP9600 mcp[];
