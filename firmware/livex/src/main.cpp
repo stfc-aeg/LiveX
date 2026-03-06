@@ -25,7 +25,7 @@ PIDAddresses pidA_addr = {
   MOD_PID_UPPER_OUTPUT_INP,
   MOD_PID_UPPER_OUTPUTSUM_INP,
   MOD_PID_UPPER_ENABLE_COIL,
-  MOD_HEATERTC_A_INP,
+  MOD_HEATERTC_UPPER_INP,
   MOD_KP_UPPER_HOLD,
   MOD_KI_UPPER_HOLD,
   MOD_KD_UPPER_HOLD,
@@ -38,7 +38,7 @@ PIDAddresses pidB_addr = {
   MOD_PID_LOWER_OUTPUT_INP,
   MOD_PID_LOWER_OUTPUTSUM_INP,
   MOD_PID_LOWER_ENABLE_COIL,
-  MOD_HEATERTC_B_INP,
+  MOD_HEATERTC_LOWER_INP,
   MOD_KP_LOWER_HOLD,
   MOD_KI_LOWER_HOLD,
   MOD_KD_LOWER_HOLD,
@@ -122,7 +122,7 @@ void setup()
   for (int i=0; i<num_mcp; i++)
   {
     modbus_server.floatToHoldingRegisters(
-      MOD_HEATERTC_A_IDX_HOLD+i*2, i
+      MOD_HEATERTC_UPPER_IDX_HOLD+i*2, i
     );
     modbus_server.floatToHoldingRegisters(
       MOD_TCIDX_0_TYPE_HOLD+i*2, mcp_type[i]

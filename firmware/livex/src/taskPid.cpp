@@ -32,21 +32,21 @@ void Core0PIDTask(void * pvParameters)
       }
       xSemaphoreTake(gradientAspcMutex, portMAX_DELAY);
       // Read A
-      int idx = modbus_server.combineHoldingRegisters(MOD_HEATERTC_A_IDX_HOLD);
+      int idx = modbus_server.combineHoldingRegisters(MOD_HEATERTC_UPPER_IDX_HOLD);
       if (0<=idx && idx<num_mcp)
       {
         float result = mcp[idx].readThermocouple();
         PID_A.input = result;
-        modbus_server.floatToInputRegisters(MOD_HEATERTC_A_INP, PID_A.input);
+        modbus_server.floatToInputRegisters(MOD_HEATERTC_UPPER_INP, PID_A.input);
       }
 
       // Read B
-      idx = modbus_server.combineHoldingRegisters(MOD_HEATERTC_B_IDX_HOLD);
+      idx = modbus_server.combineHoldingRegisters(MOD_HEATERTC_LOWER_IDX_HOLD);
       if (0<=idx && idx<num_mcp)
       {
         float result = mcp[idx].readThermocouple();
         PID_B.input = result;
-        modbus_server.floatToInputRegisters(MOD_HEATERTC_B_INP, PID_B.input);
+        modbus_server.floatToInputRegisters(MOD_HEATERTC_LOWER_INP, PID_B.input);
       }
 
       // Read extra thermocouples only once per second - when counter is multiple of pid frequency
@@ -56,7 +56,7 @@ void Core0PIDTask(void * pvParameters)
         for (int i=0; i<num_mcp-2; i++)
         {
           // Read extra thermocouples
-          idx = modbus_server.combineHoldingRegisters(MOD_EXTRATC_A_IDX_HOLD + (i-2)*2);
+          idx = modbus_server.combineHoldingRegisters(MOD_EXTRATC_A_IDX_HOLD + (i)*2);
           if (0<=idx && idx<num_mcp)
           {
             float result = mcp[idx].readThermocouple();
