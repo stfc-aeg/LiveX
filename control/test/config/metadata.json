@@ -65,9 +65,9 @@
         "persist": true,
         "user_input": false
     },
-    "thermal_gradient": {
+    "was_thermal_gradient_active": {
         "label": "Thermal Gradient",
-        "default": 0.0,
+        "default": false,
         "persist": false,
         "user_input": false
     },
@@ -158,6 +158,12 @@
     "narrowfov_resolution": {
         "label": "NarrowFOV resolution (microns)",
         "default": 0,
+        "persist": true,
+        "user_input": true
+    },
+    "scintillator": {
+        "label": "Scintillator type",
+        "default": "",
         "persist": true,
         "user_input": true
     },

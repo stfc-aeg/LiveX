@@ -25,7 +25,7 @@ class LiveXController(BaseController):
         # Parse options
         self.ref_trigger = options.get('reference_trigger', 'furnace')
         # Filepaths can vary by system - i.e. cameras may have multiple storage locations
-        self.furnace_filepath = options.get('furnace_filepath', '/tmp')
+        self.local_filepath = options.get('local_filepath', '/tmp')
         self.widefov_filepath = options.get('widefov_filepath', '/tmp')
         self.narrowfov_filepath = options.get('narrowfov_filepath', '/tmp')
 
@@ -42,15 +42,15 @@ class LiveXController(BaseController):
         self.filepaths = {
             'furnace': {
                 'filename': None,
-                'filepath': None
+                'filepath': self.local_filepath
             },
             'metadata': {
                 'filename': None,
-                'filepath': self.furnace_filepath
+                'filepath': self.local_filepath
             }
         }
 
-        self.furnace_filepath = "."
+        # self.local_filepath = "."
 
     def initialize(self, adapters):
         """Initialize the controller.
@@ -114,7 +114,7 @@ class LiveXController(BaseController):
 
             # Add cameras to self.filepaths for acquisition handling with default
             for camera in self.orca.cameras:
-                self.filepaths[camera.name] = {'filename': None, 'filepath': self.furnace_filepath}
+                self.filepaths[camera.name] = {'filename': None, 'filepath': self.local_filepath}
 
                 # Set cameras to trigger source 2 (external)
                 # Internal triggering of 120Hz is much too fast for inferencing
@@ -211,18 +211,18 @@ class LiveXController(BaseController):
         # Furnace
         filename = build_filename('furnace', 'h5')
         self.filepaths['furnace']['filename'] = filename
-        self.filepaths['furnace']['filepath'] = self.furnace_filepath
+        self.filepaths['furnace']['filepath'] = self.local_filepath + "/furnace"
 
         # Metadata
         filename = build_filename('metadata', 'yaml')
         self.filepaths['metadata']['filename'] = filename
-        self.filepaths['metadata']['filepath'] = self.furnace_filepath
+        self.filepaths['metadata']['filepath'] = self.local_filepath + "/metadata"
 
         # Cameras
         for camera in self.orca.cameras:
             name = camera.name
             self.filepaths[name]["filename"] = f"{experiment_id}_{name}"
-            self.filepaths[name]["filepath"] = self.options.get(f"{name}_filepath", self.furnace_filepath)
+            self.filepaths[name]["filepath"] = self.options.get(f"{name}_filepath", self.local_filepath)
         # Set values in metadata adapter
         iac_set(self.metadata, 'fields/experiment_id', 'value', experiment_id)
         iac_set(self.metadata, 'yaml', 'file', self.filepaths['metadata']['filename'])
@@ -336,6 +336,10 @@ class LiveXController(BaseController):
             # Write needed metadata
             iac_set(self.metadata, 'fields/furnace_framerate', 'value',
                 self.trigger_manager.frequencies['furnace'])
+
+            iac_set(self.metadata, 'fields/was_thermal_gradient_active', 'value', self.furnace.gradient.was_gradient_active)
+            # Reset the flag
+            self.furnace.gradient.was_gradient_active = False
 
         # Cams stop capturing, num-frames to 0, start again
         # Move camera(s) to capture state

@@ -17,7 +17,7 @@ function Metadata(props) {
 
     const {endpoint_url} = props;
 
-    const metadataEndPoint = useAdapterEndpoint('metadata', endpoint_url, 5000);
+    const metadataEndPoint = useAdapterEndpoint('metadata', endpoint_url, 1000);
     // Need some object defined even when metadataEndPoint is resolving to null
     const metaJson = metadataEndPoint?.data?.fields ? metadataEndPoint.data.fields : {} ;
 
