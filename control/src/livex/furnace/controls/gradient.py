@@ -51,14 +51,13 @@ class Gradient():
 
     def set_enable(self, value):
         """Set the enable value for the thermal gradient."""
-        self.enable = value
 
         if value:
-            write_coil(self.client, self.addresses['enable'], 0)
-        else:
             write_coil(self.client, self.addresses['enable'], 1)
-
+        else:
+            write_coil(self.client, self.addresses['enable'], 0)
         write_coil(self.client, self.addresses['update'], 1)
+        self.enable = read_coil(self.client, self.addresses['enable'])
         self.furnace_controller.add_event('gradient_enable', self.enable)
 
     def set_distance(self, value):
