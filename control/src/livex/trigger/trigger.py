@@ -11,7 +11,6 @@ class Trigger():
 
         self.name = name  # defined in livex.cfg
         self.addr = addresses # see modbusAddresses.py for address definitions
-        self.enable = None
         self.frequency = None
         self.target = None
         self.running = False
@@ -19,7 +18,7 @@ class Trigger():
         self.client = None
 
         self.tree = ParameterTree({
-            'enable': (lambda: self.enable, self.set_enable),
+            'enable': (lambda: None, self.set_enable),
             'running': (lambda: self.running, None),
             'frequency': (lambda: self.frequency, self.set_frequency),
             'target': (lambda: self.target, self.set_target)
@@ -34,9 +33,6 @@ class Trigger():
 
     def _get_parameters(self):
         """Read modbus registers to get the most recent values for the trigger."""
-        ret = self.client.read_coils(self.addr['enable_coil'], 1, slave=1)
-        self.enable = ret.bits[0]
-
         self.running = read_coil(self.client, self.addr['running_coil'])
         self.frequency = float(read_decode_holding_reg(self.client, self.addr['freq_hold']))
         self.target = int(read_decode_holding_reg(self.client, self.addr['target_hold']))
@@ -47,11 +43,11 @@ class Trigger():
 
     def set_enable(self, value):
         """Toggle the enable for the timer."""
-        self.enable = bool(value)
         # Both writes are True as these are flags handled by hardware
-        if self.enable:
+        value = bool(value)
+        if value:
             write_coil(self.client, self.addr['enable_coil'], True)
-        elif not self.enable:
+        elif not value:
             write_coil(self.client, self.addr['disable_coil'], True)
 
     def set_frequency(self, value):
