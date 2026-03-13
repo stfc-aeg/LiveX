@@ -135,10 +135,10 @@ class PID():
 
     def set_enable(self, value):
         """Set the enable boolean for the PID."""
-        self.enable = bool(value)
-
         if value:
             write_coil(self.client, self.addresses['enable'], 1)
         else:
             write_coil(self.client, self.addresses['enable'], 0)
+
+        self.enable = read_coil(self.client, self.addresses['enable'])
         self.furnace_controller.add_event('pid_upper_enable', self.enable)

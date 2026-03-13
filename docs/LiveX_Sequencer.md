@@ -195,7 +195,6 @@ These are instantiated by the trigger adapter above, accessible via `trigger.tri
 |-----------|-------------|
 | name      | (str) name of trigger |
 | addr      | (dict) modbus addresses (see `modbusAddresses.py`) |
-| enable    | (bool) set trigger enable |
 | frequency | (int) frequency of trigger |
 | target    | (int) frame target |
 | running   | (bool) is trigger currently running (read from hardware). Enable is a single-fire flag on trigger hardware, this is a status report |
