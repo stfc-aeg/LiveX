@@ -18,6 +18,8 @@ class Gradient():
         self.theoretical  = 0
         self.high         = 'Upper'
 
+        self.was_gradient_active = False
+
         self.furnace_controller = furnace_controller
 
         self.tree = ParameterTree({
@@ -53,6 +55,9 @@ class Gradient():
         """Set the enable value for the thermal gradient."""
         if value:
             write_coil(self.client, self.addresses['enable'], 1)
+            if self.furnace_controller.acquiring:
+                logging.warning(f"gradient enabled, setting was_gradient_active to true")
+                self.was_gradient_active = True
         else:
             write_coil(self.client, self.addresses['enable'], 0)
 

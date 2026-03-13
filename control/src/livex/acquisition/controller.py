@@ -337,6 +337,10 @@ class LiveXController(BaseController):
             iac_set(self.metadata, 'fields/furnace_framerate', 'value',
                 self.trigger_manager.frequencies['furnace'])
 
+            iac_set(self.metadata, 'fields/was_thermal_gradient_active', 'value', self.furnace.gradient.was_gradient_active)
+            # Reset the flag
+            self.furnace.gradient.was_gradient_active = False
+
         # Cams stop capturing, num-frames to 0, start again
         # Move camera(s) to capture state
         for camera in self.orca.cameras:
