@@ -241,7 +241,7 @@ function Trigger(props) {
                     border: '1px solid lightblue',
                     backgroundColor: '#e0f7ff'
                   }}>
-                    {checkNullNoDp(furnaceEndPoint.data.tcp?.tcp_reading?.counter)}
+                    {checkNullNoDp(furnaceEndPoint.data.tcp?.tcp_reading?.frame)}
                   </InputGroup.Text>
                 </InputGroup>
               </Col>
@@ -253,7 +253,19 @@ function Trigger(props) {
                     border: '1px solid lightblue',
                     backgroundColor: '#e0f7ff'
                   }}>
-                    {checkNullNoDp(orcaEndPoint?.data?.cameras?.widefov.status.frame_number)}
+                    {checkNullNoDp(orcaEndPoint?.data?.widefov?.status?.frame_number)}
+                  </InputGroup.Text>
+                </InputGroup>
+              </Col>
+              <Col>
+                <InputGroup>
+                  <InputGroup.Text>narrowfov frame count</InputGroup.Text>
+                  <InputGroup.Text style={{
+                    width: labelWidth,
+                    border: '1px solid lightblue',
+                    backgroundColor: '#e0f7ff'
+                  }}>
+                    {checkNullNoDp(orcaEndPoint?.data?.narrowfov?.status?.frame_number)}
                   </InputGroup.Text>
                 </InputGroup>
               </Col>
