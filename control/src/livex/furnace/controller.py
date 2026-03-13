@@ -268,6 +268,11 @@ class FurnaceController():
         self.file_writer.open_file()
         self.file_open_flag = True
 
+        # If you are starting the acquisition and the gradient is on, was_gradient_active should be
+        # true for the benefit of the metadata
+        if self.gradient.enable:
+            self.gradient.was_gradient_active = True
+
         self.acquiring = True
 
     def _stop_acquisition(self):

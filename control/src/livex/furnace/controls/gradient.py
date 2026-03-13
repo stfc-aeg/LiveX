@@ -56,7 +56,6 @@ class Gradient():
         if value:
             write_coil(self.client, self.addresses['enable'], 1)
             if self.furnace_controller.acquiring:
-                logging.warning(f"gradient enabled, setting was_gradient_active to true")
                 self.was_gradient_active = True
         else:
             write_coil(self.client, self.addresses['enable'], 0)
