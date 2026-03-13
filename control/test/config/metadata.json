@@ -161,6 +161,12 @@
         "persist": true,
         "user_input": true
     },
+    "scintillator": {
+        "label": "Scintillator type",
+        "default": "",
+        "persist": true,
+        "user_input": true
+    },
     "sequence_id": {
         "label": "Controlling sequence execution ID",
         "default": 1,
