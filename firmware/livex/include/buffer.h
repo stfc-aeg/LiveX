@@ -6,7 +6,7 @@
 struct BufferObject
 {
     float frame;
-    // PID A attributes
+    // upper pid attributes
     float temperature_upper;
     float output_upper;
     float kp_upper;
@@ -15,7 +15,7 @@ struct BufferObject
     float lastInput_upper;
     float outputSum_upper;
     float setpoint_upper;
-    // PID B attributes
+    // lower pid attributes
     float temperature_lower;
     float output_lower;
     float kp_lower;

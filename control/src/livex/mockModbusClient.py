@@ -37,12 +37,12 @@ class MockModbusClient:
         30007: 0,     # pid_outputsum_a_inp
         30009: 0,     # pid_outputsum_b_inp
 
-        30011: 21,    # thermocouple_a_inp
-        30013: 20,    # thermocouple_b_inp
-        30015: 20,    # thermocouple_c_inp
-        30017: 20,    # thermocouple_d_inp
-        30019: 20,    # thermocouple_e_inp
-        30021: 20,    # thermocouple_f_inp
+        30011: 21,    # thermocouple_upper_inp
+        30013: 20,    # thermocouple_lower_inp
+        30015: 20,    # thermocouple_extra_a_inp
+        30017: 20,    # thermocouple_extra_b_inp
+        30019: 20,    # thermocouple_extra_c_inp
+        30021: 20,    # thermocouple_extra_d_inp
         30023: 6,     # number_mcp_inp
 
         30025: 0,     # gradient_actual_inp
@@ -66,12 +66,12 @@ class MockModbusClient:
         40023: 2,     # autosp_rate_hold
         40025: 0,     # autosp_imgdegree_hold
 
-        40027: 0,     # thermocouple_a_idx_hold
-        40029: 1,     # thermocouple_b_idx_hold
-        40031: 2,     # thermocouple_c_idx_hold
-        40033: 3,     # thermocouple_d_idx_hold
-        40035: 4,     # thermocouple_e_idx_hold
-        40037: 5,     # thermocouple_f_idx_hold
+        40027: 0,     # thermocouple_upper_idx_hold
+        40029: 1,     # thermocouple_lower_idx_hold
+        40031: 2,     # thermocouple_extra_a_idx_hold
+        40033: 3,     # thermocouple_extra_b_idx_hold
+        40035: 4,     # thermocouple_extra_c_idx_hold
+        40037: 5,     # thermocouple_extra_d_idx_hold
 
         40039: 0,     # tcidx_0_type_hold
         40041: 0,     # tcidx_1_type_hold
@@ -207,7 +207,7 @@ class MockPLC:
         temp_change = heating-cooling
         self.temp += temp_change
 
-        self.client.registers[modAddr.thermocouple_a_inp] = self.temp
+        self.client.registers[modAddr.thermocouple_upper_inp] = self.temp
 
     def bg_temp_task(self):
         """Background thread task for the mock PLC.

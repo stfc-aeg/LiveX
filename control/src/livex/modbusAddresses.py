@@ -44,12 +44,12 @@ class modAddr():
     pid_upper_outputsum_inp = 30007
     pid_lower_outputsum_inp = 30009
 
-    thermocouple_a_inp = 30011
-    thermocouple_b_inp = 30013
-    thermocouple_c_inp = 30015
-    thermocouple_d_inp = 30017
-    thermocouple_e_inp = 30019
-    thermocouple_f_inp = 30021
+    thermocouple_upper_inp = 30011
+    thermocouple_lower_inp = 30013
+    thermocouple_extra_a_inp = 30015
+    thermocouple_extra_b_inp = 30017
+    thermocouple_extra_c_inp = 30019
+    thermocouple_extra_d_inp = 30021
     number_mcp_inp     = 30023
 
     gradient_actual_inp     = 30025
@@ -75,13 +75,13 @@ class modAddr():
     autosp_rate_hold       = 40023
     autosp_imgdegree_hold  = 40025
 
-    # Named differently to config.h, which is heatertc_a/b and extratc_a/b/c/d
-    thermocouple_a_idx_hold    = 40027
-    thermocouple_b_idx_hold    = 40029
-    thermocouple_c_idx_hold     = 40031
-    thermocouple_d_idx_hold     = 40033
-    thermocouple_e_idx_hold     = 40035
-    thermocouple_f_idx_hold     = 40037
+    # Named differently to config.h, which is heatertc_upper/lower and extratc_a/b/c/d
+    thermocouple_upper_idx_hold    = 40027
+    thermocouple_lower_idx_hold    = 40029
+    thermocouple_extra_a_idx_hold     = 40031
+    thermocouple_extra_b_idx_hold     = 40033
+    thermocouple_extra_c_idx_hold     = 40035
+    thermocouple_extra_d_idx_hold     = 40037
 
     tcidx_0_type_hold           = 40039
     tcidx_1_type_hold           = 40041
@@ -107,7 +107,7 @@ class modAddr():
         'kd': pid_kd_upper_hold,
         'output': pid_upper_output_inp,
         'outputsum': pid_upper_outputsum_inp,
-        'thermocouple': thermocouple_a_inp,
+        'thermocouple': thermocouple_upper_inp,
         'setpoint_update': setpoint_update_coil,
         'output_override': output_override_upper_hold,
         'output_override_enable': output_override_upper_coil,
@@ -123,7 +123,7 @@ class modAddr():
         'kd': pid_lower_kd_hold,
         'output': pid_lower_output_inp,
         'outputsum': pid_lower_outputsum_inp,
-        'thermocouple': thermocouple_b_inp,
+        'thermocouple': thermocouple_lower_inp,
         'setpoint_update': setpoint_update_coil,
         'output_override': output_override_lower_hold,
         'output_override_enable': output_override_lower_coil,

@@ -42,15 +42,15 @@ class ThermocoupleManager:
 
         # Thermocouple array starts with two mandatory connections
         self.thermocouples = [
-            Thermocouple(label='upper_heater', connection=CONNECTIONS[upper_heater_tc], addr=modAddr.thermocouple_a_idx_hold, val_addr=modAddr.thermocouple_a_inp),
-            Thermocouple(label='lower_heater', connection=CONNECTIONS[lower_heater_tc], addr=modAddr.thermocouple_b_idx_hold, val_addr=modAddr.thermocouple_b_inp)
+            Thermocouple(label='upper_heater', connection=CONNECTIONS[upper_heater_tc], addr=modAddr.thermocouple_upper_idx_hold, val_addr=modAddr.thermocouple_upper_inp),
+            Thermocouple(label='lower_heater', connection=CONNECTIONS[lower_heater_tc], addr=modAddr.thermocouple_lower_idx_hold, val_addr=modAddr.thermocouple_lower_inp)
         ]
 
         for i, (tc, name) in enumerate(zip(extra_tcs, extra_tc_names)):
             if tc and name:
                 self.thermocouples.append(
                     Thermocouple(label=name.strip(), connection=CONNECTIONS[tc.strip()],
-                    addr=(modAddr.thermocouple_c_idx_hold+i*2), val_addr=(modAddr.thermocouple_c_inp+i*2))
+                    addr=(modAddr.thermocouple_extra_a_idx_hold+i*2), val_addr=(modAddr.thermocouple_extra_a_inp+i*2))
                 )
 
         self.tree = {}
@@ -61,7 +61,7 @@ class ThermocoupleManager:
         try:
             # 'Zero out' thermocouple range before setting with _get_parameters()
             for i in range(self.num_mcp):
-                write_modbus_float(self.client, -1, modAddr.thermocouple_a_idx_hold+i*2)
+                write_modbus_float(self.client, -1, modAddr.thermocouple_upper_idx_hold+i*2)
 
             self._get_parameters()
             self._build_tree()
