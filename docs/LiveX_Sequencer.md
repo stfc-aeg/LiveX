@@ -13,7 +13,7 @@ The furnace adapter mostly just controls the other furnace-related components (s
 
 | attr name                 | description |
 |---------------------------|-------------|
-| pid_a / pid_b            | PID class objects representing heater controls |
+| pid_upper / pid_lower    | PID class objects representing heater controls |
 | gradient                 | Thermal gradient controls |
 | aspc                     | Auto setpoint controls |
 | log_directory            | Location of output file (edit through function) |
