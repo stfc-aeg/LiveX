@@ -183,8 +183,8 @@ class FurnaceController():
         :param value: value to set the max_setpoint_increase to
         """
         self.max_setpoint_increase = value
-        self.pid_upper.max_setpoint_increase = self.max_setpoint_increase
-        self.pid_lower.max_setpoint_increase = self.max_setpoint_increase
+        self.pid_upper.max_setpt_step = self.max_setpoint_increase
+        self.pid_lower.max_setpt_step = self.max_setpoint_increase
 
     def cleanup(self):
         """Clean up the FurnaceController instance.

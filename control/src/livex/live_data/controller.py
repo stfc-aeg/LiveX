@@ -86,12 +86,10 @@ class LiveDataController(BaseController):
                                ]}
                     ),
                     "clip_range_value": (lambda proc=proc: [proc.clipping['min'], proc.clipping['max']],
-                                   partial(self.set_img_clip_value, processor=proc),
-                                   {'min': 0, 'max': 65535}
+                                   partial(self.set_img_clip_value, processor=proc)
                     ),
                     "clip_range_percent": (lambda proc=proc: [proc.clipping['percent']['min'], proc.clipping['percent']['max']],
-                                        partial(self.set_img_clip_percent, processor=proc),
-                                        {'min': 0, 'max': 100}
+                                        partial(self.set_img_clip_percent, processor=proc)
                     ),
                     "zoom": (lambda proc=proc: [
                         proc.zoom['x_lower'], proc.zoom['x_upper'], proc.zoom['y_lower'], proc.zoom['y_upper']],

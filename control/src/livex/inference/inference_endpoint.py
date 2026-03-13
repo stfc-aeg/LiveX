@@ -130,7 +130,7 @@ class InferenceEndpoint():
             res = probabilities[i]
 
             # Need to trim these to maximum length by removing earliest entries
-            max_length = 3600  # Arbitrary maximum length for now
+            max_length = 300  # Arbitrary maximum length for now
 
             self.columnar.append(res['columnar'])
             self.equiaxed.append(res['equiaxed'])
@@ -207,15 +207,6 @@ class InferenceEndpoint():
         cmd_msg = IpcMessage('cmd', msg_val='start_experiment', id=self._next_msg_id())
         cmd_msg.set_param(param_name='experiment_number', param_value=experiment_number)
         self.inference.send(cmd_msg.encode())
-
-        try:
-            response = self.await_response(silence_reply=True)
-            if response:
-                if response.get('msg_type', 'ack') == 'nack':
-                    logging.error(f"Error when starting inferencing experiment: {response.attrs['params']['error']}")
-                    # No particular handling of errors but should at least inform on what they are
-        except Exception as e:
-            logging.error(f"Error when starting inferencing experiment: {e}")
 
     def stop_experiment(self):
         """Send a stop_experiment command."""
