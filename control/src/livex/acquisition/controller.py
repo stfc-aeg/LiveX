@@ -116,6 +116,10 @@ class LiveXController(BaseController):
             for camera in self.orca.cameras:
                 self.filepaths[camera.name] = {'filename': None, 'filepath': self.furnace_filepath}
 
+                # Set cameras to trigger source 2 (external)
+                # Internal triggering of 120Hz is much too fast for inferencing
+                camera.set_config(value=2, param='trigger_source')
+
             # Reconstruct tree with relevant adapter references
             self._build_tree()
         except Exception as e:
