@@ -1,6 +1,58 @@
-provides=['d25_test_acquisition']
+provides=['d25_test_acquisition', 'abortable_acquisition']
 
 import time
+
+def abortable_acquisition(heat_rate=2.5, target_temp=150, heat_hold_time=15,cool_rate=2.5, cool_target=50):
+    furnace = get_context('furnace')
+    livex = get_context('livex')
+
+    heaters = [furnace.pid_upper, furnace.pid_lower]
+    gradient = furnace.gradient
+    aspc = furnace.aspc
+    interval = furnace.bg_read_task_interval
+
+    print("setting parameters")
+    print("gradient stuff would go here")
+
+    for heater in heaters:
+        heater.set_setpoint(30)  # Now at temperature, make sure setpoints are on the dot
+        heater.set_enable(True)
+
+    print("Starting heat ramp to target temperature")
+    aspc.set_rate(heat_rate)
+    aspc.set_heating('heating')
+    aspc.set_enable(True)
+
+    # Wait until temperature at least reaches target temperature
+    while furnace.pid_upper.setpoint < target_temp:
+        time.sleep(interval)  # Sleep for period of furnace background task to minimise 'lag' on updates
+        if abort_sequence():
+            return
+    aspc.set_enable(False)
+    for heater in heaters:
+        heater.set_setpoint(target_temp)  # Now at temperature, make sure setpoints are on the dot
+
+    
+    print("holding at top")
+    for i in range(heat_hold_time):
+        time.sleep(1)
+        if abort_sequence():
+            return
+    
+    print("acquisition starts here")
+
+    aspc.set_heating('cooling')
+    aspc.set_rate(cool_rate)
+    aspc.set_enable(True)
+
+    while furnace.pid_upper.setpoint > cool_target:
+        time.sleep(interval)
+        if abort_sequence():
+            print("acquisition cancelled")
+            aspc.set_enable(False)
+            for heater in heaters:
+                heater.set_enable(False)
+            return
 
 def d25_test_acquisition(
     heat_rate=2.5, target_temp=600, heat_hold_time=60,
@@ -14,7 +66,7 @@ def d25_test_acquisition(
     furnace = get_context('furnace')
     livex = get_context('livex')
 
-    heaters = [furnace.pid_a, furnace.pid_b]
+    heaters = [furnace.pid_upper, furnace.pid_lower]
     gradient = furnace.gradient
     aspc = furnace.aspc
     interval = furnace.bg_read_task_interval
@@ -40,7 +92,7 @@ def d25_test_acquisition(
     aspc.set_enable(True)
 
     # Wait until temperature at least reaches target temperature
-    while furnace.pid_a.setpoint < target_temp:
+    while furnace.pid_upper.setpoint < target_temp:
         time.sleep(interval)  # Sleep for period of furnace background task to minimise 'lag' on updates
     
     aspc.set_enable(False)  # Turn heating off when reached target
@@ -61,7 +113,7 @@ def d25_test_acquisition(
     aspc.set_rate(first_cool_rate)
     aspc.set_enable(True)
 
-    while furnace.pid_a.setpoint > cool_target:
+    while furnace.pid_upper.setpoint > cool_target:
         time.sleep(interval)
 
     print(f"First cooling target reached, holding for {cool_hold_time} seconds.")
@@ -71,7 +123,7 @@ def d25_test_acquisition(
     aspc.set_rate(second_cool_rate)
     aspc.set_enable(True)
 
-    while furnace.pid_a.setpoint > cool_target_2:
+    while furnace.pid_upper.setpoint > cool_target_2:
         time.sleep(interval)
     print("Second cooling target reached, ending acquisition.")
     aspc.set_enable(False)

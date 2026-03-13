@@ -16,7 +16,7 @@ class Gradient():
         self.distance     = float(1.5)
         self.actual       = 0
         self.theoretical  = 0
-        self.high         = 'A'
+        self.high         = 'Upper'
 
         self.furnace_controller = furnace_controller
 
@@ -29,7 +29,7 @@ class Gradient():
             'actual': (lambda: self.actual, None),
             'theoretical': (lambda: self.theoretical, None),
             'high_heater': (lambda: self.high, self.set_high,
-                            {'allowed_values': ['A', 'B']})
+                            {'allowed_values': ['Upper', 'Lower']})
         })
 
     def _register_modbus_client(self, client):
@@ -78,9 +78,9 @@ class Gradient():
         """Set the boolean for thermal gradient high heater."""
         self.high = value
 
-        if value =='B':  # 1, heater B
+        if value =='Lower':  # 1, Lower heater
             write_coil(self.client, self.addresses['high'], 1)
-        elif value == 'A':  # 0, heater A
+        elif value == 'Upper':  # 0, Upper heater
             write_coil(self.client, self.addresses['high'], 0)
         write_coil(self.client, self.addresses['update'], 1)
         self.furnace_controller.add_event('gradient_high', self.high)

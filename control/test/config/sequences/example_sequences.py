@@ -93,7 +93,7 @@ def stabilise_at_temperature_a(setpoint=300, stability_threshold=0.25, do_gradie
     furnace = get_context('furnace')
     trigger = get_context('trigger')
 
-    furnace.pid_a.set_setpoint(setpoint)
+    furnace.pid_upper.set_setpoint(setpoint)
     interval = furnace.bg_read_task_interval
 
     freq = trigger.triggers['furnace'].frequency
@@ -105,7 +105,7 @@ def stabilise_at_temperature_a(setpoint=300, stability_threshold=0.25, do_gradie
         furnace.gradient.set_high(grad_high_towards_a)
         furnace.gradient.set_enable(do_gradient)
 
-    furnace.pid_a.set_enable(True)
+    furnace.pid_upper.set_enable(True)
 
     def mean(errors):
         if len(errors) == 0:
@@ -117,12 +117,12 @@ def stabilise_at_temperature_a(setpoint=300, stability_threshold=0.25, do_gradie
     errors = []
     # Checking
     while (len(errors)<duration) or (mean(errors) >= stability_threshold):
-        errors.append((furnace.pid_a.temperature - furnace.pid_a.setpoint))
+        errors.append((furnace.pid_upper.temperature - furnace.pid_upper.setpoint))
         if len(errors) > duration:
             errors.pop(0)
         time.sleep(interval)
 
-    print(f"temperature stabilised at {furnace.pid_a.temperature} for setpoint {furnace.pid_a.setpoint}")
+    print(f"temperature stabilised at {furnace.pid_upper.temperature} for setpoint {furnace.pid_upper.setpoint}")
 
 
 def change_img_settings(camera_name="widefov", x_boundaries=[0,100], y_boundaries=[0,100], clip_percent_range=[0, 100], colour='AUTUMN'):

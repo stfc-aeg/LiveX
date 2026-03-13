@@ -8,8 +8,8 @@ import { checkNull, usePrevious } from '../../utils';
 function InfoPanel(props) {
     const {furnaceEndPoint} = props;
 
-    const lastInput_a = usePrevious(furnaceEndPoint.data?.pid_upper?.temperature);
-    const lastInput_b = usePrevious(furnaceEndPoint.data?.pid_lower?.temperature);
+    const lastInput_upper = usePrevious(furnaceEndPoint.data?.pid_upper?.temperature);
+    const lastInput_lower= usePrevious(furnaceEndPoint.data?.pid_lower?.temperature);
 
     // Fixing the label width of the display labels so that they're consistent
     // ~6px per character.
@@ -73,7 +73,7 @@ function InfoPanel(props) {
       </Row>
       <Row className="mt-3">
         <Col xs={6} xl={4}>
-          <label>PID A</label>
+          <label>Upper PID</label>
           <Row>
             <InputGroup>
               <InputGroup.Text style={{width:labelWidth}}>
@@ -128,7 +128,7 @@ function InfoPanel(props) {
               <InputGroup.Text style={labelStyling}>
               {checkNull(
                   furnaceEndPoint.data.pid_upper?.derivative
-                  * (furnaceEndPoint.data.pid_upper?.temperature - lastInput_a))}
+                  * (furnaceEndPoint.data.pid_upper?.temperature - lastInput_upper))}
               </InputGroup.Text>
             </InputGroup>
           </Row>
@@ -144,7 +144,7 @@ function InfoPanel(props) {
           </Row>
         </Col>
         <Col xs={6} xl={4}>
-          <label>PID B</label>
+          <label>Lower PID</label>
           <Row>
             <InputGroup>
               <InputGroup.Text style={{width:labelWidth}}>
@@ -199,7 +199,7 @@ function InfoPanel(props) {
               <InputGroup.Text style={labelStyling}>
               {checkNull(
                   furnaceEndPoint.data.pid_lower?.derivative
-                  * (furnaceEndPoint.data.pid_lower?.temperature - lastInput_b))}
+                  * (furnaceEndPoint.data.pid_lower?.temperature - lastInput_lower))}
               </InputGroup.Text>
             </InputGroup>
           </Row>
