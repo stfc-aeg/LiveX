@@ -302,9 +302,44 @@ class MockTCPClient:
         pass
 
     def recv(self, buffersize):
+        """Generate a binary packet that matches LiveXPacketDecoder format.
+        
+        The packet contains 16 floats (64 bytes) packed as: f ffffffff ffffffff
+        - frame (counter)
+        - temperature_upper, output_upper, kp_upper, ki_upper, kd_upper, lastInput_upper, outputSum_upper, setpoint_upper
+        - temperature_lower, output_lower, kp_lower, ki_lower, kd_lower, lastInput_lower, outputSum_lower, setpoint_lower
+        """
         self.counter += 1
-        temp = self.plc.temp
-        return [self.counter, temp]
+        
+        # Generate simulated data
+        temp_upper = self.plc.temp
+        temp_lower = self.plc.temp - 2  # Simulate lower thermocouple reading lower
+        output_upper = self.plc.output
+        output_lower = self.plc.output * 0.8  # Simulate lower output slightly different
+        setpoint_upper = self.plc.client.registers.get(modAddr.pid_setpoint_upper_hold, 30.0)
+        
+        # Pack 16 floats directly using struct format: f ffffffff ffffffff
+        payload = struct.pack(
+            'f ffffffff ffffffff',
+            float(self.counter),        # frame (1 float)
+            temp_upper,                 # temperature_upper
+            output_upper,               # output_upper
+            0.3,                        # kp_upper
+            0.02,                       # ki_upper
+            0.0,                        # kd_upper
+            0.0,                        # lastInput_upper
+            self.plc.outputSum,         # outputSum_upper
+            setpoint_upper,             # setpoint_upper (8 floats)
+            temp_lower,                 # temperature_lower
+            output_lower,               # output_lower
+            0.3,                        # kp_lower
+            0.02,                       # ki_lower
+            0.0,                        # kd_lower
+            0.0,                        # lastInput_lower
+            self.plc.outputSum,         # outputSum_lower
+            setpoint_upper              # setpoint_upper (repeated, 8 floats)
+        )
+        return payload
 
     def close(self):
         pass
