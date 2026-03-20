@@ -370,7 +370,7 @@ class FurnaceController():
             return
         frame = self.packet_decoder.data['frame']
         # Values are strings as you cannot have multiple data types in one field
-        self.event_buffer.append({'event_frame': frame, 'event_key': key, 'event_value': str(value)})
+        self.event_buffer.append({'event_frame': str(frame), 'event_key': key, 'event_value': str(value)})
 
     @run_on_executor
     def background_stream_task(self):
@@ -378,83 +378,86 @@ class FurnaceController():
         in the parameter tree.
         """
         while self.bg_stream_task_enable:
-            if self.mocking:
-                if self.acquiring:
-                    try:
-                        frame, temp = self.tcp_client.recv(self.packet_decoder.size)
-
-                        logging.debug(f"Mock acquisition data: temperature {temp} at reading {frame}")
-                    except Exception as e:
-                        logging.debug(f"Mock acquisition error: {e}")
-
-                    # Do not need to go as fast for a fake acquisition, there is no timeout
-                time.sleep(1/self.pid_frequency)
-
-            else:
-                if self.acquiring:
-                    try:
-                        reading = self.tcp_client.recv(self.packet_decoder.size)
+            if self.acquiring:
+                try:
+                    reading = self.tcp_client.recv(self.packet_decoder.size)
+                    
+                    # Decode the reading using packet decoder
+                    self.tcp_reading = self.packet_decoder.unpack(reading)
+                    
+                    if not self.mocking:
                         logging.debug(self.packet_decoder.data['frame'])
-                        self.tcp_reading = self.packet_decoder.unpack(reading)
+                    else:
+                        logging.debug(f"Mock acquisition data: frame {self.packet_decoder.data['frame']}, temperature_upper {self.packet_decoder.data['temperature_upper']}")
 
-                    except socket.timeout:
+                except socket.timeout:
+                    if not self.mocking:
                         logging.debug("TCP Socket timeout: read no data")
                         continue  # If no data received, do not use the packet_decoding logic
-                    except Exception as e:
+                    else:
+                        logging.debug("Mock TCP timeout (expected for mock)")
+                except Exception as e:
+                    if not self.mocking:
                         logging.debug(f"Other TCP error: {str(e)}")
                         logging.debug("Halting background tasks")
                         self._stop_background_tasks()
                         break
+                    else:
+                        logging.debug(f"Mock TCP error: {e}")
 
-                    self.tcp_reading = self.packet_decoder.data
+                self.tcp_reading = self.packet_decoder.data
 
-                    # Add decoded data to the stream buffer
-                    for attr in self.packet_decoder.data.keys():
-                        self.stream_buffer[attr].append(self.packet_decoder.data[attr])
+                # Add decoded data to the stream buffer
+                for attr in self.packet_decoder.data.keys():
+                    self.stream_buffer[attr].append(self.packet_decoder.data[attr])
 
-                    # After a certain number of data reads, write data to the file
-                    if len(self.stream_buffer['frame']) >= self.pid_frequency:
-                        self.file_writer.write_hdf5(
-                            data=self.stream_buffer,
-                            groupname=self.data_groupname
-                        )
-                        # Then clear the stream buffer
-                        for key in self.stream_buffer:
-                            self.stream_buffer[key].clear()
+                # After a certain number of data reads, write data to the file
+                if len(self.stream_buffer['frame']) >= self.pid_frequency:
+                    self.file_writer.write_hdf5(
+                        data=self.stream_buffer,
+                        groupname=self.data_groupname
+                    )
+                    # Then clear the stream buffer
+                    for key in self.stream_buffer:
+                        self.stream_buffer[key].clear()
 
-                        # Additional information written at a lower frequency
-                        secondary_data = {
-                            'frame': [self.packet_decoder.data['frame']],
-                            'setpoint_upper': [self.pid_upper.setpoint],
-                            'setpoint_lower': [self.pid_lower.setpoint],
-                            'output_upper': [self.pid_upper.output],
-                            'output_lower': [self.pid_lower.output]
+                    # Additional information written at a lower frequency
+                    secondary_data = {
+                        'frame': [self.packet_decoder.data['frame']],
+                        'setpoint_upper': [self.pid_upper.setpoint],
+                        'setpoint_lower': [self.pid_lower.setpoint],
+                        'output_upper': [self.pid_upper.output],
+                        'output_lower': [self.pid_lower.output]
+                    }
+                    # Include additional thermocouples if enabled, not including a or b (0,1)
+                    for tc in self.tc_manager.thermocouples[2:self.tc_manager.num_mcp]:
+                        if tc.index is not None and tc.index >= 0:
+                            data_label = f'thermocouple_{tc.label}'
+                            secondary_data[data_label] = [tc.value]
+
+                    self.file_writer.write_hdf5(
+                        data=secondary_data,
+                        groupname="slow_data"
+                    )
+
+                    # Write out the event buffer once per second too
+                    # List-of-dicts format won't work, so convert it to dict-of-lists
+                    if self.event_buffer:
+                        batch = {
+                            "event_frame": [e["event_frame"] for e in self.event_buffer],
+                            "event_key":   [e["event_key"]   for e in self.event_buffer],
+                            "event_value": [e["event_value"] for e in self.event_buffer]
                         }
-                        # Include additional thermocouples if enabled, not including a or b (0,1)
-                        for tc in self.tc_manager.thermocouples[2:self.tc_manager.num_mcp]:
-                            if tc.index is not None and tc.index >= 0:
-                                data_label = f'thermocouple_{tc.label}'
-                                secondary_data[data_label] = [tc.value]
-
                         self.file_writer.write_hdf5(
-                            data=secondary_data,
-                            groupname="slow_data"
+                            data=batch,
+                            groupname="event_data"
                         )
+                        self.event_buffer.clear()
 
-                        # Write out the event buffer once per second too
-                        # List-of-dicts format won't work, so convert it to dict-of-lists
-                        if self.event_buffer:
-                            batch = {
-                                "event_frame": [e["event_frame"] for e in self.event_buffer],
-                                "event_key":   [e["event_key"]   for e in self.event_buffer],
-                                "event_value": [e["event_value"] for e in self.event_buffer]
-                            }
-                            self.file_writer.write_hdf5(
-                                data=batch,
-                                groupname="event_data"
-                            )
-                            self.event_buffer.clear()
-
+            # Sleep interval - shorter for mocking to avoid it going too fast
+            if self.mocking:
+                time.sleep(1/self.pid_frequency)
+            else:
                 time.sleep(self.bg_stream_task_interval)
 
     @run_on_executor
