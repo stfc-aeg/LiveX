@@ -86,7 +86,7 @@ class FurnaceController():
         self.background_thread_counter = 0
 
         self.file_writer = FileWriter(self.log_directory, self.log_filename, 
-            dtypes={'timestamps': 'S', 'key': 'str', 'event_key': 'str', 'event_value': 'str'}
+            dtypes={'timestamps': 'S', 'key': 'str', 'event_frame': 'str', 'event_key': 'str', 'event_value': 'str'}
         )
         
         # File is not open by default in case of multiple acquisitions per software run
@@ -369,8 +369,15 @@ class FurnaceController():
         if not self.acquiring:
             return
         frame = self.packet_decoder.data['frame']
-        # Values are strings as you cannot have multiple data types in one field
-        self.event_buffer.append({'event_frame': str(frame), 'event_key': key, 'event_value': str(value)})
+        # If the frame is unavailable for some reason - e.g. set a parameter right after acq start
+        if frame is None:
+            frame = 'unknown'
+        # event_values are strings as you cannot have multiple data types in one field
+        # event_frames are strings to allow for obvious 'unknown' instead of -1
+        # Careful handling of the event data is required anyway so this is not burdensome to parse
+        self.event_buffer.append(
+            {'event_frame': str(frame), 'event_key': key, 'event_value': str(value)}
+        )
 
     @run_on_executor
     def background_stream_task(self):

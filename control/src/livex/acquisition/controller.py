@@ -131,7 +131,8 @@ class LiveXController(BaseController):
 
         # Make filename
         self.sequence_id = iac_get(self.metadata, 'fields/sequence_id/value', param='value')
-        iac_set(self.metadata, 'fields/sequence_id', 'value', self.sequence_id+1)
+        self.sequence_id = self.sequence_id + 1
+        iac_set(self.metadata, 'fields/sequence_id', 'value', self.sequence_id)
         iac_set(self.metadata, 'fields/sequence_name', 'value', sequence_name)
 
         padded_seq_id = str(self.sequence_id).rjust(4, '0')
@@ -306,11 +307,11 @@ class LiveXController(BaseController):
 
         if self.executing_sequence:
             iac_set(self.metadata, 'fields/sequence_id', 'value', self.sequence_id)
-
             self.log_sequence_message(f"Beginning acquisition {acq_num}.")
         else:  # No sequence currently
             iac_set(self.metadata, 'fields/sequence_name', 'value', 'None')
-            iac_set(self.metadata, 'fields/sequence_id', 'value', -1)
+            # Don't update sequence_id here - preserve the counter for next sequence
+            # The acquisition YAML will show -1 via stop_acquisition logic
 
         # Enable timer coils simultaneously
         self.trigger.set_all_timers(
