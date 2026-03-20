@@ -284,7 +284,7 @@ class LiveXController(BaseController):
                 iac_set(self.munir_adapter, f'subsystems/{camera.name}/', 'args', munir_args)
                 iac_set(self.munir_adapter, 'execute', camera.name, True)
 
-                iac_set(self.metadata, f'fields/{camera.name}_orientation', 'value', self.live_data.options.get(f'{camera.name}_orientation', 'up'))
+                iac_set(self.metadata, f'fields/{camera.name}_orientation', 'value', int(self.live_data.options.get(f'{camera.name}_orientation', '0')))
                 
         acq_num = iac_get(self.metadata, 'fields/acquisition_num/value', param='value')
 

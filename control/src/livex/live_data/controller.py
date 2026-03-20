@@ -1,6 +1,7 @@
 import logging
 from functools import partial
 import cv2
+from math import floor
 
 from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
@@ -44,7 +45,12 @@ class LiveDataController(BaseController):
         for i in range(len(endpoints)):
             name = self.names[i]
             resolution = resolutions[i]
-            orientation = self.options.get(f'{name}_orientation', 'up')
+            
+            # Orientation is a number of degrees clockwise but it should be converted
+            orientation = int(self.options.get(f'{name}_orientation', '90'))
+            # Divide by 90, rounded down, and % 4 gives 0, 1, 2, 3, 0 (360 degrees)
+            orientation = floor(orientation/90) % 4
+
             # mirrors will be 'x', 'y', 'x,y' or ''
             mirrors = self.options.get(f'{name}_mirror', '').lower().split(',')
             if mirrors:

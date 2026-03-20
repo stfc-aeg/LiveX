@@ -17,12 +17,20 @@ from odin_data.control.ipc_channel import IpcChannel
 class LiveDataProcessor():
     """Class to process image data received on a multiprocess that it instantiates."""
 
+    # No. degrees clockwise rotation: 1 is 90, 2 is 180, 3 is 270 (90 counter), 0 is none
     orientations = {
-        'up': -1,
-        'right': cv2.ROTATE_90_COUNTERCLOCKWISE, # 0
-        'down': cv2.ROTATE_180,                  # 1
-        'left': cv2.ROTATE_90_CLOCKWISE          # 2
+        0: -1,
+        1: cv2.ROTATE_90_CLOCKWISE,
+        2: cv2.ROTATE_180,
+        3: cv2.ROTATE_90_COUNTERCLOCKWISE
     }
+
+    # orientations = {
+    #     'up': -1,
+    #     'right': cv2.ROTATE_90_COUNTERCLOCKWISE, # 0
+    #     'down': cv2.ROTATE_180,                  # 1
+    #     'left': cv2.ROTATE_90_CLOCKWISE          # 2
+    # }
 
     def __init__(self, endpoint, resolution, pixel_bytes, orientation, mirror_x=False, mirror_y=False, size_x=2048, size_y=1152, colour='greyscale'):
         """Initialise the LiveDataProcessor object.
@@ -30,7 +38,7 @@ class LiveDataProcessor():
         :param endpoint: string representation of endpoint for image data.
         :param resolution: dict ({'x': x, 'y': y}) of maximum image dimensions
         :param pixel_bytes: number of bytes per pixel in image data
-        :param orientation: string representing image orientation (see `orientations`)
+        :param orientation: int representing degrees to rotate image
         :param mirror_x/y: booleans to mirror image in x/y axes
         :param size_x: integer width of output image in pixels (default 2048).
         :param size_y: integer height of output image in pixels (default 1152).
@@ -46,7 +54,7 @@ class LiveDataProcessor():
         self.size_y = size_y
         self.out_dimensions = [size_x, size_y]
 
-        self.orientation = self.orientations.get(orientation, 'up')
+        self.orientation = self.orientations.get(orientation, -1)
 
         self.mirror_x = mirror_x
         self.mirror_y = mirror_y
