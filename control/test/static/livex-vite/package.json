@@ -11,8 +11,9 @@
   },
   "dependencies": {
     "bootstrap": "^5.3.8",
+    "odin-kinesis-ui": "github:stfc-aeg/odin-kinesis-ui#0.2.0",
     "odin-react": "github:stfc-aeg/odin-react#2.0.6",
-    "odin-sequencer-react-ui": "github:stfc-aeg/odin-sequencer-ui",
+    "odin-sequencer-react-ui": "github:stfc-aeg/odin-sequencer-ui#0.3.1",
     "react": "^19.1.0",
     "react-bootstrap": "^2.10.10",
     "react-dom": "^19.1.0",
