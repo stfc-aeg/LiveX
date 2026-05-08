@@ -15,7 +15,7 @@ import InferencePage from './components/InferencePage.jsx';
 import GraphPage from './components/GraphPage.jsx'
 import SequencerPage from './components/SequencerPage.jsx';
 
-import Motors from './components/motors/Motors.jsx';
+import Motors from 'odin-kinesis-ui';
 
 // import plotly from 'plotly.js-dist-min';
 
@@ -65,7 +65,7 @@ function App() {
       <Row>
         <Motors
           endpoint_url={endpoint_url}
-        />
+         />
       </Row>
     </OdinApp>
   );
