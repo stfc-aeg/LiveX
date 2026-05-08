@@ -235,7 +235,10 @@ class LiveXController(BaseController):
         :param acquisitions: (dict) {name: bool} to determine which acquisitions are to be run
         """
         self.acquiring = True
-        self.current_acquisition = acquisitions
+        if self.furnace.force_solo_acquisition:
+            self.current_acquisition = ['furnace']
+        else:
+            self.current_acquisition = acquisitions
 
         # Get self.filepaths set to
         self._generate_experiment_filenames()

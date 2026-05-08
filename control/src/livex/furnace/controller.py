@@ -46,6 +46,9 @@ class FurnaceController():
         max_autosp_rate = int(options.get('max_autosp_rate', 8))
 
         self.allow_solo_acquisition = bool(int(options.get('allow_furnace_only_acquisition', 0)))
+        self.force_solo_acquisition = bool(int(options.get('force_furnace_only_acquisition', 0)))
+        if self.force_solo_acquisition:
+            self.allow_solo_acquisition = True
         self.allow_pid_override = bool(int(options.get('allow_pid_override', 0)))
 
         self.power_output_scale = float(options.get('power_output_scale', 1))
