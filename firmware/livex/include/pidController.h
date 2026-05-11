@@ -22,6 +22,7 @@ struct PIDAddresses
   int modKiHold;
   int modKdHold;
   int modOutputOverrideHold;
+  int modOutputScaleHold;
 };
 
 
@@ -33,6 +34,7 @@ class PIDController
     double baseSetPoint;
     float gradientModifier = 0;
     float autospRate = 0;
+    float power_output_scale;
 
     PID myPID_;
     PIDAddresses addr_;
@@ -40,6 +42,7 @@ class PIDController
     PIDController(PIDAddresses addr);
     void run();
     void check_PID_tunings(double newKp, double newKi, double newKd);
+    void check_output_scale(float new_scale);
 };
 
 #endif

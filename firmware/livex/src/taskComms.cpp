@@ -166,19 +166,6 @@ void updateSetPoints()
     }
   }
 
-  // Additional check - has the power output scalar been changed?
-  // Better to have this check in here than with its own flag, as it is updated very very rarely
-  power_output_scale = modbus_server.combineHoldingRegisters(MOD_POWER_OUTPUT_SCALE);
-  if (power_output_scale < 0) { power_output_scale = 0; }
-  else if (power_output_scale > 1) { power_output_scale = 1; }
-
-  if (DEBUG)
-  {
-    Serial.print("New baseSetPoint for Upper PID: ");
-    Serial.println(PID_upper.baseSetPoint);
-    Serial.print("New baseSetPoint for Lower PID: ");
-    Serial.println(PID_lower.baseSetPoint);
-  }
   // Set coil back to 0 to prevent continuously calling this function
   modbus_server.writeBool(MOD_SETPOINT_UPDATE_COIL, 0);
 }

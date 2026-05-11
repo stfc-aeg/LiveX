@@ -11,7 +11,7 @@
 #define INVERT_OUTPUT_SIGNAL false
 
 // true: use external interrupt instead of internal timer
-#define USE_EXTERNAL_INTERRUPT true
+#define USE_EXTERNAL_INTERRUPT false
 // true: output total of external interrupts at given range (e.g.: every 100 interrupts. 100, 200, etc.)
 #define LOG_INTERRUPTS true
 #define LOG_INTERRUPTS_INTERVAL 50
@@ -125,7 +125,8 @@
 
 #define MOD_OUTPUT_OVERRIDE_UPPER_HOLD 40055
 #define MOD_OUTPUT_OVERRIDE_LOWER_HOLD 40057
-#define MOD_POWER_OUTPUT_SCALE 40059
+#define MOD_POWER_OUTPUT_SCALE_UPPER_HOLD 40059
+#define MOD_POWER_OUTPUT_SCALE_LOWER_HOLD 40061
 
 #define PIN_PWM_UPPER A0_5
 #define PIN_PWM_LOWER A0_6

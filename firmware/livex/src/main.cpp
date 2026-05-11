@@ -29,7 +29,8 @@ PIDAddresses pidUpper_addr = {
   MOD_KP_UPPER_HOLD,
   MOD_KI_UPPER_HOLD,
   MOD_KD_UPPER_HOLD,
-  MOD_OUTPUT_OVERRIDE_UPPER_HOLD
+  MOD_OUTPUT_OVERRIDE_UPPER_HOLD,
+  MOD_POWER_OUTPUT_SCALE_UPPER_HOLD
 };
 
 PIDAddresses pidLower_addr = {
@@ -42,7 +43,8 @@ PIDAddresses pidLower_addr = {
   MOD_KP_LOWER_HOLD,
   MOD_KI_LOWER_HOLD,
   MOD_KD_LOWER_HOLD,
-  MOD_OUTPUT_OVERRIDE_LOWER_HOLD
+  MOD_OUTPUT_OVERRIDE_LOWER_HOLD,
+  MOD_POWER_OUTPUT_SCALE_LOWER_HOLD
 };
 
 PIDController PID_upper(pidUpper_addr);
@@ -74,8 +76,6 @@ volatile int interruptCounter = 0;
 // Communicated via modbus
 float interruptFrequency = 10;
 float setpointLimit = DEFAULT_SETPOINT_LIMIT;  // Maximum temperature setpoint
-
-float power_output_scale = POWER_OUTPUT_SCALE;
 
 void IRAM_ATTR pidFlagOnTimer()
 {
@@ -116,7 +116,8 @@ void setup()
   // Also write in some safe defaults to be overridden when adapter is started
   modbus_server.floatToHoldingRegisters(MOD_SETPOINT_LIMIT_HOLD, setpointLimit);
   modbus_server.floatToHoldingRegisters(MOD_SETPOINT_STEP_HOLD, DEFAULT_SETPOINT_STEP_LIMIT);
-  modbus_server.floatToHoldingRegisters(MOD_POWER_OUTPUT_SCALE, power_output_scale);
+  modbus_server.floatToHoldingRegisters(MOD_POWER_OUTPUT_SCALE_UPPER_HOLD, POWER_OUTPUT_SCALE);
+  modbus_server.floatToHoldingRegisters(MOD_POWER_OUTPUT_SCALE_LOWER_HOLD, POWER_OUTPUT_SCALE);
 
   // Write default indices for active thermocouples, assume in order
   for (int i=0; i<num_mcp; i++)

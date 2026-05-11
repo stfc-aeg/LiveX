@@ -96,7 +96,8 @@ class modAddr():
     output_override_upper_hold  = 40055
     output_override_lower_hold  = 40057
 
-    power_output_scale          = 40059
+    power_output_scale_upper    = 40059
+    power_output_scale_lower    = 40061
 
     # Addresses for controls
     addresses_pid_upper = {

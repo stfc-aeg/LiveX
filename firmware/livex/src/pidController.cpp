@@ -10,6 +10,7 @@ PIDController::PIDController(PIDAddresses addr) : myPID_(&input, &output, &setPo
     Ki = PID_KI_DEFAULT;
     Kd = PID_KD_DEFAULT;
     addr_ = addr;
+    power_output_scale = POWER_OUTPUT_SCALE;
 
     // Set PID output range to match ESP3258PLC PWM
     myPID_.SetOutputLimits(0, PID_OUTPUT_LIMIT);
@@ -25,7 +26,7 @@ void PIDController::run()
     myPID_.Compute();
 }
 
- // Check if PID terms in registers are different, and set them accordingly
+// Check if PID terms in registers are different, and set them accordingly
 void PIDController::check_PID_tunings(double newKp, double newKi, double newKd)
 {
     if ((newKp != Kp) || (newKi != Ki) || (newKd != Kd)) 
@@ -35,4 +36,19 @@ void PIDController::check_PID_tunings(double newKp, double newKi, double newKd)
       Ki = newKi;
       Kd = newKd;
     }
+}
+
+// Check PID output scalar and change if it differs from the current value
+void PIDController::check_output_scale(float new_scale)
+{
+    if (new_scale != power_output_scale)
+    {
+        power_output_scale = new_scale;
+        if (DEBUG)
+        {
+            Serial.print("New power output scale: ");
+            Serial.println(power_output_scale);
+        }
+    }
+
 }
