@@ -113,7 +113,8 @@ class modAddr():
         'output_override': output_override_upper_hold,
         'output_override_enable': output_override_upper_coil,
         'max_setpoint': setpoint_limit_hold,
-        'max_setpoint_step': setpoint_step_hold
+        'max_setpoint_step': setpoint_step_hold,
+        'output_scalar': power_output_scale_upper
     }
 
     addresses_pid_lower = {
@@ -129,7 +130,8 @@ class modAddr():
         'output_override': output_override_lower_hold,
         'output_override_enable': output_override_lower_coil,
         'max_setpoint': setpoint_limit_hold,
-        'max_setpoint_step': setpoint_step_hold
+        'max_setpoint_step': setpoint_step_hold,
+        'output_scalar': power_output_scale_lower
     }
 
     gradient_addresses = {

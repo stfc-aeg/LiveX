@@ -139,6 +139,27 @@ void updateSetPoints()
     PID_lower.baseSetPoint = newLowerSp;
   }
 
+  // If the maximum setpoint is lowered and the setpoints themselves are not updated,
+  // clamp any existing base setpoints to the new limit.
+  bool clamped = false;
+  if (PID_upper.baseSetPoint > setpointLimit)
+  {
+    PID_upper.baseSetPoint = setpointLimit;
+    clamped = true;
+  }
+  if (PID_lower.baseSetPoint > setpointLimit)
+  {
+    PID_lower.baseSetPoint = setpointLimit;
+    clamped = true;
+  }
+
+  // Write the values to the registers so this is reflected in the UI
+  if (clamped)
+  {
+    modbus_server.floatToHoldingRegisters(MOD_SETPOINT_UPPER_HOLD, PID_upper.baseSetPoint);
+    modbus_server.floatToHoldingRegisters(MOD_SETPOINT_LOWER_HOLD, PID_lower.baseSetPoint);
+  }
+
   // When setpoints are updated, thermal gradient will also need adjusting as modifiers will change
   thermalGradient();
 

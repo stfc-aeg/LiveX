@@ -65,7 +65,7 @@ function App() {
       <Row>
         <Motors
           endpoint_url={endpoint_url}
-         />
+        />
       </Row>
     </OdinApp>
   );

@@ -7,7 +7,7 @@ class PID():
     It stores the values, and provides functions to write to the modbus server on the PLC.
     """
 
-    def __init__(self, addresses, pid_defaults, max_setpoint, max_setpoint_increase, furnace_controller):
+    def __init__(self, addresses, pid_defaults, power_scalar,furnace_controller):
         """Initialise the PID class with addresses, creating the Parameter Tree and its
         required parameters to be populated when a modbus connection is established via the 
         controller.
@@ -15,9 +15,6 @@ class PID():
         # Addresses are generic via dictionary usage. Particularly important here for two PIDs
         self.addresses = addresses
         self.pid_defaults = pid_defaults
-
-        # Maximum amount setpoint can increase by in one step. Min.1 because SP must be changeable
-        self.max_setpt_step = max_setpoint_increase if max_setpoint_increase >= 1 else 1
 
         self.enable = False
         self.setpoint = 0.0
@@ -31,12 +28,13 @@ class PID():
 
         self.override_percent = 0
         self.override_enable = False
+        self.power_scalar = power_scalar
 
         self.furnace_controller = furnace_controller
 
         self.tree = ParameterTree({
             'enable': (lambda: self.enable, self.set_enable),
-            'setpoint': (lambda: self.setpoint, self.set_setpoint, {'max': max_setpoint}),
+            'setpoint': (lambda: self.setpoint, self.set_setpoint),
             'proportional': (lambda: self.kp, self.set_proportional),
             'integral': (lambda: self.ki, self.set_integral),
             'derivative': (lambda: self.kd, self.set_derivative),
@@ -47,8 +45,14 @@ class PID():
                 'percent_out': (lambda: self.override_percent, self.set_override_percent,
                                 {'min': 0, 'max': 100}),
                 'enable': (lambda: self.override_enable, self.set_override_enable)
-            }
+            },
+            'output_scalar': (lambda: self.power_scalar, self.set_power_scalar)
         })
+
+    def set_power_scalar(self, value):
+        """Set the power scalar for the PID output."""
+        self.power_scalar = value
+        write_modbus_float(self.client, self.power_scalar, self.addresses['power_output_scale_upper'])
 
     def set_override_percent(self, value):
         """Set the % output on the PID override."""
@@ -100,9 +104,11 @@ class PID():
 
     def set_setpoint(self, value):
         """Set the setpoint of the PID."""
-        if (value - self.setpoint) > self.max_setpt_step:
+        if (value - self.setpoint) > self.furnace_controller.max_setpt_step:
             # Limit is increase-only, safety considerations and cooling has no thermal shock risk
             raise LiveXError("Temperature step size exceeds limit.")
+        if value > self.furnace_controller.max_setpoint:
+            raise LiveXError("Setpoint exceeds maximum limit.")
         self.setpoint = value
         write_modbus_float(
             self.client, value, self.addresses['setpoint']

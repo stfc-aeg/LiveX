@@ -114,8 +114,8 @@ class FurnaceController():
         self.acquiring = False
 
         self.tc_manager = ThermocoupleManager(options)
-        self.pid_upper = PID(modAddr.addresses_pid_upper, pid_defaults, self.max_setpoint, self.max_setpoint_increase, self)
-        self.pid_lower = PID(modAddr.addresses_pid_lower, pid_defaults, self.max_setpoint, self.max_setpoint_increase, self)
+        self.pid_upper = PID(modAddr.addresses_pid_upper, pid_defaults, self.power_output_scale_upper, self)
+        self.pid_lower = PID(modAddr.addresses_pid_lower, pid_defaults, self.power_output_scale_lower, self)
         self.gradient = Gradient(modAddr.gradient_addresses, self)
         self.aspc = AutoSetPointControl(modAddr.aspc_addresses, max_autosp_rate, self)
 
@@ -173,6 +173,7 @@ class FurnaceController():
             'pid_lower': self.pid_lower.tree,
             'max_setpoint_increase': (lambda:
                 self.max_setpoint_increase, self.set_max_setpoint_increase, {'min':1}),
+            'max_setpoint': (lambda: self.max_setpoint, self.set_max_setpoint),
             'autosp': self.aspc.tree,
             'gradient': self.gradient.tree,
             'tcp': self.tcp_subtree,
@@ -183,6 +184,15 @@ class FurnaceController():
             'thermocouples': self.tc_manager.tree
         })
 
+    def set_max_setpoint(self, value):
+        """Set the maximum setpoint allowed for the heaters.
+        This affects both PIDs and is written to the PLC for use there.
+        :param value: new maximum setpoint as a float
+        """
+        self.max_setpoint = value
+        write_modbus_float(self.mod_client, self.max_setpoint, modAddr.setpoint_limit_hold)
+        write_coil(self.mod_client, modAddr.setpoint_update_coil, True)
+
     def set_max_setpoint_increase(self, value):
         """Set the maximum setpoint increase for both PID objects.
 
@@ -191,8 +201,7 @@ class FurnaceController():
         :param value: value to set the max_setpoint_increase to
         """
         self.max_setpoint_increase = value
-        self.pid_upper.max_setpt_step = self.max_setpoint_increase
-        self.pid_lower.max_setpt_step = self.max_setpoint_increase
+        write_modbus_float(self.mod_client, self.max_setpoint_increase, modAddr.setpoint_step_hold)
 
     def cleanup(self):
         """Clean up the FurnaceController instance.
@@ -516,6 +525,9 @@ class FurnaceController():
 
                     self.pid_upper.setpoint = read_decode_holding_reg(self.mod_client, modAddr.pid_setpoint_upper_hold)
                     self.pid_lower.setpoint = read_decode_holding_reg(self.mod_client, modAddr.pid_lower_setpoint_hold)
+
+                    self.max_setpoint = read_decode_holding_reg(self.mod_client, modAddr.setpoint_limit_hold)
+                    self.max_setpoint_increase = read_decode_holding_reg(self.mod_client, modAddr.setpoint_step_hold)
 
                 except Exception as e:
                     logging.error(f"error in reading: {e}")
