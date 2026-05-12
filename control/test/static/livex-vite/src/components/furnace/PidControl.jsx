@@ -106,16 +106,6 @@ function PidControl(props) {
                       />
                     </FloatingLabel>
                   </Col>
-                  <Col>
-                    <FloatingLabel label="Max Increase">
-                      <EndPointFormControl
-                        endpoint={furnaceEndPoint}
-                        fullpath={"max_setpoint_increase"}
-                        disabled={connectedDisable}
-                        style={floatingInputStyle}
-                      />
-                    </FloatingLabel>
-                  </Col>
                 </Row>
                 <Row>
                   <Col xs={8} sm={6}>

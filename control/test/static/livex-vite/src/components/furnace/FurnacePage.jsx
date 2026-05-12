@@ -12,6 +12,7 @@ import AutoSetPointControl from './AutoSetPointControl';
 import InfoPanel from './InfoPanel';
 import FurnaceRecording from './FurnaceRecording';
 import PidOverride from './PidOverride';
+import FurnaceMeta from './FurnaceMeta';
 
 function FurnacePage(props){
     
@@ -93,6 +94,11 @@ function FurnacePage(props){
             <></>
           }
 
+          <FurnaceMeta
+            furnaceEndPoint={furnaceEndPoint}
+            connectedDisable={connectedDisable}
+          />
+
           {
             furnaceEndPoint.data.status?.allow_solo_acquisition ?
             <FurnaceRecording
@@ -101,7 +107,6 @@ function FurnacePage(props){
             :
             <></>
           }
-
         </Col>
         <Col md={6}>
 

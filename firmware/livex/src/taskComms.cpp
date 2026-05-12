@@ -139,6 +139,27 @@ void updateSetPoints()
     PID_lower.baseSetPoint = newLowerSp;
   }
 
+  // If the maximum setpoint is lowered and the setpoints themselves are not updated,
+  // clamp any existing base setpoints to the new limit.
+  bool clamped = false;
+  if (PID_upper.baseSetPoint > setpointLimit)
+  {
+    PID_upper.baseSetPoint = setpointLimit;
+    clamped = true;
+  }
+  if (PID_lower.baseSetPoint > setpointLimit)
+  {
+    PID_lower.baseSetPoint = setpointLimit;
+    clamped = true;
+  }
+
+  // Write the values to the registers so this is reflected in the UI
+  if (clamped)
+  {
+    modbus_server.floatToHoldingRegisters(MOD_SETPOINT_UPPER_HOLD, PID_upper.baseSetPoint);
+    modbus_server.floatToHoldingRegisters(MOD_SETPOINT_LOWER_HOLD, PID_lower.baseSetPoint);
+  }
+
   // When setpoints are updated, thermal gradient will also need adjusting as modifiers will change
   thermalGradient();
 
@@ -166,19 +187,6 @@ void updateSetPoints()
     }
   }
 
-  // Additional check - has the power output scalar been changed?
-  // Better to have this check in here than with its own flag, as it is updated very very rarely
-  power_output_scale = modbus_server.combineHoldingRegisters(MOD_POWER_OUTPUT_SCALE);
-  if (power_output_scale < 0) { power_output_scale = 0; }
-  else if (power_output_scale > 1) { power_output_scale = 1; }
-
-  if (DEBUG)
-  {
-    Serial.print("New baseSetPoint for Upper PID: ");
-    Serial.println(PID_upper.baseSetPoint);
-    Serial.print("New baseSetPoint for Lower PID: ");
-    Serial.println(PID_lower.baseSetPoint);
-  }
   // Set coil back to 0 to prevent continuously calling this function
   modbus_server.writeBool(MOD_SETPOINT_UPDATE_COIL, 0);
 }

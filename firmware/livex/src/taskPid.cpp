@@ -193,6 +193,10 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
     double newKd = double(modbus_server.combineHoldingRegisters(addr.modKdHold));
     PID->check_PID_tunings(newKp, newKi, newKd);
 
+    // Check power output scalar. This won't change often but is not intensive to check
+    float new_scale = modbus_server.combineHoldingRegisters(addr.modOutputScaleHold);
+    PID->check_output_scale(new_scale);
+
     // Setpoint and computation handling
     // The goal here is that the setPoint used in PID computation is always derived from the
     // baseSetPoint of the PID. the bSP is gotten from a register in taskComms when changed,
@@ -215,7 +219,7 @@ void runPID(PIDEnum pid = PIDEnum::UNKNOWN)
     // The value output is still 0->4095 bits representing 0->10V
     // But we want to scale this down to 80% of the available range
     float out = POWER_OUTPUT_BITS * PID->output / PID_OUTPUT_LIMIT;
-    out = out * power_output_scale;
+    out = out * PID->power_output_scale;
 
     // Write PID output. When PID is not enabled, 
     modbus_server.floatToInputRegisters(addr.modPidOutputInp, PID->output);
