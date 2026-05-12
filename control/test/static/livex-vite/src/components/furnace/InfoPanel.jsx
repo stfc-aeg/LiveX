@@ -92,7 +92,7 @@ function InfoPanel(props) {
                 </InputGroup.Text>
                 <InputGroup.Text
                   style={labelStyling}>
-                    {checkNull((furnaceEndPoint.data?.pid_upper?.output) * 0.1)}
+                    {checkNull((furnaceEndPoint.data?.pid_upper?.output) * 0.1 * furnaceEndPoint.data?.pid_upper?.output_scalar)}
                 </InputGroup.Text>
               </InputGroup>
             </Row>
@@ -163,7 +163,7 @@ function InfoPanel(props) {
                 </InputGroup.Text>
                 <InputGroup.Text
                   style={labelStyling}>
-                    {checkNull((furnaceEndPoint.data?.pid_lower?.output) * 0.1)}
+                    {checkNull((furnaceEndPoint.data?.pid_lower?.output) * 0.1 * furnaceEndPoint.data?.pid_lower?.output_scalar)}
                 </InputGroup.Text>
               </InputGroup>
             </Row>

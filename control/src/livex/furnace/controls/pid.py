@@ -52,7 +52,7 @@ class PID():
     def set_power_scalar(self, value):
         """Set the power scalar for the PID output."""
         self.power_scalar = value
-        write_modbus_float(self.client, self.power_scalar, self.addresses['power_output_scale_upper'])
+        write_modbus_float(self.client, self.power_scalar, self.addresses['output_scalar'])
 
     def set_override_percent(self, value):
         """Set the % output on the PID override."""
@@ -104,7 +104,7 @@ class PID():
 
     def set_setpoint(self, value):
         """Set the setpoint of the PID."""
-        if (value - self.setpoint) > self.furnace_controller.max_setpt_step:
+        if (value - self.setpoint) > self.furnace_controller.max_setpoint_increase:
             # Limit is increase-only, safety considerations and cooling has no thermal shock risk
             raise LiveXError("Temperature step size exceeds limit.")
         if value > self.furnace_controller.max_setpoint:
