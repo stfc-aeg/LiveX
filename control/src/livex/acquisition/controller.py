@@ -308,6 +308,9 @@ class LiveXController(BaseController):
         start_time = now.strftime("%d/%m/%Y, %H:%M:%S")
         iac_set(self.metadata, 'fields/start_time', 'value', start_time)
 
+        start_time_ms = now.strftime("%H:%M:%S.%f")[:-3]
+        iac_set(self.metadata, 'fields/start_time_ms', 'value', start_time_ms)
+
         if self.executing_sequence:
             iac_set(self.metadata, 'fields/sequence_id', 'value', self.sequence_id)
             self.log_sequence_message(f"Beginning acquisition {acq_num}.")
@@ -386,6 +389,9 @@ class LiveXController(BaseController):
         now = datetime.now()
         stop_time = now.strftime("%d/%m/%Y, %H:%M:%S")
         iac_set(self.metadata, 'fields/stop_time', 'value', stop_time)
+
+        stop_time_ms = now.strftime("%H:%M:%S.%f")[:-3]
+        iac_set(self.metadata, 'fields/stop_time_ms', 'value', stop_time_ms)
 
         # Writing metadata with or without sequence info
         if not self.executing_sequence:

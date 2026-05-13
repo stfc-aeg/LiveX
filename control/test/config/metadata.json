@@ -95,6 +95,18 @@
         "persist": false,
         "user_input": false
     },
+    "start_time_ms": {
+        "label": "Acquisition Start Time (ms)",
+        "default": "0",
+        "persist": false,
+        "user_input": false
+    },
+    "stop_time_ms": {
+        "label": "Acquisition Stop Time (ms)",
+        "default": "0",
+        "persist": false,
+        "user_input": false
+    },
     "cooling_rate": {
         "label": "Cooling rate",
         "default": 0.0,
