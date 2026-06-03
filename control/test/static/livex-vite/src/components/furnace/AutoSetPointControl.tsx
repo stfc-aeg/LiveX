@@ -1,24 +1,24 @@
-import { checkNull } from '../../utils';
+import {  } from '../../utils';
 
-import React from "react";
-import { TitleCard, WithEndpoint } from 'odin-react';
-import Button from 'react-bootstrap/Button';
-import Form from 'react-bootstrap/Form';
-import Col from 'react-bootstrap/Col';
-import Row from 'react-bootstrap/Row';
+import type { AdapterEndpoint } from 'odin-react';
+import type { FurnaceEndpointTypes } from '../../EndpointTypes';
 
-import FloatingLabel from 'react-bootstrap/FloatingLabel';
-import { floatingInputStyle, floatingLabelStyle } from '../../utils';
+import { TitleCard, WithEndpoint, EndpointButton } from 'odin-react';
+import { Button, Form, Col, Row, FloatingLabel } from 'react-bootstrap';
+import { checkNull, floatingInputStyle, floatingLabelStyle } from '../../utils';
 
-const EndPointButton = WithEndpoint(Button);
 const EndpointSelect = WithEndpoint(Form.Select);
 const EndPointFormControl = WithEndpoint(Form.Control);
 
-function AutoSetPointControl(props){
-    const {furnaceEndPoint} = props;
-    const {connectedDisable} = props;
+interface AutoSetPointControlProps {
+    furnaceEndPoint: AdapterEndpoint<FurnaceEndpointTypes>;
+    connectedDisable: boolean;
+}
 
-    const heating_metadata = furnaceEndPoint.metadata.autosp?.heating;
+function AutoSetPointControl(props: AutoSetPointControlProps){
+    const {furnaceEndPoint, connectedDisable} = props;
+
+    const heating_metadata = furnaceEndPoint.metadata?.autosp?.heating;
 
     return (
         <TitleCard
@@ -26,14 +26,14 @@ function AutoSetPointControl(props){
             <Row>
               <Col xs={3} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>Auto Set Point Control</Col>
               <Col xs={3}>
-                <EndPointButton
+                <EndpointButton
                   endpoint={furnaceEndPoint}
                   fullpath="autosp/enable"
-                  value={furnaceEndPoint.data.autosp?.enable ? false : true}
-                  variant={furnaceEndPoint.data.autosp?.enable ? 'danger' : 'primary'}
+                  value={furnaceEndPoint.data?.autosp?.enable ? false : true}
+                  variant={furnaceEndPoint.data?.autosp?.enable ? 'danger' : 'primary'}
                   >
-                    {furnaceEndPoint.data.autosp?.enable ? "Disable" : "Enable"}
-                </EndPointButton>
+                    {furnaceEndPoint.data?.autosp?.enable ? "Disable" : "Enable"}
+                </EndpointButton>
               </Col>
             </Row>
           }>
@@ -58,7 +58,7 @@ function AutoSetPointControl(props){
                   endpoint={furnaceEndPoint}
                   fullpath="autosp/heating"
                   variant='outline-secondary'
-                  buttonText={furnaceEndPoint.data.autosp?.heating}
+                  buttonText={furnaceEndPoint.data?.autosp?.heating}
                   style={floatingInputStyle}
                   disabled={connectedDisable}>
                     {(heating_metadata?.allowed_values ?? []).map(
@@ -78,7 +78,7 @@ function AutoSetPointControl(props){
                   plaintext
                   readOnly
                   style={floatingLabelStyle}
-                  value={checkNull(furnaceEndPoint.data.autosp?.midpt_temp)}
+                  value={checkNull(furnaceEndPoint.data?.autosp?.midpt_temp)}
                   />
               </FloatingLabel>
 

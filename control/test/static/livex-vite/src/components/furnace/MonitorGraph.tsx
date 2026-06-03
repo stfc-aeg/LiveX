@@ -1,13 +1,17 @@
-import React from 'react';
-import { useState, useEffect, useMemo } from 'react';
-import Col from 'react-bootstrap/Col';
-import Row from 'react-bootstrap/Row';
-import Button from 'react-bootstrap/Button';
-import { TitleCard, OdinGraph } from 'odin-react';
-import InputGroup from 'react-bootstrap/InputGroup';
+import { useState, useMemo } from 'react';
+import { Row, Col, Button, InputGroup } from 'react-bootstrap';
+import { TitleCard, OdinGraph, AdapterEndpoint } from 'odin-react';
+import type { ParamTree, ParamNode } from 'odin-react';
 import ResizeableOdinGraph from '../ResizeableOdinGraph';
 
-function MonitorGraph(props) {
+interface MonitorGraphProps {
+  endpoint: AdapterEndpoint;
+  title: string;
+  paths: string[]; // paths to the data in the endpoint, e.g. "temperature_upper/data"
+  seriesNames: string[];
+}
+
+function MonitorGraph(props: MonitorGraphProps) {
     const {endpoint, title, paths, seriesNames } = props;
 
     // Initialise enabled traces outside of useEffect, all to true
@@ -21,7 +25,11 @@ function MonitorGraph(props) {
       return paths.map((path) => {
         const val = path
           .split("/")
-          .reduce((acc, key) => acc?.[key], endpoint.data);
+          // Narrow acc to paramnode|undefined for typing reasons
+          .reduce<ParamTree | undefined>((acc, key) => {
+            if (!acc || typeof acc !== 'object' || Array.isArray(acc)) return undefined;
+            return (acc as ParamNode)[key];
+          }, endpoint.data as ParamNode)
         return Array.isArray(val) ? val : []; // always an array
       });
     }, [paths, endpoint?.data]);
@@ -34,7 +42,7 @@ function MonitorGraph(props) {
       seriesNames.filter((_, i) => enabledTraces[i]), [seriesNames, enabledTraces]);
 
     // Copy the previous enabledTraces, flip the value for the specific trace
-    const toggleTrace = (i) =>
+    const toggleTrace = (i: number) =>
       setEnabledTraces((prev) => ({...prev, [i]: !prev[i]}));
 
     // console.log(filteredData)

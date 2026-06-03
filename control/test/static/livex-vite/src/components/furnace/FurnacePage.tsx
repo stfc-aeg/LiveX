@@ -1,10 +1,8 @@
-import React from 'react';
 
+import { FurnaceEndpointTypes } from '../../EndpointTypes';
+
+import { Col, Row, Button, Container } from 'react-bootstrap';
 import { TitleCard, WithEndpoint, useAdapterEndpoint } from 'odin-react';
-import Button from 'react-bootstrap/Button';
-import Container from 'react-bootstrap/Container';
-import Col from 'react-bootstrap/Col';
-import Row from 'react-bootstrap/Row';
 
 import PidControl from './PidControl';
 import ThermalGradient from './ThermalGradient';
@@ -14,33 +12,33 @@ import FurnaceRecording from './FurnaceRecording';
 import PidOverride from './PidOverride';
 import FurnaceMeta from './FurnaceMeta';
 
-function FurnacePage(props){
+function FurnacePage(){
     
     const endpoint_url = import.meta.env.VITE_ENDPOINT_URL;
 
-    const furnaceEndPoint = useAdapterEndpoint('furnace', endpoint_url, 500);
+    const furnaceEndPoint = useAdapterEndpoint<FurnaceEndpointTypes>('furnace', endpoint_url, 500);
     const EndPointButton = WithEndpoint(Button);
 
-    const connectedDisable = (!(furnaceEndPoint.data.status?.connected || false))
+    const connectedDisable = (!(furnaceEndPoint.data?.status?.connected || false))
 
     return (
-    <Row>
+      <Row>
         <Container>
           <Row className="d-flex justify-content-between">
             <Col xs="auto">
               <EndPointButton
                 endpoint={furnaceEndPoint}
-                value={true}
+                value={true as any}
                 fullpath="status/reconnect"
                 disabled={!connectedDisable}
-                variant={furnaceEndPoint.data.status?.connected ? "primary" : "danger"}>
-                {furnaceEndPoint.data.status?.connected ? 'Connected' : 'Reconnect'}
+                variant={furnaceEndPoint.data?.status?.connected ? "primary" : "danger"}>
+                {furnaceEndPoint.data?.status?.connected ? 'Connected' : 'Reconnect'}
               </EndPointButton>
             </Col>
             <Col xs="auto">
               <EndPointButton
                 endpoint={furnaceEndPoint}
-                value={true}
+                value={true as any}
                 fullpath="status/full_stop"
                 disabled={connectedDisable}
                 variant='danger'>Disable all outputs
@@ -64,7 +62,7 @@ function FurnacePage(props){
           </PidControl>
 
           {
-            furnaceEndPoint.data.status?.allow_pid_override ?
+            furnaceEndPoint.data?.status?.allow_pid_override ?
             <TitleCard
               title="Manual PID Override">
                 <Row>
@@ -100,7 +98,7 @@ function FurnacePage(props){
           />
 
           {
-            furnaceEndPoint.data.status?.allow_solo_acquisition ?
+            furnaceEndPoint.data?.status?.allow_solo_acquisition ?
             <FurnaceRecording
               furnaceEndPoint={furnaceEndPoint}
             />
@@ -122,7 +120,7 @@ function FurnacePage(props){
 
           <InfoPanel furnaceEndPoint={furnaceEndPoint}/>
         </Col>
-    </Row>
+      </Row>
     )
 }
 export default FurnacePage;

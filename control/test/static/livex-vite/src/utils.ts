@@ -1,14 +1,16 @@
 import * as React from 'react';
 
 // Utility function that checks if a value is null or undefined. Returns 'null' if yes, value if no
-export const checkNull = (val) => val === null || val === undefined ? 'null' : val.toFixed(4);
+export const checkNull = (val: number | null | undefined): string => 
+  val === null || val === undefined ? 'null' : val.toFixed(4);
 
-export const checkNullNoDp = (val) => val === null || val === undefined ? 'null' : val;
+export const checkNullNoDp = (val: number | null | undefined): string => 
+  val === null || val === undefined ? 'null' : val.toString();
 
 // usePrevious - to track the previous state of a variable
 // https://phuoc.ng/collection/react-ref/save-the-previous-value-of-a-variable/
-export const usePrevious = (value) => {
-    const ref = React.useRef();
+export const usePrevious = <T,>(value: T): T | undefined => {
+    const ref = React.useRef<T | undefined>(undefined);
     React.useEffect(() => {
         ref.current = value;
     });

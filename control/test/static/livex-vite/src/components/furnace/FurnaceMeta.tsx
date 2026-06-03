@@ -1,12 +1,19 @@
+import type { AdapterEndpoint } from 'odin-react';
+import type { FurnaceEndpointTypes } from '../../EndpointTypes';
+
 import { Col, Row, Form, FloatingLabel } from 'react-bootstrap';
 import { TitleCard, WithEndpoint } from 'odin-react';
 import { floatingInputStyle } from '../../utils';
 
 const EndPointFormControl = WithEndpoint(Form.Control);
 
-function FurnaceMeta(props) {
-    const {furnaceEndPoint } = props;
-    const {connectedDisable} = props;
+interface FurnaceMetaProps {
+  furnaceEndPoint: AdapterEndpoint<FurnaceEndpointTypes>;
+  connectedDisable: boolean;
+}
+
+function FurnaceMeta(props: FurnaceMetaProps) {
+    const { furnaceEndPoint, connectedDisable } = props;
 
     return (
       <TitleCard title={

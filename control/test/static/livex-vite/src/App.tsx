@@ -6,11 +6,11 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
-import FurnacePage from './components/furnace/FurnacePage';
+import FurnacePage from './components/furnace/FurnacePage.js';
 import { OdinApp } from 'odin-react';
-import Metadata from './components/setup/Metadata';
-import Cameras from './components/cameras/Cameras';
-import Trigger from './components/setup/Trigger';
+import Metadata from './components/setup/Metadata.jsx';
+import Cameras from './components/cameras/Cameras.jsx';
+import Trigger from './components/setup/Trigger.jsx';
 import InferencePage from './components/InferencePage.jsx';
 import GraphPage from './components/GraphPage.jsx'
 import SequencerPage from './components/SequencerPage.jsx';

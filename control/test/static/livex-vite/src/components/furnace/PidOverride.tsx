@@ -1,27 +1,24 @@
-import React from 'react';
-import Col from 'react-bootstrap/Col';
-import Form from 'react-bootstrap/Form';
-import Row from 'react-bootstrap/Row';
-import InputGroup from 'react-bootstrap/InputGroup';
-import Button from 'react-bootstrap/Button';
-import { TitleCard, WithEndpoint } from 'odin-react';
-import ToggleSwitch from '../ToggleSwitch';
-import { checkNull  } from '../../utils';
+import type { AdapterEndpoint } from 'odin-react';
+import type { FurnaceEndpointTypes } from '../../EndpointTypes';
 
-import { floatingInputStyle, floatingLabelStyle } from '../../utils';
-import { FloatingLabel } from 'react-bootstrap';
-
+import { Col, Row, Form, FloatingLabel } from 'react-bootstrap';
+import { TitleCard, WithEndpoint, EndpointButton } from 'odin-react';
+import { floatingInputStyle } from '../../utils';
 
 const EndPointFormControl = WithEndpoint(Form.Control);
-const EndPointButton = WithEndpoint(Button);
 
-function PidOverride(props) {
+interface PidOverrideProps {
+    furnaceEndPoint: AdapterEndpoint<FurnaceEndpointTypes>;
+    connectedDisable: boolean;
+    title: string;
+    pid: "pid_upper" | "pid_lower";
+}
+
+function PidOverride(props: PidOverrideProps) {
     const {furnaceEndPoint} = props;
     const {connectedDisable} = props;
     const {title} = props;
     const {pid} = props;
-
-    const labelWidth="100px";
 
     return (
       <TitleCard
@@ -29,14 +26,14 @@ function PidOverride(props) {
           <Row>
             <Col xs={6} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>{title}</Col>
             <Col xs={3}>
-              <EndPointButton
+              <EndpointButton
                 endpoint={furnaceEndPoint}
                 fullpath={pid+"/override/enable"}
-                variant={furnaceEndPoint.data[pid]?.override?.enable ? 'danger' : 'primary'}
-                value={furnaceEndPoint.data[pid]?.override?.enable ? false : true}
+                variant={furnaceEndPoint.data?.[pid]?.override?.enable ? 'danger' : 'primary'}
+                value={furnaceEndPoint.data?.[pid]?.override?.enable ? false : true}
                 >
-                  {furnaceEndPoint.data[pid]?.override?.enable ? "Disable" : "Enable"}
-              </EndPointButton>
+                  {furnaceEndPoint.data?.[pid]?.override?.enable ? "Disable" : "Enable"}
+              </EndpointButton>
             </Col>
           </Row>
         }>

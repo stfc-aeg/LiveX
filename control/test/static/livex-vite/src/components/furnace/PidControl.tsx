@@ -2,26 +2,31 @@ import React from 'react';
 import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
-import InputGroup from 'react-bootstrap/InputGroup';
 import Button from 'react-bootstrap/Button';
-import { TitleCard, WithEndpoint } from 'odin-react';
-import ToggleSwitch from '../ToggleSwitch';
+import { TitleCard, WithEndpoint, EndpointButton } from 'odin-react';
+import type { AdapterEndpoint } from 'odin-react';
 import { checkNull  } from '../../utils';
 
-import { floatingInputStyle, floatingLabelStyle } from '../../utils';
+import { floatingInputStyle } from '../../utils';
 import { FloatingLabel } from 'react-bootstrap';
+import { FurnaceEndpointTypes } from '../../EndpointTypes';
 
 
 const EndPointFormControl = WithEndpoint(Form.Control);
-const EndPointButton = WithEndpoint(Button);
 
-function PidControl(props) {
-    const {furnaceEndPoint} = props;
-    const {connectedDisable} = props;
-    const {title} = props;
-    const {pid} = props;
+interface PidControlProps {
+    furnaceEndPoint: AdapterEndpoint<FurnaceEndpointTypes>;
+    connectedDisable: boolean;
+    title: string;
+    pid: "pid_upper" | "pid_lower";
+}
 
-    const labelWidth="100px";
+type PidBranch = FurnaceEndpointTypes['pid_upper' | 'pid_lower'];
+
+function PidControl(props: PidControlProps) {
+    const { furnaceEndPoint, connectedDisable, title, pid } = props;
+    const pidData = furnaceEndPoint.data?.[pid] as PidBranch | undefined;
+    const labelWidth = "100px";
 
     return (
       <TitleCard
@@ -29,14 +34,14 @@ function PidControl(props) {
           <Row>
             <Col xs={3} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>{title}</Col>
             <Col xs={3}>
-              <EndPointButton
+              <EndpointButton
                 endpoint={furnaceEndPoint}
                 fullpath={pid+"/enable"}
-                variant={furnaceEndPoint.data[pid]?.enable ? 'danger' : 'primary'}
-                value={furnaceEndPoint.data[pid]?.enable ? false : true}
+                variant={pidData?.enable ? 'danger' : 'primary'}
+                value={pidData?.enable ? false : true}
                 >
-                  {furnaceEndPoint.data[pid]?.enable ? "Disable" : "Enable"}
-              </EndPointButton>
+                  {pidData?.enable ? "Disable" : "Enable"}
+              </EndpointButton>
             </Col>
           </Row>
         }>
@@ -102,7 +107,7 @@ function PidControl(props) {
                           backgroundColor: '#e0f7ff',
                           borderRadius: '0.375rem'
                         }}
-                        value={checkNull(furnaceEndPoint.data[pid]?.setpoint)}
+                        value={checkNull(pidData?.setpoint)}
                       />
                     </FloatingLabel>
                   </Col>
@@ -121,7 +126,7 @@ function PidControl(props) {
                               borderRadius: '0.375rem'
                           }}
 
-                          value={checkNull((furnaceEndPoint.data[pid]?.temperature))}
+                          value={checkNull(pidData?.temperature)}
                         />
                     </FloatingLabel>
                   </Col>
@@ -139,8 +144,8 @@ function PidControl(props) {
                           }}
                           value={
                             checkNull(Math.abs(
-                              (furnaceEndPoint.data[pid]?.setpoint) -
-                              (furnaceEndPoint.data[pid]?.temperature))
+                              (pidData?.setpoint ?? 0) -
+                              (pidData?.temperature ?? 0))
                             )
                           }
                         />
