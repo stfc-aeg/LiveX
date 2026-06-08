@@ -1,4 +1,3 @@
-import type { AdapterEndpoint } from 'odin-react';
 import type { InferenceEndpointTypes } from '../../EndpointTypes';
 
 import { Row, Col, Container, Form, FloatingLabel, Button } from 'react-bootstrap';

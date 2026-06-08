@@ -1,10 +1,8 @@
-import {  } from '../../utils';
-
 import type { AdapterEndpoint } from 'odin-react';
 import type { FurnaceEndpointTypes } from '../../EndpointTypes';
 
 import { TitleCard, WithEndpoint, EndpointButton } from 'odin-react';
-import { Button, Form, Col, Row, FloatingLabel } from 'react-bootstrap';
+import { Form, Col, Row, FloatingLabel } from 'react-bootstrap';
 import { checkNull, floatingInputStyle, floatingLabelStyle } from '../../utils';
 
 const EndpointSelect = WithEndpoint(Form.Select);

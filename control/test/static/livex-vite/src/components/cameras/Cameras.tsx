@@ -1,7 +1,7 @@
+import type { CameraEndpointTypes } from '../../EndpointTypes';
+
 import { Row, Col } from 'react-bootstrap';
 import { useAdapterEndpoint } from 'odin-react';
-import type { AdapterEndpoint } from 'odin-react';
-import type { CameraEndpointTypes } from '../../EndpointTypes';
 
 import OrcaCamera from './OrcaCamera';
 
@@ -13,7 +13,7 @@ interface CamerasProps {
 function Cameras(props: CamerasProps) {
     const {endpoint_url} = props;
 
-    const cameraEndPoint = useAdapterEndpoint<CameraEndpointTypes>('camera', endpoint_url, 1000) as AdapterEndpoint<CameraEndpointTypes>;
+    const cameraEndPoint = useAdapterEndpoint<CameraEndpointTypes>('camera', endpoint_url, 1000);
 
     // Destructuring data and cameras safely
     const cameras = cameraEndPoint?.data || {} // Fallback to an empty object if no data
