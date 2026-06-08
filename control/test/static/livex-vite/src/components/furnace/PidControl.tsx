@@ -1,16 +1,10 @@
-import React from 'react';
-import Col from 'react-bootstrap/Col';
-import Form from 'react-bootstrap/Form';
-import Row from 'react-bootstrap/Row';
-import Button from 'react-bootstrap/Button';
+import { Row, Col, Form, FloatingLabel } from 'react-bootstrap';
 import { TitleCard, WithEndpoint, EndpointButton } from 'odin-react';
 import type { AdapterEndpoint } from 'odin-react';
+import type { FurnaceEndpointTypes } from '../../EndpointTypes';
 import { checkNull  } from '../../utils';
 
 import { floatingInputStyle } from '../../utils';
-import { FloatingLabel } from 'react-bootstrap';
-import { FurnaceEndpointTypes } from '../../EndpointTypes';
-
 
 const EndPointFormControl = WithEndpoint(Form.Control);
 
@@ -26,7 +20,6 @@ type PidBranch = FurnaceEndpointTypes['pid_upper' | 'pid_lower'];
 function PidControl(props: PidControlProps) {
     const { furnaceEndPoint, connectedDisable, title, pid } = props;
     const pidData = furnaceEndPoint.data?.[pid] as PidBranch | undefined;
-    const labelWidth = "100px";
 
     return (
       <TitleCard

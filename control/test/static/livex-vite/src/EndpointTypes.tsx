@@ -148,9 +148,7 @@ export interface LiveXEndpointTypes extends ParamNode {
         start: any;
         stop: any;
     };
-    cameras: {
-        use_exposure_lookup: boolean;
-    };
+    cameras: Record<string, CameraType>;
 }
 
 export interface MetadataField extends ParamNode {
@@ -191,49 +189,25 @@ export interface MetadataEndpointTypes extends ParamNode {
     };
 }
 
-export interface liveDataEndpointTypes extends ParamNode {
+export interface LiveDataDetailsTypes extends ParamNode {
+    cam_name: string;
+    endpoint: string;
     image: {
-        narrowfov: {
-            histogram: null;
-            image: null;
-        };
-        widefov: {
-            histogram: null;
-            image: null;
-        };
+        autoclip: boolean;
+        autoclip_percent: number;
+        clip_range_percent: [number, number];
+        clip_range_value: [number, number];
+        colour: string;
+        dimensions: [number, number];
+        resolution: number;
+        size_x: number;
+        size_y: number;
+        zoom: [number, number, number, number];
     };
-    narrowfov: {
-        cam_name: string;
-        endpoint: string;
-        image: {
-            autoclip: boolean;
-            autoclip_percent: number;
-            clip_range_percent: [number, number];
-            clip_range_value: [number, number];
-            colour: string;
-            dimensions: [number, number];
-            resolution: number;
-            size_x: number;
-            size_y: number;
-            zoom: [number, number, number, number];
-        };
-    };
-    widefov: {
-        cam_name: string;
-        endpoint: string;
-        image: {
-            autoclip: boolean;
-            autoclip_percent: number;
-            clip_range_percent: [number, number];
-            clip_range_value: [number, number];
-            colour: string;
-            dimensions: [number, number];
-            resolution: number;
-            size_x: number;
-            size_y: number;
-            zoom: [number, number, number, number];
-        };
-    };
+}
+
+export interface LiveDataEndpointTypes extends ParamNode {
+    [camera_id: string]: LiveDataDetailsTypes;
 }
 
 
@@ -301,3 +275,73 @@ export interface KinesisEndpointTypes extends ParamNode {
     controllers: Record<string, KDCController>;
 };
 
+export interface CameraType extends ParamNode {
+    background_task: {
+        enable: boolean;
+        interval: number;
+    };
+    camera_name: string;
+    command: any;
+    config: {
+        camera_number: number;
+        exposure_time: number;
+        frame_rate: number;
+        image_timeout: number;
+        num_frames: number;
+        timestamp_mode: number;
+        trigger_active: number;
+        trigger_connector: number;
+        trigger_mode: number;
+        trigger_polarity: number;
+        trigger_source: number;
+    };
+    connection: {
+        connected: boolean;
+        reconnect: any;
+    };
+    endpoint: string;
+    status: {
+        camera_status: string;
+        camera_temperature: number;
+        frame_number: number;
+    };
+}
+
+export interface CameraEndpointTypes extends ParamNode {
+    [camera_id: string]: CameraType;
+}
+
+export interface InferenceEndpointResultTypes extends ParamNode {
+    endpoint_name: string;
+    endpoint: string;
+    connection: {
+        connected: boolean;
+        reconnect: boolean;
+    };
+    probabilities: {
+        columnar: number;
+        equiaxed: number;
+        alpha: number;
+        beta: number;
+        hot_tear: number;
+    };
+    results: {
+        inference_enabled: boolean;
+        inference_running: boolean;
+        last_frame_number: number;
+        avg_inference_time_ms: number;
+        flatfield_file: string;
+        experiment_number: number;
+        recording: boolean;
+        num_predictions: number;
+    };
+    set_flatfield_num: number;
+    background_task: {
+        interval: number;
+        enable: boolean;
+    };
+}
+
+export interface InferenceEndpointTypes extends ParamNode {
+    [endpoint_id: string]: InferenceEndpointResultTypes;
+}

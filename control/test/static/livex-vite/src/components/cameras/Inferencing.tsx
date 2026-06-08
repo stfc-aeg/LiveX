@@ -1,27 +1,26 @@
-import React from 'react';
-import Col from 'react-bootstrap/Col';
-import Row from 'react-bootstrap/Row';
-import { Container } from 'react-bootstrap';
-import Form from 'react-bootstrap/Form';
-import { useAdapterEndpoint, WithEndpoint, TitleCard } from 'odin-react';
-import { FloatingLabel } from 'react-bootstrap';
-import Button from 'react-bootstrap/Button';
-import { useState } from 'react';
+import type { AdapterEndpoint } from 'odin-react';
+import type { InferenceEndpointTypes } from '../../EndpointTypes';
 
+import { Row, Col, Container, Form, FloatingLabel, Button } from 'react-bootstrap';
+import { useAdapterEndpoint, TitleCard, EndpointButton } from 'odin-react';
+import { useState } from 'react';
 import { checkNull, checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../../utils';
 
-const EndPointButton = WithEndpoint(Button);
+interface InferenceViewProps {
+  endpoint_url: string;
+  name: string;
+}
 
-function InferenceView(props) {
-    const {endpoint_url} = props;
-    const {name} = props;
+function InferenceView(props: InferenceViewProps) {
+    const {endpoint_url, name} = props;
+
  
-    const inferenceEndPoint = useAdapterEndpoint('inference', endpoint_url, 1000);
-    const inferenceResults = inferenceEndPoint?.data[name]?.results;
+    const inferenceEndPoint = useAdapterEndpoint<InferenceEndpointTypes>('inference', endpoint_url, 1000);
+    const inferenceResults = inferenceEndPoint?.data?.[name]?.results;
 
     const [flatfieldNum, setFlatfieldNum] = useState(0);
-    const handleFlatfieldNumChange = (e) => {
-      setFlatfieldNum(e.target.value);
+    const handleFlatfieldNumChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setFlatfieldNum(Number(e.target.value));
     };
 
     return (
@@ -37,7 +36,7 @@ function InferenceView(props) {
                         plaintext
                         readOnly
                         style={floatingLabelStyle}
-                        value={checkNullNoDp(inferenceResults?.total_objects)}
+                        value={checkNullNoDp(inferenceResults?.num_predictions)}
                       />
                   </FloatingLabel>
                 </Col>
@@ -48,7 +47,7 @@ function InferenceView(props) {
                         plaintext
                         readOnly
                         style={floatingLabelStyle}
-                        value={checkNullNoDp(inferenceResults?.frame_number)}
+                        value={checkNullNoDp(inferenceResults?.last_frame_number)}
                       />
                   </FloatingLabel>
                 </Col>
@@ -73,7 +72,7 @@ function InferenceView(props) {
                         <Form.Control
                           style={floatingInputStyle}
                           type="number"
-                          value={inferenceResults?.ff_correction_file}
+                          value={inferenceResults?.flatfield_file}
                           onChange={handleFlatfieldNumChange}
                         />
                     </FloatingLabel>
@@ -81,21 +80,21 @@ function InferenceView(props) {
                 </Col>
                 <Col>
                   <Row>
-                    <EndPointButton
+                    <EndpointButton
                       endpoint={inferenceEndPoint}
                       fullpath={`${name}/results/set_flatfield_num`}
                       value={flatfieldNum}>
                         Set flatfield from acquisition
-                    </EndPointButton>
+                    </EndpointButton>
                   </Row>
                   <Row>
-                    <EndPointButton
+                    <EndpointButton
                       endpoint={inferenceEndPoint}
                       fullpath={`${name}/results/set_flatfield_num`}
                       value={-1 /*Special case adapter-side,*/} 
                       variant='danger'>
                         Clear flatfield
-                    </EndPointButton>
+                    </EndpointButton>
                   </Row>
                 </Col>
               </Row>

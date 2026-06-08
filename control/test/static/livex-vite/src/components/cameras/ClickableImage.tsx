@@ -1,6 +1,18 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-function ClickableImage(props){
+interface ClickableImageProps {
+    id: string;
+    endpoint: any;  // Endpoint to send coordinate data to
+    imgPath: string;  // Path to get image from
+    coordsPath: string;  // Path to put coordinates to
+    coordsParam: string;  // Parameter name for coordinates in the put request
+    maximiseAxis?: 'x' | 'y';  // Optional axis to maximise selection to
+    valuesAsPercentages?: boolean;  // Whether to send values as percentages instead of pixels
+    rectOutlineColour?: string;  // Colour of the rectangle outline, default 'white'
+    rectRgbaProperties?: string;  // Fill style for the rectangle, default 'rgba(255,255,255,0.33)'
+}
+
+function ClickableImage(props: ClickableImageProps){
     /*
     - id is a string for the purpose of the image. This is used for the canvas - if you have more
       than one ClickableImage on a single page, you will need a unique id for its canvas.
@@ -27,18 +39,18 @@ function ClickableImage(props){
       right: 2
     }
 
-    const [imgData, changeImgData] = useState(null);
+    const [imgData, changeImgData] = useState("");
 
     const refreshImage = useCallback(() => {
         endpoint.get(imgPath, {responseType: "blob"})
-        .then(result => {
+        .then((result: Blob) => {
             URL.revokeObjectURL(imgData);  // memory management
             const img_url = URL.createObjectURL(result);
             changeImgData(img_url);
             // endpoint.refreshData();
-        }).catch((error) => {
+        }).catch((error: Error) => {
             console.error("IMAGE GET FAILED: ", error);
-            changeImgData(null);
+            changeImgData("");
         })
     }, [endpoint.updateFlag]);
 
@@ -49,15 +61,15 @@ function ClickableImage(props){
     }, [refreshImage]);
 
     // Initialize some states to keep track of points clicked
-    const [startPoint, setStartPoint] = useState([]);
-    const [endPoint, setEndPoint] = useState([]);
-    const [points, setPoints] = useState([]);
-    const [coords, setCoords] = useState([]);
+    const [startPoint, setStartPoint] = useState<[number, number] | null>(null);
+    const [endPoint, setEndPoint] = useState<[number, number] | null>(null);
+    const [points, setPoints] = useState<[number, number][]>([]);
+    const [coords, setCoords] = useState<number[][]>([]);
 
     // Both mouseDown and mouseUp need this
-    const getPoint = useCallback(e => {
+    const getPoint = useCallback((e: React.MouseEvent<SVGSVGElement>): [number, number] => {
       // Event handling, get bounds of what the user clicked on and calculate from top-left
-      const bounds = e.target.getBoundingClientRect();
+      const bounds = e.currentTarget.getBoundingClientRect();
       const x = e.clientX - bounds.left;
       const y = e.clientY - bounds.top;
 
@@ -65,6 +77,8 @@ function ClickableImage(props){
     }, []);
 
     const calculateRectangle = useCallback(() => {
+      if (!startPoint || !endPoint) return;
+
       // Lists of x and y coordinates
       const xCoords = [startPoint[0], endPoint[0]];
       const yCoords = [startPoint[1], endPoint[1]];
@@ -91,7 +105,7 @@ function ClickableImage(props){
       }
 
       // The polygon draws from the first entry. Top-left is default here, going clockwise
-      const rectanglePoints = [
+      const rectanglePoints: [number, number][] = [
         [minX, minY], // Top left
         [maxX, minY], // Top right
         [maxX, maxY], // Bottom right
@@ -105,7 +119,7 @@ function ClickableImage(props){
     }, [startPoint, endPoint, maxAxis]);
 
     //  Handle context menu = handle right click
-    const handleContextMenu = useCallback(e => {
+    const handleContextMenu = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
       const isRectangle = startPoint || endPoint || points.length > 0;
 
       if (isRectangle)
@@ -119,9 +133,9 @@ function ClickableImage(props){
         setCoords([]);
       }
       // Otherwise open context as normal
-    })
+    }, [startPoint, endPoint, points.length])
 
-    const handleMouseDown = useCallback(e => {
+    const handleMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
       // First press sets start for when mouse moves
       if (e.button===buttons.left)  // Left click only
       {
@@ -132,7 +146,7 @@ function ClickableImage(props){
 
     }, [getPoint]);
 
-    const handleMouseMove = useCallback(e => {
+    const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
       if (startPoint)
       {
         let point = getPoint(e);
@@ -141,7 +155,7 @@ function ClickableImage(props){
       }
     }, [startPoint, getPoint, calculateRectangle]);
 
-    const handleMouseUp = useCallback(e => {
+    const handleMouseUp = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
       if (startPoint) 
       {
         calculateRectangle();
@@ -155,9 +169,10 @@ function ClickableImage(props){
         // Adjust to percentages if needed
         if (valuesAsPercentages)
         {
-          let canvas = document.getElementById(svgId);
-          let width = canvas.clientWidth;
-          let height = canvas.clientHeight;
+          const canvas = document.getElementById(svgId);
+          if (!canvas) return;
+          const width = canvas.clientWidth;
+          const height = canvas.clientHeight;
 
           // Calculate new percentage coordinates to 2 d.p.
           let xMin = parseFloat(((coords[0][0] / width) * 100).toFixed(2));
@@ -177,7 +192,7 @@ function ClickableImage(props){
         endpoint.put(sendVal, coordsPath);
         setPoints([]);
       }
-    }, [startPoint, getPoint, calculateRectangle]);
+    }, [startPoint, getPoint, calculateRectangle, coords, valuesAsPercentages, coordsParam, coordsPath, endpoint, svgId]);
 
     // Only insert polygon tags if there's enough entries in the array
     return (

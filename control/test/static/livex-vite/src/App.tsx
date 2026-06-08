@@ -3,15 +3,15 @@ import './App.css';
 // import 'odin-react/dist/index.css'
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-import Col from 'react-bootstrap/Col';
-import Row from 'react-bootstrap/Row';
+import { Row, Col } from 'react-bootstrap';
 
-import FurnacePage from './components/furnace/FurnacePage.js';
 import { OdinApp } from 'odin-react';
+
+import FurnacePage from './components/furnace/FurnacePage.tsx';
 import Metadata from './components/setup/Metadata.jsx';
-import Cameras from './components/cameras/Cameras.jsx';
+import Cameras from './components/cameras/Cameras.tsx';
 import Trigger from './components/setup/Trigger.jsx';
-import InferencePage from './components/InferencePage.jsx';
+import InferencePage from './components/InferencePage.tsx';
 import GraphPage from './components/GraphPage.jsx'
 import SequencerPage from './components/SequencerPage.jsx';
 

@@ -1,33 +1,30 @@
-import React from 'react';
-import Col from 'react-bootstrap/Col';
-import Row from 'react-bootstrap/Row';
-import { Container } from 'react-bootstrap';
-import Form from 'react-bootstrap/Form';
-import { useAdapterEndpoint, WithEndpoint, TitleCard } from 'odin-react';
-import { FloatingLabel } from 'react-bootstrap';
-import Button from 'react-bootstrap/Button';
-import { useState } from 'react';
-import MonitorGraph from '../furnace/MonitorGraph';
+import type { AdapterEndpoint } from 'odin-react';
+import type { InferenceEndpointTypes } from '../../EndpointTypes';
 
+import { Row, Col, Form, FloatingLabel } from 'react-bootstrap';
+import { useAdapterEndpoint, EndpointButton, TitleCard } from 'odin-react';
+import { useState, useMemo } from 'react';
+
+import MonitorGraph from '../furnace/MonitorGraph';
 import { checkNull, checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../../utils';
 
-const EndPointButton = WithEndpoint(Button);
+interface InferenceCardProps {
+  endpoint_url: string;
+  name: string;
+}
 
-function InferenceCard(props) {
-    const {endpoint_url} = props;
-    const {name} = props;
+function InferenceCard(props: InferenceCardProps) {
+    const {endpoint_url, name} = props;
  
-    const inferenceEndPoint = useAdapterEndpoint('inference', endpoint_url, 1000);
-    const inferenceResults = inferenceEndPoint?.data[name]?.results;
-
-    const sampleRate = React.useMemo(() => inferenceResults?.frames_per_second );
+    const inferenceEndPoint = useAdapterEndpoint<InferenceEndpointTypes>('inference', endpoint_url, 1000);
+    const inferenceResults = inferenceEndPoint?.data?.[name]?.results;
 
     const [flatfieldNum, setFlatfieldNum] = useState(0);
-    const handleFlatfieldNumChange = (e) => {
-      setFlatfieldNum(e.target.value);
+    const handleFlatfieldNumChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setFlatfieldNum(Number(e.target.value));
     };
 
-    const fullpaths = React.useMemo(() => [
+    const fullpaths = useMemo(() => [
       `${name}/probabilities/columnar`,
       `${name}/probabilities/equiaxed`,
       `${name}/probabilities/alpha`,
@@ -79,29 +76,29 @@ function InferenceCard(props) {
                       <Form.Control
                         style={floatingInputStyle}
                         type="number"
-                        value={inferenceResults?.ff_correction_file}
+                        value={inferenceResults?.flatfield_file}
                         onChange={handleFlatfieldNumChange}
                       />
                     </FloatingLabel>
                   </Col>
                   <Col>
                     <Row>
-                      <EndPointButton
+                      <EndpointButton
                         endpoint={inferenceEndPoint}
                         fullpath={`${name}/results/set_flatfield_num`}
                         value={flatfieldNum}>
                         Set flatfield from acquisition
-                      </EndPointButton>
+                      </EndpointButton>
                     </Row>
                   <Row>
-                    <EndPointButton
+                    <EndpointButton
                       endpoint={inferenceEndPoint}
                       fullpath={`${name}/results/set_flatfield_num`}
                       value={-1 /*Special case adapter-side,*/} 
                       variant='danger'
                     >
                         Clear flatfield
-                    </EndPointButton>
+                    </EndpointButton>
                   </Row>
                 </Col>
               </Row>
@@ -112,7 +109,7 @@ function InferenceCard(props) {
                     <Form.Control
                       readOnly
                       plaintext
-                      value={inferenceEndPoint?.data?.[name]?.results?.active_classes}
+                      value={inferenceEndPoint?.data?.[name]?.results?.experiment_number || 'N/A'}
                       style={{
                           border: '1px solid lightgreen',
                           backgroundColor: '#e0ffe2ff',
@@ -127,11 +124,10 @@ function InferenceCard(props) {
           </Row>
           <Row>
             <MonitorGraph
+              title="Results"
               endpoint={inferenceEndPoint}
               paths={fullpaths}
               seriesNames={['col', 'equi', 'alpha', 'beta', 'tear']}
-              xSampleRate={sampleRate}
-              xLabel="Time (s)"
             />
           </Row>
         </TitleCard>
