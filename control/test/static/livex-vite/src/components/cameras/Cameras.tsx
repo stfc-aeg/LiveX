@@ -1,4 +1,4 @@
-import type { CameraEndpointTypes } from '../../EndpointTypes';
+import type { CameraEndpointTypes, LiveDataEndpointTypes } from '../../EndpointTypes';
 
 import { Row, Col } from 'react-bootstrap';
 import { useAdapterEndpoint } from 'odin-react';
@@ -14,6 +14,7 @@ function Cameras(props: CamerasProps) {
     const {endpoint_url} = props;
 
     const cameraEndPoint = useAdapterEndpoint<CameraEndpointTypes>('camera', endpoint_url, 1000);
+    const liveViewEndPoint = useAdapterEndpoint<LiveDataEndpointTypes>('live_data', endpoint_url, 1000);
 
     // Destructuring data and cameras safely
     const cameras = cameraEndPoint?.data || {} // Fallback to an empty object if no data
@@ -29,8 +30,8 @@ function Cameras(props: CamerasProps) {
           >
             <OrcaCamera
               endpoint={cameraEndPoint}
-              endpoint_url={endpoint_url}
-              name={cameraEndPoint.data?.[key]?.camera_name}
+              liveViewEndPoint={liveViewEndPoint}
+              name={cameraEndPoint.data?.[key]?.camera_name ?? 'Camera Not Found'}
             />
           </Col>
         ))

@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import type { AdapterEndpoint } from 'odin-react';
 
 interface ClickableImageProps {
     id: string;
-    endpoint: any;  // Endpoint to send coordinate data to
+    endpoint: AdapterEndpoint;  // Endpoint to send coordinate data to
     imgPath: string;  // Path to get image from
     coordsPath: string;  // Path to put coordinates to
     coordsParam: string;  // Parameter name for coordinates in the put request
@@ -12,7 +13,7 @@ interface ClickableImageProps {
     rectRgbaProperties?: string;  // Fill style for the rectangle, default 'rgba(255,255,255,0.33)'
 }
 
-function ClickableImage(props: ClickableImageProps){
+function ClickableImage(props: ClickableImageProps) {
     /*
     - id is a string for the purpose of the image. This is used for the canvas - if you have more
       than one ClickableImage on a single page, you will need a unique id for its canvas.
@@ -42,8 +43,8 @@ function ClickableImage(props: ClickableImageProps){
     const [imgData, changeImgData] = useState("");
 
     const refreshImage = useCallback(() => {
-        endpoint.get(imgPath, {responseType: "blob"})
-        .then((result: Blob) => {
+        endpoint.get<Blob>(imgPath, {responseType: "blob"})
+        .then((result) => {
             URL.revokeObjectURL(imgData);  // memory management
             const img_url = URL.createObjectURL(result);
             changeImgData(img_url);
@@ -52,7 +53,7 @@ function ClickableImage(props: ClickableImageProps){
             console.error("IMAGE GET FAILED: ", error);
             changeImgData("");
         })
-    }, [endpoint.updateFlag]);
+    }, [endpoint.apiVersion]);
 
     useEffect(() => {
         let timer_id;

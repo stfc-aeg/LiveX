@@ -12,18 +12,16 @@ const EndPointFormControl = WithEndpoint(Form.Control);
 
 interface OrcaCameraProps {
     endpoint: AdapterEndpoint<CameraEndpointTypes>;
-    endpoint_url: string;
+    liveViewEndPoint: AdapterEndpoint<LiveDataEndpointTypes>;
     name: string;
 }
 
 function OrcaCamera(props: OrcaCameraProps) {
     const {endpoint} = props;
-    const {endpoint_url} = props;
+    const {liveViewEndPoint} = props;
     const {name} = props;
  
-    const liveViewEndPoint = useAdapterEndpoint<LiveDataEndpointTypes>('live_data', endpoint_url, 1000);
     const liveViewData = liveViewEndPoint?.data?.[name];
-
     const colour_metadata = liveViewEndPoint?.metadata?.[name]?.image?.colour;
 
     // Array of camera status names
