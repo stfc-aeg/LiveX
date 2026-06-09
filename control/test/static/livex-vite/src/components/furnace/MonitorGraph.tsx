@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Row, Col, Button, InputGroup } from 'react-bootstrap';
-import { TitleCard, OdinGraph, AdapterEndpoint } from 'odin-react';
+import { TitleCard, AdapterEndpoint } from 'odin-react';
 import type { ParamTree, ParamNode } from 'odin-react';
 import ResizeableOdinGraph from '../ResizeableOdinGraph';
 

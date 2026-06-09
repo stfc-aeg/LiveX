@@ -1,9 +1,17 @@
-import React from 'react'
+
 import Dropdown from 'react-bootstrap/Dropdown'
 
-/** */
-function DropdownSelector(props) {
-    const { buttonText="Dropdown", variant="primary", id, onSelect=null} = props;
+interface DropdownSelectorProps {
+    buttonText?: string;
+    variant?: string;
+    id: string;
+    onSelect?: (eventKey: string | null, event: React.SyntheticEvent<unknown>) => void;
+    children: React.ReactNode;
+}
+
+function DropdownSelector(props: DropdownSelectorProps) {
+    const { buttonText="Dropdown", variant="primary", id, onSelect=undefined} = props;
+
     return (
         <Dropdown onSelect={onSelect}>
             <Dropdown.Toggle variant={variant} id={id}>

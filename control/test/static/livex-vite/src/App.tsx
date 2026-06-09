@@ -8,12 +8,12 @@ import { Row, Col } from 'react-bootstrap';
 import { OdinApp } from 'odin-react';
 
 import FurnacePage from './components/furnace/FurnacePage.tsx';
-import Metadata from './components/setup/Metadata.jsx';
+import Metadata from './components/setup/Metadata.tsx';
 import Cameras from './components/cameras/Cameras.tsx';
-import Trigger from './components/setup/Trigger.jsx';
+import Trigger from './components/setup/Trigger.tsx';
 import InferencePage from './components/InferencePage.tsx';
-import GraphPage from './components/GraphPage.jsx'
-import SequencerPage from './components/SequencerPage.jsx';
+import GraphPage from './components/GraphPage.tsx'
+import SequencerPage from './components/SequencerPage.tsx';
 
 import Motors from 'odin-kinesis-ui';
 
@@ -25,7 +25,6 @@ function App() {
   // axios.defaults.baseURL = process.env.REACT_APP_ENDPOINT_URL;
 
   const endpoint_url = import.meta.env.VITE_ENDPOINT_URL;
-
 
   return (
     <OdinApp title="AIXI Control" navLinks={["Metadata and Setup", "Sequencer", "Furnace Control", "Camera Control", "Monitoring", "Inferencing", "Motors"]}>

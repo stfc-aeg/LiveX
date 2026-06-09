@@ -1,12 +1,16 @@
-import Col from 'react-bootstrap/Col';
-import Row from 'react-bootstrap/Row';
+import type { GraphEndpointTypes } from '../EndpointTypes'
+
+import { Row, Col } from 'react-bootstrap';
 import { useAdapterEndpoint } from 'odin-react';
 import MonitorGraph from './furnace/MonitorGraph';
 
+interface GraphPageProps {
+  endpoint_url: string;
+}
 
-function GraphPage(props) {
+function GraphPage(props: GraphPageProps) {
     const { endpoint_url } = props;
-    const graphEndPoint = useAdapterEndpoint('graph', endpoint_url, 200);
+    const graphEndPoint = useAdapterEndpoint<GraphEndpointTypes>('graph', endpoint_url, 200);
 
     return (
       <Row>

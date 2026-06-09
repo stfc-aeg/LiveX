@@ -1,10 +1,21 @@
-import React, { useState, useCallback, useRef, useMemo } from 'react';
+import type { AdapterEndpoint } from 'odin-react';
+import type { MetadataEndpointTypes } from '../../EndpointTypes';
+
+import { useState, useCallback, useRef, useMemo } from 'react';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Select from 'react-select';
 
-function TagInput(props) {
+interface TagInputProps {
+  options: string[];
+  metadataEndPoint: AdapterEndpoint<MetadataEndpointTypes>;
+  field: string;
+  labelWidth: number | string;
+  currentValue: string[]; // Assuming currentValue is an array of strings
+}
+
+function TagInput(props: TagInputProps) {
   const { options, metadataEndPoint, field, labelWidth, currentValue } = props;
-  const timer = useRef(null);
+  const timer = useRef(setTimeout(() => {}, 0)); // Ref to store the debounce timer
 
   // Memo for stable references prevents flickering
   const selectOptions = useMemo(
@@ -23,27 +34,28 @@ function TagInput(props) {
     [selectOptions, selectedValues]
   );
 
-  const sendTags = (values) => {
-    let fullpath = `fields/${field}/value`;
-    metadataEndPoint.put(values, fullpath)
-      .then((response) => {
-        metadataEndPoint.mergeData(response, fullpath);
-      })
-      .catch((err) => {});
+  const sendTags = (values: string[]) => {
+    let fullpath = `fields/${field}/`;
+    let valueParam = { 'value': values };
+    metadataEndPoint.put(valueParam, fullpath)
+      .catch((err) => { console.log(err) });
   }
 
-  const onChangeHandler = useCallback((newSelected) => {
-    const values = newSelected ? newSelected.map(option => option.value) : [];
-    setSelectedValues(values);
+  const onChangeHandler = useCallback(
+    (newValue: readonly {label: string; value: string}[] | null) => {
+      const values = newValue ? newValue.map(option => option.value) : [];
+      setSelectedValues(values);
 
-    if (timer.current) {
-      clearTimeout(timer.current);
-    }
-    timer.current = setTimeout(() => {
-      console.log("Timer Elapsed. Sending tag data.");
-      sendTags(values);
-    }, 1000);
-  }, []);
+      if (timer.current) {
+        clearTimeout(timer.current);
+      }
+      timer.current = setTimeout(() => {
+        console.log("Timer Elapsed. Sending tag data.");
+        sendTags(values);
+      }, 1000);
+    },
+    []
+  );
 
   return (
     <InputGroup>

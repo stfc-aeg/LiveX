@@ -7,7 +7,7 @@ export interface ThermocoupleType extends ParamNode {
 }
 
 export interface FurnaceTCPReadingType extends ParamNode {
-    counter: number;
+    frame: number;
     temperature_upper: number;
     output_upper: number;
     kp_upper: number;
@@ -96,6 +96,13 @@ export interface FurnaceEndpointTypes extends ParamNode {
     thermocouples: Record<string, ThermocoupleType>;
 }
 
+export interface TriggerEndpointTriggerType extends ParamNode {
+    enable: boolean;
+    frequency: number;
+    running: boolean;
+    target: number;
+}
+
 export interface TriggerEndpointTypes extends ParamNode {
     all_timers_enable: boolean;
     background: {
@@ -107,26 +114,7 @@ export interface TriggerEndpointTypes extends ParamNode {
         ip: string;
         reconnect: any;
     };
-    triggers: {
-        furnace: {
-            enable: boolean;
-            frequency: number;
-            running: boolean;
-            target: number;
-        };
-        narrowfov: {
-            enable: boolean;
-            frequency: number;
-            running: boolean;
-            target: number;
-        };
-        widefov: {
-            enable: boolean;
-            frequency: number;
-            running: boolean;
-            target: number;
-        };
-    };
+    triggers: Record<string, TriggerEndpointTriggerType>;
 }
 
 export interface LiveXEndpointTypes extends ParamNode {
@@ -148,7 +136,11 @@ export interface LiveXEndpointTypes extends ParamNode {
         start: any;
         stop: any;
     };
-    cameras: Record<string, CameraType>;
+    cameras: {
+        narrowfov_exposure: number;
+        use_exposure_lookup: boolean;
+        widefov_exposure: number;
+    };
 }
 
 export interface MetadataField extends ParamNode {
@@ -344,4 +336,16 @@ export interface InferenceEndpointResultTypes extends ParamNode {
 
 export interface InferenceEndpointTypes extends ParamNode {
     [endpoint_id: string]: InferenceEndpointResultTypes;
+}
+
+export interface GraphEndpointDataType extends ParamNode {
+    data: number[];
+    interval: number;
+    loop_running: boolean;
+    retention: number;
+    timestamps: number[];
+}
+
+export interface GraphEndpointTypes extends ParamNode {
+    [graph_id: string]: GraphEndpointDataType;
 }
