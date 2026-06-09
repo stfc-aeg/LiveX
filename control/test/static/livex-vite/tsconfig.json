@@ -8,7 +8,6 @@
     "types": ["vite/client"],
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",
