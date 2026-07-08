@@ -7,168 +7,180 @@ To use the sequencer, there are code examples and a README in the [odin-sequence
 
 In short, you define functions in sequences files ( `control/test/config/sequences`). You then provide these functions in a list (`provides=['<name_of_function>']`) and these become visible in the user interface, with function arguments interpreted. Sequences can rely on other sequences; if those sequences are in another file, they can be used following `requires=['<name_of_file>']` (accessing all sequences in that file).
 
+
 # Furnace
 
-The furnace adapter mostly just controls the other furnace-related components (see Furnace Components below), but has a few essential functions of its own, mostly related to starting and stopping acquisitions.
+The `furnace adapter` controls the furnace hardware, tcp acquisition stream and has its own internal h5 logging. It manages the Modbus and TCP clients needed, thermocouple readings, and regularly polls updates from the firmware.  
+Most of the control functions are delegated to its child classes: PID, ASPC, Gradient, and ThermocoupleManager.access.
 
-| attr name                 | description |
-|---------------------------|-------------|
-| pid_upper / pid_lower    | PID class objects representing heater controls |
-| gradient                 | Thermal gradient controls |
-| aspc                     | Auto setpoint controls |
-| log_directory            | Location of output file (edit through function) |
-| log_filename             | Name of output file (edit through function) |
-| ip                       | (str) ip address for modbus server |
-| bg_read_task_enable      | (bool) is background reading task (getting PLC parameters) enabled |
-| bg_read_task_interval    | (int) background task interval in seconds |
-| bg_stream_task_enable    | (bool) is background streaming task (receive acquisition TCP data) enabled |
-| pid_frequency           | (int) frequency PID is running at, used to derive the following: |
-| buffer_size             | (int) size of data buffer, derived from frequency so that data is written once per second |
-| bg_stream_task_interval | (int) interval for stream task so it never waits longer than the PID interval and stays up-to-date (set to half of pid_frequency) |
-| file_writer             | (FileWriter) FileWriter class object |
-| file_open_flag          | (bool) is file currently open/being written to |
-| tcp_reading             | Data object representing last stream data received |
-| packet_decoder          | (PacketDecoder) PacketDecoder object to process TCP data |
-| stream_buffer           | (dict) object of decoded packets to be written to file |
-| data_groupname          | (str) name of groupname in hdf5 file |
-| acquiring              | (bool) is acquisition currently occurring |
-| thermocouple_c         | (float) reading of third ‘central’ thermocouple |
-| lifetime_counter       | (float) value of counter from PLC |
-| mocking                | (bool) config, is mock client being used |
-| mod_client             | ModbusClient which manages connection to PLC |
-| mockClient             | Mock modbus client used if mocking is true. Used in background read task |
+Attributes:
 
-### solo_acquisition(bool: value)
-Given a Boolean value (which is converted to bool immediately on calling the function), this starts (True) or stops (False) a ‘solo’ acquisition with the furnace. This means that only the furnace will record and save any data. 
+- **pid_upper / pid_lower**: `PID` controller objects for the two heaters; see below.
+- **gradient**: Gradient control object, see below.
+- **aspc**: Auto SetPoint Control object, see below.
+- **ip / port**: connection details for the PLC (Modbus/TCP).
+- **mocking**: if True, uses mock Modbus/TCP clients instead of real hardware for testing.
+- **bg_read_task_enable / bg_stream_task_enable**: booleans that control the two background tasks (PLC polling and TCP streaming).
+- **bg_read_task_interval / bg_stream_task_interval**: polling intervals for the background read task and stream task. `bg_stream_task_interval` is derived from `pid_frequency`.
+- **pid_frequency**: frequency (Hz) at which the PID runs; used to size buffers and determine when to flush fast data to disk. This is usually set by the `livex` adapter but is given a default on startup.
+- **buffer_size**: derived from `pid_frequency`; number of fast readings written per second.
+- **packet_decoder / tcp_reading / stream_buffer / data_groupname / event_buffer**: TCP packet decoding and buffers used to collect and batch acquisition data for HDF5 writes.
+- **file_writer / log_directory / log_filename / file_open_flag**: file writing utility and current file state.
+- **tc_manager / thermocouples**: thermocouple manager and list of thermocouple entries read from the PLC.
+- **mod_client / tcp_client**: Modbus and TCP clients (real or mock) used for communications.
+- **acquiring**: True while an acquisition is active.
 
-### stop_all_pid(value=None)
-This function has an unused argument. It sets both PIDs to false, disabling them. Usually used as an ‘emergency stop’.
+Controller operations (important methods):
 
-### set_task_enable(bool: enable)
-This function starts and stops the background tasks based on the truthiness of the argument you give it. Enable is converted to a bool immediately when the function is run. The background tasks handle the regular polling of information from the PLC, and the reception of streaming data during an acquisition. You generally want these enabled.
+- **set_max_setpoint(value)**: update the maximum allowed setpoint (affects both PIDs) and writes the value to the PLC holding registers, toggling the setpoint update coil.
 
-### set_task_interval(float: interval)
-This function sets the interval of the polling task. The streaming tasks runs at the frequency defined by `pid_frequency` in the adapter.
+- **set_max_setpoint_increase(value)**: writes the maximum allowed setpoint increase (step) to the PLC.
 
-### update_furnace_frequency(int: frequency)
-Inform the furnace PLC of its trigger frequency, helping with accuracy of its PID logic and ensuring the auto setpoint control keeps to the correct rate. This also updates the size of the stream buffer and stream interval, to ensure 
+- **_set_filename(value) / _set_filepath(value)**: update `FileWriter` filename/path (ensures `.h5` extension) and recompute full path; caller should avoid changing these during an active acquisition.
+- **stop_all_pid(value=None)**: disables both PID controllers (acts as an emergency stop).
 
-### _start_acquisition()
-This function signals the PLC to start the acquisition process, which sends data to the background task. Normally this is called by the livexadapter and not used otherwise, but you could use this with _set_filename/_set_filepath to work around the automatic filename generation.
+- **solo_acquisition(value)**: when `allow_solo_acquisition` is enabled, asks the `livex` adapter to start or stop a furnace-only acquisition via `livex.start_acquisition(acquisitions={'furnace': True})` or `livex.stop_acquisition()`.
 
-### _stop_acquisition()
-This function stops the acquisition, and also finishes writing any data in the buffer to the file. Normally this would be called by the livexadapter, so if you call _start_acquisition it would be consistent to call this instead of a different process. 
+- **_start_acquisition()**: low-level start used by the adapter; writes the acquisition coil on the PLC, opens the HDF5 file and marks `acquiring=True`. If the gradient is active, records that for metadata.
 
-### _set_filename(str: value) / _set_filepath(str: value)
-Given a String value, this function sets the filename/filepath for the furnace. In an acquisition (full or solo), this is set automatically and shouldn’t need to be called – running an acquisition will overwrite it, calling it during an acquisition could cause issues with the file writing.
+- **_stop_acquisition()**: low-level stop; clears the acquisition coil, writes any buffered stream data to HDF5, clears buffers, writes event batches and closes the file.
+
+- **update_furnace_frequency(freq)**: updates `pid_frequency`, recalculates `buffer_size` and `bg_stream_task_interval`, and writes the new frequency to the PLC (also asserts an update coil). Passing non-positive values defaults to 1 Hz.
 
 
-# Furnace Components (PIDA/B, ASPC, Gradient, Motors)
 
-There are three components and these are accessed as part of the furnace sequencer context.
-All of these functions contain a ‘register_modbus_client’ and ‘_get_parameters’ function, which are used in initialisation and are not useful for any sequencer activities.
+# Furnace Controls (PID, ASPC, Gradient, ThermocoupleManager)
 
-### PID
-
-These handle the PID behaviour for the adapters. You can access these via `furnace.pid_a` or `furnace.pid_b`, as there are two heaters. I recommend heater A being the physically-uppermost heater as this is how it’s labelled in the UI. 
-
-| attr name   | description |
-|------------|-------------|
-| enable     | (bool) is heater enabled |
-| setpoint   | (float) target temperature of heater |
-| kp/ki/kd   | (float) value of proportional/integral/derivative terms |
-| output     | (float) PID output value |
-| outputSum  | (float) PID cumulative integral value |
-| temperature | (float) actual temperature |
+The furnace control classes live under `control/src/livex/furnace/controls` and are exposed via the `FurnaceController` as `pid_upper`, `pid_lower`, `aspc`, `gradient` and `tc_manager`. e.g.: `furnace = get_context('furnace')` // `furnace.pid_upper`
 
 
-### set_setpoint/_proportional/_integral/_derivative(float: value)
-All four of these functions set the relevant value in the PLC and keep that value internally.
 
-### set_enable(bool: value)
-Turn the PID on or off. Pass a Boolean value to turn off that particular heater.
- 
+### PID_upper/lower
+
+`PID` instances manage one heater each and provide the live PID parameters and write helpers for the PLC.
+Accessed in the sequencer through `.pid_upper` or `.pid_lower` on the furnace controller object.
+
+| attr name      | description |
+|----------------|-------------|
+| enable         | (bool) is heater enabled (reads/writes a coil)
+| setpoint       | (float) target temperature (written to holding register, update coil asserted)
+| kp/ ki/ kd | (float) PID term values (written to holding registers)
+| temperature    | (float) current measured temperature (read from input register)
+| output         | (float) PID output (read from input register)
+| outputsum      | (float) PID integral sum (read from input register)
+| override_percent | (int) manual override percent (written to holding register)
+| override_enable | (bool) enable manual override (writes coil)
+| output_scalar  | (float) scaling applied to PID output (written to holding register)
+
+Methods:
+- `set_setpoint(value: float)`: write the new setpoint to the PLC. Enforces `max_setpoint` and `max_setpoint_increase` limits from the `FurnaceController`
+- `set_proportional/integral/derivative(value: float)`: write the respective PID term to the PLC.
+- `set_enable(value: bool)`: toggle the PID enable coil and subsequently enable/disable the heater
+- `set_override_percent(value: float)` and `set_override_enable(value: bool)`: control the manual override output if `allow_pid_override` is enabled in options.
+- `set_power_scalar(value: float (0-1))`: write the PID output scalar to the PLC.
+
+
 ### Auto SetPoint Control (ASPC)
 
-This class handles the auto setpoint control behaviour. You can access it via `furnace.aspc` in the sequencer.
+Controls automatic, continuous adjustment of the setpoint.
+Accessed in the sequencer through `.aspc` on the furnace controller object.
 
-| attr name          | description |
-|--------------------|-------------|
-| enable            | (bool) is ASPC enabled |
-| heating           | (bool) is ASPC heating (True) or cooling (False) |
-| heating_options   | (list) reference to what heating options are for parameterTree |
-| rate             | (float) rate of setpoint change (average per second) |
-| midpt            | (float) midpoint temperature of heaters A and B (calculated from PLC) |
+| attr name     | description |
+|---------------|-------------|
+| enable        | (bool) ASPC enabled (coil)
+| heating       | (str) 'heating' or 'cooling' (writes coil)
+| rate          | (float) average rate (C/s) — limited by a configured maximum and written to a holding register
+| midpt_temp    | (float) midpoint temperature calculated/read from PLC
 
-### set_enable(bool: value)
-Turn the ASPC on (True) or off (False) via a boolean argument.
+Key methods:
+- `set_enable(value)`: write enable coil and assert update; emits `autosp_enable` event.
+- `set_heating(value)`: set direction ('heating'/'cooling') by writing the heating coil and emits `autosp_heating` event.
+- `set_rate(value)`: writes the rate to the PLC and asserts the update coil; emits `autosp_rate` event.
 
-### set_heating(bool: value)
-This determines if you are heating (True) or cooling (False). With heating, the ASPC increases the setpoint, otherwise it decreases it.
-
-### set_rate(float: value)
-Set the rate at which the ASPC will adjust the setpoint. The value you enter here is an average per second, the rate is calculated per-tick in the hardware, so with a frequency of 50Hz, a 1C/s ASPC will change by 0.02 per tick.
+The `rate` parameter is interpreted by the PLC per-tick; the controller writes a float value and the hardware applies it across PID ticks.
 
 ### Gradient
 
-This class handles the thermal gradient behaviour. You can access it as `furnace.gradient` in the sequencer.
+Handles the thermal gradient behaviour between the two heaters.
+Accessed in the sequencer through `.gradient` on the furnace controller object.
 
-| attr name   | description |
-|------------|-------------|
-| enable     | (bool) is gradient enabled |
-| wanted     | (float) desired temperature change per mm |
-| distance   | (float) distance between heaters in mm |
-| actual     | (float) actual temperature difference between heaters |
-| theoretical | (float) theoretical temperature difference (wanted*distance) |
-| high       | (bool) which heater does gradient increase towards (1: B, 0: A) |
-| high_options | (list) textual representation of the high options |
+| attr name    | description |
+|--------------|-------------|
+| enable       | (bool) gradient enabled (coil)
+| wanted       | (float) desired temperature change per mm (holding register)
+| distance     | (float) distance in mm between heaters (holding register)
+| actual       | (float) actual measured difference (input register)
+| theoretical  | (float) theoretical difference (input register)
+| high_heater  | ('Upper'|'Lower') which heater is defined as the high side (coil / read as index)
 
-### set_enable(bool: value)
-Turn the gradient on (True) or off (False) via a Boolean argument.
+Key methods:
+- `set_enable(value)`: toggles enable coil, activating the gradient logic in the PLC. If the gradient is enabled while acquiring, `was_gradient_active` is set for metadata.
+- `set_distance(value)` / `set_wanted(value)`: set the respective gradient values. Emit `gradient_distance` / `gradient_wanted` events.
+- `set_high(value)`: set which heater is 'high' - the other/'low' heater's setpoint will be *reduced* by the *theoretical* gradient value.
 
-### set_distance(float: value)
-Set the ‘distance’ value, that being the distance in mm between the heaters.
+### ThermocoupleManager
 
-### set_wanted(float: value)
-Set the ‘wanted’ value, that being the desired temperature change per mm. A distance of 5 and wanted of 2 gives a 10C gradient.
+`ThermocoupleManager` manages thermocouple configuration and readings. It maps logical thermocouple labels to physical PLC indices.
+Accessed in the sequencer through `.tc_manager` on the furnace controller object.
 
-### set_high(bool: value)
-Set the direction of the gradient, or set the ‘high heater’, which determines which heater has its setpoint rise from the gradient. If True, the gradient is high towards heater B. If False, the gradient is high towards heater A.
+Attributes:
+- `num_mcp`: number of thermocouple inputs reported by the PLC (read from `modAddr.number_mcp_inp`), which should be 6.
+- `thermocouples`: list of `Thermocouple` dataclass entries. Each entry contains `label`, `connection` (enum `CONNECTIONS` with values a..f), `addr` (holding register address used to write the selected index), `val_addr` (input register address for the thermocouple value), `index` (the index written into the PLC) and `value` (last-read temperature).
+
+This means that to access a given thermocouple's value you need to check the labels by iterating over the list. The upper and lower heaters will always be labelled `upper_heater` and `lower_heater` respectively. Other names for 'extra' thermocouples will depend on your configuration file. If you need the temperatures of the heaters, it is better to access them through the `pid` objects' `temperature` attribute.
+
+Key methods:
+- There are no publically available methods in this class
 
 
 # LiveX Adapter
 
-This adapter is mostly responsible for handling the acquisition process, and other user-side-only details such as the estimated acquisition duration in seconds.
+The `LiveXController` is exposed as the `livex` context in the sequencer. It manages acquisition start/stop, freerun mode, trigger frequency control, and camera exposure settings.
 
-| attr name            | description |
-|----------------------|-------------|
-| ref_trigger         | (str) from config, name of reference trigger |
-| filepath           | (str) from config, where are files saved |
-| acq_frame_target   | (int) frame target for acquisition |
-| acq_time           | (int) estimated duration of acquisition (calculated when target is set) |
-| acquiring         | (bool) is an acquisition currently happening |
-| current_acquisition | (dict) details of what is running in current acquisition e.g.: {‘furnace’: True} |
-| freerun           | (bool) is frame target respected or overridden to zero (for endless acquisition) |
-| filepaths         | (dict) store of filepaths and names for furnace, metadata, and cameras |
-| munir/furnace/trigger/orca/metadata | References to other adapters |
+| attr name               | description |
+|-------------------------|-------------|
+| ref_trigger             | (str) reference trigger name from config, usually `furnace` |
+| frame_target            | (int) current acquisition frame target for the reference trigger |
+| acquiring               | (bool) whether an acquisition is currently active |
+| current_acquisition     | (list) names of subsystems currently being acquired |
+| freerun                 | (bool) whether target values are overridden to 0 for continuous capture |
+| filepaths               | (dict) current filenames and paths for `furnace`, `metadata`, and cameras |
+| frequencies             | (subtree) per-trigger frequency controls under `livex.acquisition.frequencies` |
+| cameras                 | (subtree) camera exposure controls and lookup toggle |
+| trigger_manager         | (object) has methods to manage trigger frequencies, targets, and camera exposures. See below
 
-### start_acquisition(dict: acquisitions)
-This function starts an acquisition. It checks for values in the acquisition dictionary argument to determine which parts of the acquisition are to be run. The key is a string, the value is a Bool. Generally, this is going to be ‘furnace’ and ‘widefov’+’narrowfov’ (the camera names). This allows for files to be saved with consistent name formats and for acquisitions to include a variety of things.
-Related, this function calls an internal function, `_generate_experiment_filenames`. This function uses the metadata adapter to create a filename, so be wary about overwriting files if you reset this information (particularly the acquisition_number).
+### Methods
+- `start_acquisition(acquisition: list)`: Start an acquisition. Pass a list of names ('furnace', 'widefov', 'narrowfov') to select which acquisition subsystems should run. The adapter then configures filenames, starts requested acquisitions, prepares cameras, and starts the trigger timers simultaneously.
+- `stop_acquisition()`: Stop the acquisition. Disables timers, stops acquisitions, ends camera capture, writes metadata and sequence file, and then restarts in preview mod
 
-### stop_acquisition(None: value)
-This function has an unused optional argument. It stops the acquisitions based on the ones called in start_acquisition. It should only be called after start_acquisition to avoid unexpected results.
+### Trigger Manager (class)
 
-### set_freerun(bool: value)
-Set the freerun attribute of the acquisition. If True, frame targets are ignored when running an acquisition, instead relying on a manual stop command.
+The `TriggerManager` is the internal class used by `LiveXController` to manage trigger frequencies, frame targets, linked triggers, and camera exposure behavior.
 
-### set_timer_frequency(int: value, str: timer) 
-The timer values can also be set in the trigger adapter, but this function includes some additional logic about updating the frequency for the furnace (which is the ‘reference trigger’ as defined in the config) and recalculating frame targets and duration based on the frequency. When you update a timer, you pass the new frequency as value, and then specify which timer via a string, which should match one of the timers in the config for trigger.
+It is exposed through `.trigger_manager` in the livex context in the sequencer.
 
-### set_acq_frame_target(int: value)
-This sets the frame target for the acquisition. This is the target for the ‘reference trigger’ as described in set_timer_frequency, which is the furnace for livex. Other targets will be based on this so that the durations match. i.e.: if the camera Hz is twice as high as the furnace, the frame target for that camera will be twice as high as the frame target given for the furnace.
+| attr name | description |
+|-----------| ----------- |
+| linked_triggers | (list: str[]) connected triggers by name. when the frequency or exposure time on one is set, the other will be set to match it |
+| use_exposure_lookup | (bool) use the exposure lookup table |
+| frequencies | (dict) {trigger_name: frequency} |
+| acq_frame_target | (int) acquisition frame target |
+| acq_frame_frequency | (int) frequency of all triggers, used through set_acq_frame_frequency |
+| freerun | (bool) is acquisition running endlessly (no frame target) |
+| targets | (dict) {trigger_name: frame_target} used to set target of each trigger |
 
-# Trigger
+| method | description |
+|--------|-------------|
+| `set_freerun(value)` |  enable or disable freerun mode |
+| `set_acq_frame_target(value)` | set the reference trigger frame target |
+| `set_acq_frame_frequency(value)` | set one frequency for all triggers |
+| `set_frequency(value, trigger=...)` |  set frequency for a named trigger |
+| `link_triggers([t1, t2])` |  link two triggers together based on trigger names. linked|
+| `unlink_triggers([t1, t2])` |  unlink two triggers based on trigger names|
+| `set_use_exposure_lookup(value)` |  toggle exposure lookup for camera triggers |
+| `set_camera_exposure(value, cam_name=...)` |  set exposure for a named camera |
+
+# Trigger (adapter)
 
 The trigger adapter creates a trigger for each value provided to it in the ‘triggers’ option in its config file. The triggers have their own callable functions, accessed via `trigger.triggers[trigger_name]`.
 
@@ -177,15 +189,11 @@ The trigger adapter creates a trigger for each value provided to it in the ‘tr
 | ip                      | (str) ip address for modbus server |
 | status_bg_task_enable   | (int) is background task enabled |
 | status_bg_task_interval | (int) background task interval in seconds |
-| triggers                | (dict) dictionary of Trigger objects based on names in config |
+| triggers                | (dict) {name: trigger} dictionary of Trigger objects based on names in config |
 
+### Methods:
+- `set_all_timers(values: dict)`: {'enable': bool, 'freerun': bool}. This function enables (enable: True) or disables (enable: False) all timers, with the additional 'freerun' key overwriting trigger targets to 0 if true. With a target of 0, timers run until stopped manually.
 
-### set_ip(str: value)
-Sets the ip attribute to the given string value. (e.g.: ‘127.0.0.1’). This would then be used in the `initialise_client` function if the reconnect parameter tree value is called.
-
-### set_all_timers(dict: values)
-Values is a dictionary in the structure: `{‘enable’: bool, ‘freerun’: bool}`.
-This function enables (enable: True) or disables (enable: False) all timers, with the additional ‘freerun’ argument overwriting the trigger targets to 0 if set to true. With a target of 0, triggers run until stopped manually, otherwise going until the target is reached.
 
 ### Trigger (Class)
 
@@ -200,14 +208,10 @@ These are instantiated by the trigger adapter above, accessible via `trigger.tri
 | running   | (bool) is trigger currently running (read from hardware). Enable is a single-fire flag on trigger hardware, this is a status report |
 | client    | (ModbusTCPClient) modbus client object from trigger adapter |
 
-### set_enable(bool: value)
-Turn the trigger on (True) or off (False).
-
-### set_frequency(int: value)
-Sets the frequency of the trigger to the given value.
-
-### set_target(int: target)
-Sets the frame target of the trigger to the given value.
+### Methods
+- `set_enable(value: bool)`: turn the trigger on (True) or off (False)
+- `set_frequency(value: int)`: set the frequency of the trigger to the given value
+- `set_target(target: int)`: set the frame target of the trigger to the given value
 
 # Live_Data
 
@@ -243,26 +247,16 @@ Processors store the actual information, but they are run in a Process. This mea
 | pipe_parent, pipe_child | Pipe object outputs |
 | process           | (Process) process object that runs image processing logic |
 
-###  set_img_x/y(int: value, Processor: processor)
-Set the width/height of the image in pixels within an existing zoom (this can be the full image). If you define more than the maximum width, it should just include the entire image without causing further issue.
+### Methods (live_data adapter)
+When a method has a Processor as the argument, get the processor you want to use from the processors attribute in the class. Processors are created in the order listed in the `livex.cfg` file (typically widefov, then narrowfov)
 
-### set_img_dims(array, int: value, Processor: processor)
-Sets both image dimensions, width and height (x and y). Value should look like `[x, y]`. This selection occurs within any existing defined zoom.
-
-### set_img_colour(str: value, Processor: processor)
- Set the colourmap based on the string provided. See the [opencv ‘COLORMAP’ pages for information](https://docs.opencv.org/4.x/d3/d50/group__imgproc__colormap.html) on the string – only the name is needed, not the `COLORMAP_` prefix.
-
-### set_img_clip_value(array, int: value, Processor: processor)
-Set the image clipping range absolutely – limiting the range of output values on the graph, pulling any beyond the limit to that limit. Value should be an array like `[min, max]` as integers.
-
-### set_img_clip_percent(array, int: value, Processor: processor)
-This sets the clipping range proportionally – if you have a range defined, this defines it within that range. So the value `[min,max]` represent percentages instead. Normally, this information is provided by the ClickableImage histogram underneath the previews.
-
-### set_resolution(int: value, Processor: processor)
-Sets the resolution of the image, as a percentage. So value should be within 0-100.
-
-### set_zoom_boundaries(array, array, int: value, Processor: processor)
-Set zoom boundaries for the image, zooming in on the specified area (as it will fill the full image space on the interface). This will work if you have one set already, allowing the ClickableImage UI to repeatedly click-and-drag to zoom on one area.
+- `set_img_x/y(value: int, processor: Processor)`: Set the width/height of the image in pixels within an existing zoom. If you define more than the maximum width, it should just include the entire image.
+- `set_img_dims(value: int[], processor: Processor)`: Sets both image dimensions, width and height (x and y). Value should take the shape `[x, y]`. This selection occurs within any existing defined zoom.
+- `set_img_colour(value: str, processor: Processor)`: Set the colourmap based on the string provided. See the [opencv ‘COLORMAP’ pages for information](https://docs.opencv.org/4.x/d3/d50/group__imgproc__colormap.html) on the string – only the name is needed, not the `COLORMAP_` prefix.
+- `set_img_clip_value(value: int[], processor: Processor)`: Set the image clipping range absolutely – limiting the range of output values on the graph, pulling any beyond the limit to that limit. Value should be an array like `[min, max]` as integers.
+- `set_img_clip_percent(value: int[], processor: Processor)`: This sets the clipping range proportionally – if you have a range defined, this defines it within that range. So the value `[min,max]` represent percentages instead. Normally, this information is provided by the ClickableImage histogram underneath the previews.
+- `set_resolution(value: int, processor: Processor)`: Sets the resolution of the image, as a percentage. So value should be within 0-100.
+- `set_zoom_boundaries(value: [int[], int[]], processor: Processor)`: Set zoom boundaries for the image, zooming in on the specified area (as it will fill the full image space on the interface). This will work if you have one set already, allowing the ClickableImage UI to repeatedly click-and-drag to zoom on one area.
 Value should look like this: `[[x_low, x_high], [y_low, y_high]]`. If you provide 0 as both lows and 100 as both highs the zoom is set to full image size, as an override to allow resetting within one function.
 
 # Motors (Kinesis)
@@ -290,75 +284,57 @@ If you want to look at the codebase for the motor controllers, look here: https:
 
 ### Motor controller attributes and functions
 
-The motor controllers are built off of a 'baseMotorController' class. Most of the functions defined here relate to sending and decoding instructions and won't be used at all. 
+Motor controllers are built on a `SerialController` class. The functions within it are available but are used exclusively by other functions in the actual controller classes for communication, they should not need to be used at all and so are not listed here.
 
-For example, the 'move_jog' function of the `motController` class actually requires a stage given to it as argument. When you call `jog()` on a stage, this calls `move_jog()` of its parent controller and provides itself as an argument. So, none of the functions in the controller class should be used to make a motor move, it is easier to define the stages and control them directly.
-
+Controllers have stages as objects within them which contain the stage details, such as jog settings, current position, etc..  
+For the KDC101 controllers, which are the only controllers used in AIXI, there is only one stage so this does not need to be considered except when reading values back. For setting values, use the given functions.
 
 ## Motor Stage Attributes
 
-These vary slightly by stage type (encoder or non-encoder stages). If not specified, it belongs to both.
+Stage attributes for the KDC101 controller are accessed like so from the kinesis context:
+- `.controllers[controller_name].stages[stage_name][attribute]`
+- It may be preferable to assign these to their own variable e.g. `stage_upperheater = kinesis.controllers['furnace_upper'].stages['upper_heater']` then `stage_upperheater['current_position']
 
-| attr name             | description | stage type |
-| --------------------- | ----------- | ---------- |
-| name              | (str) name of stage ||
-| channel_identity  | (int) generated number used to identify stages for commands ||
-| command_queue     | (list) list of time-taking (e.g. movement) commands for device to process ||
-| current_command | (obj) current command being processed ||
-| expected_response | (tuple) name and length of expected response to command ||
-| await_queue | (Queue) queue of 'await' commands (commands that take time to process and send a message when they are completed, such as movement)||
-| instant_queue | (PriorityQueue) queue of 'instant' commands that prompt an instant response from device | |
-| moving | (bool) is device moving? ||
-| homing | (bool) is device homing? ||
-| current_position | (float) current reported position of stage ||
-| target_position | (float) desired position of stage ||
-| reverse_jog | (bool) reverse direction of jog (forward->backward, vice versa) ||
-| self.enc_cnt/sf_vel/sf_acc | (int) each of these are encoder scale factors for encoder stages such as the MTS50-Z8. They scale mm to stage movements. | encoderStage |
-| jog_mode | (int) 0x01 or 0x02. Does not need changing | encoderStage |
-| jog_step_size | (float) step size in mm | encoderStage |
-| jog_min_vel   | (float) minimum jog speed. needs to be specified in code but must be 0 | encoderStage |
-| jog_accel | (float) acceleration of jog step | encoderStage |
-| jog_max_vel | (float) maximum jog speed | encoderStage |
-| jog_stop_mode | (int) 0x01 (abrupt) or 0x02 (profiled) stop | encoderStage |
-| upper_limit | (float) upper positional limit in mm | encoderStage |
-| lower_limit | (float) lower positional limit in mm | encoderStage |
-| jog_mode | (int) 0x02 is step, which is desirable for non-encoder stages | piezoStage |
-| jog_step_size_fwd | (int) jog movement forward steps. these stages tend to move much more easily in one direction than another (i.e. unreliable), so are more configurable. (1-2000) | piezoStage |
-| jog_step_size_rev | (int) step quantity of reverse jogs. (1-2000) | piezoStage |
-| jog_step_rate | (int) steps per second of jog. (1-2000) | piezoStage |
-| jog_step_accn | (int) jog movement acceleration in (1-100K steps/s^2)| piezoStage |
+| attr name             | description |
+| --------------------- | ----------- |
+| name              | (str) name of stage |
+| chan_ident  | (int) number used to identify stages for commands |
+| stage_type | (str) type of stage as listed in `devices.json` |
+| upper/lower_limit | (float) software positional limit of stage |
+| destination | (int) communications protocol value for sent messages |
+| current_position | (float) reading of current position |
+| target_position | (float) postition to move to (when set via set_target) |
+| moving | (bool) is motor moving |
+| homing | (bool) is motor homing |
+| current_command | (str) current non-instant command (e.g. move_jog) |
+| expected_response | (str) response expected from current command |
+| jog_mode | (int) 0x01 continuous or 0x02 step |
+| jog_step_size | (float) size of each step in mm |
+| jog_min_vel | (float) minimum velocity of stage in mm/s. must be 0 |
+| jog_accel | (float) acceleration speed of stage in mm/s^2. cannot be 0 |
+| jog_max_vel | (float) maximum velocity of stage in mm/s. cannot be 0 |
+| reverse_jog | (bool) is jog direction reversed. set through config |
+| await_queue | (Queue) queue of non-instant commands |
+| instant_queue | (PriorityQueue) queue of instant commands with special priority for 'stop' |
 
-
-## Stage Functions
-
-### reverse_jog_direction(self, rev: Bool)
-Reverse (True) or unreverse (False) the direction of the jog
-
-### get_current_position(self)
-Requests the position of this stage from the controller. Done by a background task in the adapter for all stages periodically
-
-### set_target_position(self, pos)
-Implemented differently across stage types. Sets target position, may check if within limits, apply encoder scaling if needed, and then call controller to move stage if target is different to current.
-
-### home(self, value)
-Value is not used. Homes the motor by calling on the controller. Sets `homing` to True.
-
-### stop(self, value)
-Value is not used. Sends a stop command via the controller, setting `homing` and `moving` to False.
-
-### val_to_enc, enc_to_val - encoderStage
-These functions convert values to encoder counts or vice versa. Any other functions should already handle these so it shouldn't be necessary to use them.
-
-### set_upper/lower_limit(self, lim: Float)
-Set the upper or lower limit to the given value. You can set the limit so that the current position is out of bounds, so be careful as this could affect movements to get the stage back in (especially with steps)
-
-### jog(self, direction: Bool)
-Start a jog in a given direction via the controller. True (forward) or False (backward)
-
-### set_jog_mode/step_size/min_vel/accel/max_vel/stop_mode(self, value)
-Set the given attribute to the provided value. Each of these functions calls on the controller to actually send the command.
-
-
+### Controller Methods
+Methods available to the KDC101 Controller class.
+- `move_home(val: any)`: val is unused. Homes the stage
+- `move_stop(val: any)`: val is unused. Sends a stop command to the stage
+- `move(position: float)`: move to the target position.
+- `move_jog(direction: bool)`: True is forward, False is backward. This is called by `jog()`, which also handles the reverse logic, so use `jog()` for this movement.
+- `get_current_position()`: Requests the position of this stage from the controller. Done by a background task in the adapter for all stages periodically
+- `get_jogparams()`: sets the jog params to the queue to be updated in the response
+- `set_jogparams()`: sets the jog params based on the current stage attributes
+- `set_target_position(pos: float)`: sets the target position to the given value, and moves the motor if that position is different to current and within the limits
+- `stop()`: calls move_stop()
+- `jog(direction: bool)`: jogs forward (True) or backward (False). Handles reverse direction and respects stage limits
+- `set_jog_mode(value: int)`: set the jog mode to continuous (0x01) or step (0x02), defaulting to 2 if value is out of that range. Then calls `set_jogparams()`
+- `set_jog_step_size(value: float)`: sets the jog step size and calls `set_jogparams()`
+- `set_jog_min_vel(value: float)`: sets the jog minimum velocity and calls `set_jogparams()`
+- `set_jog_accel(value: float)`: sets the jog acceleration and calls `set_jogparams()`
+- `set_jog_max_vel(value: float)`: sets the jog maximum velocity and calls `set_jogparams()`
+- `set_jog_stop_mode(value: int)`: sets the stop mode to immediate (0x01) or continuous/profiled (0x02) and calls `set_jogparams()`. Is value is not 0x01 or 0x02, it is set to 0x02.
 
 
 # Metadata
