@@ -1,4 +1,4 @@
-from odin.adapters.parameter_tree import ParameterTree
+from odin_control.adapters.parameter_tree import ParameterTree
 from livex.util import read_coil, read_decode_input_reg, read_decode_holding_reg, write_modbus_float, write_coil, LiveXError
 import logging
 

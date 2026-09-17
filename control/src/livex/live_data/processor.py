@@ -1,10 +1,8 @@
 import numpy as np
 import cv2
 import blosc
-import base64
 import zmq
 from multiprocessing import Process, Queue, Pipe
-import time
 
 import logging
 import matplotlib

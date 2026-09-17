@@ -8,10 +8,10 @@ to be read by the PLC.
 Mika Shearwood, Detector Systems Software Group
 """
 
-from livex.base_adapter import BaseAdapter
+from odin_control.adapters.adapter import ApiAdapter
 from livex.furnace.controller import FurnaceController, LiveXError
 
-class FurnaceAdapter(BaseAdapter):
+class FurnaceAdapter(ApiAdapter):
 
     controller_cls = FurnaceController
     error_cls = LiveXError

@@ -1,9 +1,9 @@
 import logging
 from datetime import datetime
 
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from odin_control.adapters.base_controller import BaseController
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
-from livex.base_controller import BaseController
 from livex.util import (
     LiveXError,
     iac_get,
@@ -77,7 +77,7 @@ class LiveXController(BaseController):
             else:
                 logging.warning("Trigger adapter not found.")
 
-            self.orca = adapters["camera"].camera if 'camera' in self.adapters else logging.warning("Camera adapter not found")
+            self.orca = adapters["camera"].controller if 'camera' in self.adapters else logging.warning("Camera adapter not found")
             self.metadata = adapters["metadata"] if 'metadata' in self.adapters else logging.warning("Metadata adapter not found.")
             # Metadata adapter is likely easier with IAC
 
@@ -86,7 +86,7 @@ class LiveXController(BaseController):
                 self.adapters['sequencer'].add_context('livex', self)
 
                 # Add a new logger
-                self.sequencer = self.adapters['sequencer'].command_sequencer.manager
+                self.sequencer = self.adapters['sequencer'].controller.manager
                 self.sequencer.register_logger(self.log_sequence_message)
 
                 self.sequencer.register_sequence_start_hook(self.prepare_sequencer_file)

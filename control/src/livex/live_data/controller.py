@@ -2,9 +2,9 @@ import logging
 from functools import partial
 import cv2
 
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from odin_control.adapters.base_controller import BaseController
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
-from livex.base_controller import BaseController
 from livex.util import LiveXError
 from livex.live_data.processor import LiveDataProcessor
 

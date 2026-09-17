@@ -10,11 +10,11 @@ Tim Nicholls, STFC Detector Systems Software Group
 import json
 import logging
 from functools import partial
-from typing import Any, Callable, Dict, Tuple
+from typing import Callable, Tuple
 
-from livex.base_controller import BaseController
+from odin_control.adapters.base_controller import BaseController
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from livex.util import LiveXError
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from .hdf_writer import HdfMetadataWriter
 from .markdown_writer import MarkdownMetaWriter

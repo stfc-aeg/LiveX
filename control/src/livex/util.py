@@ -6,7 +6,7 @@ Mika Shearwood, STFC Detector Systems Software Group
 from pymodbus.payload import BinaryPayloadDecoder
 from pymodbus.payload import BinaryPayloadBuilder
 from pymodbus.constants import Endian
-from odin.adapters.adapter import ApiAdapterRequest
+from odin_control.adapters.adapter import ApiAdapterRequest
 
 import logging
 import math

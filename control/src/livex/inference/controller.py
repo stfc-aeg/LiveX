@@ -1,10 +1,9 @@
 """LiveX inference controller."""
 
-import logging
-from livex.base_controller import BaseController
 from livex.util import LiveXError
 from livex.inference.inference_endpoint import InferenceEndpoint
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from odin_control.adapters.base_controller import BaseController
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 class InferenceController(BaseController):
     """"""

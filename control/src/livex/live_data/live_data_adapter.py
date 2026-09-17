@@ -1,11 +1,8 @@
-
-from livex.base_adapter import BaseAdapter
 from livex.live_data.controller import LiveDataController, LiveXError
-from livex.base_adapter import ApiAdapterResponse
 
-from odin.adapters.adapter import wants_metadata
+from odin_control.adapters.adapter import ApiAdapter, ApiAdapterResponse, wants_metadata
 
-class LiveDataAdapter(BaseAdapter):
+class LiveDataAdapter(ApiAdapter):
 
     controller_cls = LiveDataController
     error_cls = LiveXError
