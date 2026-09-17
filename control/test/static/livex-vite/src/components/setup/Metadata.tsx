@@ -1,23 +1,22 @@
-import React from 'react';
-import Form from 'react-bootstrap/Form';
-import InputGroup from 'react-bootstrap/InputGroup';
-import Dropdown from 'react-bootstrap/Dropdown';
-import Button from 'react-bootstrap/Button';
-import Col from 'react-bootstrap/esm/Col';
-import { Container } from 'react-bootstrap';
+import type { MetadataEndpointTypes } from '../../EndpointTypes';
+
+import {  Form, InputGroup, Dropdown, Container } from 'react-bootstrap';
 import { useState, useEffect } from 'react';
 import { TitleCard, WithEndpoint, useAdapterEndpoint } from 'odin-react';
-import DropdownSelector from '../DropdownSelector.jsx';
-import TagInput from "./TagInput";
+import DropdownSelector from '../DropdownSelector.tsx';
+import TagInput from "./TagInput.tsx";
 
 const EndPointFormControl = WithEndpoint(Form.Control);
 const EndpointDropdown = WithEndpoint(DropdownSelector);
 
-function Metadata(props) {
+interface MetadataProps {
+  endpoint_url: string;
+}
 
+function Metadata(props: MetadataProps) {
     const {endpoint_url} = props;
 
-    const metadataEndPoint = useAdapterEndpoint('metadata', endpoint_url, 1000);
+    const metadataEndPoint = useAdapterEndpoint<MetadataEndpointTypes>('metadata', endpoint_url, 1000);
     // Need some object defined even when metadataEndPoint is resolving to null
     const metaJson = metadataEndPoint?.data?.fields ? metadataEndPoint.data.fields : {} ;
 
@@ -29,7 +28,7 @@ function Metadata(props) {
     if (Object.keys(metaJson).length > 0) {
 
       // Function to calculate width
-      const calculateLabelWidth = (fields) => {
+      const calculateLabelWidth = (fields: Record<string, any>) => {
         let maxLength = 0;
         Object.keys(fields).forEach((key) => {
           const labelLength = fields[key].label.length;
@@ -80,7 +79,7 @@ function Metadata(props) {
             { // Tags
               return (
                 <TagInput
-                  options={metadataEndPoint?.data?.fields[key]?.choices}
+                  options={metadataEndPoint?.data?.fields[key]?.choices ?? ['']}
                   metadataEndPoint={metadataEndPoint}
                   field={key}
                   labelWidth={labelWidth}
@@ -97,8 +96,8 @@ function Metadata(props) {
                       {label}:
                     </InputGroup.Text>
                     <EndpointDropdown
+                      id={`metadata-${key}`}
                       endpoint={metadataEndPoint}
-                      event_type="select"
                       fullpath={"fields/"+key+"/value"}
                       variant="outline-secondary"
                       buttonText={currentValue}>

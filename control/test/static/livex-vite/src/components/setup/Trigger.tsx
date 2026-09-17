@@ -1,30 +1,24 @@
-import React from 'react';
-import Col from 'react-bootstrap/Col';
-import { Container } from 'react-bootstrap';
-import Form from 'react-bootstrap/Form';
-import Row from 'react-bootstrap/Row';
-import InputGroup from 'react-bootstrap/InputGroup';
-import Button from 'react-bootstrap/Button';
-import { TitleCard, WithEndpoint, useAdapterEndpoint } from 'odin-react';
-import { useEffect } from 'react';
+import type { TriggerEndpointTypes, TriggerEndpointTriggerType, CameraEndpointTypes, FurnaceEndpointTypes, LiveXEndpointTypes } from '../../EndpointTypes';
+
+import { Row, Col, Container, Form, InputGroup, ButtonGroup, ToggleButton } from 'react-bootstrap';
+import { TitleCard, WithEndpoint, useAdapterEndpoint, EndpointButton } from 'odin-react';
+import { useEffect, useState } from 'react';
 
 import { checkNullNoDp } from '../../utils';
 
-import { useState } from 'react';
-import ButtonGroup from 'react-bootstrap/ButtonGroup';
-import ToggleButton from 'react-bootstrap/ToggleButton';
-
 const EndPointFormControl = WithEndpoint(Form.Control);
-const EndPointButton = WithEndpoint(Button);
 
-function Trigger(props) {
+interface TriggerProps {
+    endpoint_url: string;
+}
 
+function Trigger(props: TriggerProps) {
     const {endpoint_url} = props;
 
-    const triggerEndPoint = useAdapterEndpoint('trigger', endpoint_url, 1000);
-    const orcaEndPoint = useAdapterEndpoint('camera', endpoint_url, 1000);
-    const furnaceEndPoint = useAdapterEndpoint('furnace', endpoint_url, 1000);
-    const liveXEndPoint = useAdapterEndpoint('livex', endpoint_url, 1000);
+    const triggerEndPoint = useAdapterEndpoint<TriggerEndpointTypes>('trigger', endpoint_url, 1000);
+    const orcaEndPoint = useAdapterEndpoint<CameraEndpointTypes>('camera', endpoint_url, 1000);
+    const furnaceEndPoint = useAdapterEndpoint<FurnaceEndpointTypes>('furnace', endpoint_url, 1000);
+    const liveXEndPoint = useAdapterEndpoint<LiveXEndpointTypes>('livex', endpoint_url, 1000);
 
     const [timeFrameValue, setTimeFrameValue] = useState('free');
     const timeFrameRadios = [
@@ -32,7 +26,7 @@ function Trigger(props) {
       { name: 'Run endless', value: 'free'}
     ];
 
-    const handleTimeFrameValueChange = (newValue) => {
+    const handleTimeFrameValueChange = (newValue: string) => {
       setTimeFrameValue(newValue); // update state
       // Put value to endpoint
       let freerunBool = newValue === 'free';
@@ -40,7 +34,7 @@ function Trigger(props) {
       liveXEndPoint.put(sendVal, 'acquisition');
     }
 
-    const [linkCameras, setLinkCameras] = useState(null);
+    const [linkCameras, setLinkCameras] = useState(false);
     useEffect(() => {
       const currentLinks = liveXEndPoint.data?.acquisition?.link_triggers?.current;
 
@@ -48,32 +42,33 @@ function Trigger(props) {
       setLinkCameras(linked);
     }, [liveXEndPoint.data?.acquisition?.link_triggers?.current]);
 
-    const handleLinkCamerasChange = (e) => {
+    const handleLinkCamerasChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const checked = e.target.checked;
       setLinkCameras(checked);
 
-      const path = checked ? 'acquisition/link_triggers/link_cameras' : 'acquisition/link_triggers/unlink_cameras';
+      const pathHead = checked ? 'link_cameras' : 'unlink_cameras';
+      const pathBody = "acquisition/link_triggers/";
       const value = ['widefov', 'narrowfov'];
-      liveXEndPoint.put(value, path);
+      liveXEndPoint.put({[pathHead]: value}, pathBody);
     }
 
-    const [exposureLookup, setExposureLookup] = useState(null);
+    const [exposureLookup, setExposureLookup] = useState(false);
     useEffect(() => {
-      const usingLookup = liveXEndPoint.data?.cameras?.use_exposure_lookup;
+      const usingLookup = liveXEndPoint.data?.cameras?.use_exposure_lookup ?? false;
       setExposureLookup(usingLookup);
     }, [liveXEndPoint.data?.cameras?.use_exposure_lookup]);
 
-    const handleExposureLookupChange = (e) => {
+    const handleExposureLookupChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const checked = e.target.checked;
       setExposureLookup(checked);
 
-      const path = 'cameras/use_exposure_lookup';
+      const path = 'cameras/';
       const value = checked ? true : false;  // Put false to disable if checked (enabled)
-      liveXEndPoint.put(value, path);
+      liveXEndPoint.put({ 'use_exposure_lookup': value }, path);
     }
 
     const triggers = triggerEndPoint.data?.triggers;
-    const ref_trigger = liveXEndPoint.data.acquisition?.reference_trigger;
+    const ref_trigger = liveXEndPoint?.data?.acquisition?.reference_trigger;
 
     const labelWidth = 72;
 
@@ -83,16 +78,15 @@ function Trigger(props) {
           <Row>
             <Col xs={3} className="d-flex align-items-center" style={{fontSize:"1.3rem"}}>Trigger settings</Col>
             <Col xs={4}>
-              <EndPointButton
+              <EndpointButton
                 endpoint={triggerEndPoint}
                 fullpath={"modbus/reconnect"}
                 value={true}
                 disabled={triggerEndPoint?.data?.modbus?.connected}
-                event_type="click"
-                variant={triggerEndPoint.data.modbus?.connected ? "primary": "danger"}
+                variant={triggerEndPoint?.data?.modbus?.connected ? "primary": "danger"}
               >
-                  {triggerEndPoint.data.modbus?.connected ? "Trigger Connected": "Reconnect Trigger"}
-              </EndPointButton>
+                  {triggerEndPoint?.data?.modbus?.connected ? "Trigger Connected": "Reconnect Trigger"}
+              </EndpointButton>
             </Col>
           </Row>
           }>
@@ -120,8 +114,6 @@ function Trigger(props) {
                             endpoint={liveXEndPoint}
                             type="number"
                             fullpath={'acquisition/frame_target'}
-                            event_type="enter"
-                            disabled={timeFrameValue==='free'}
                             style={{
                               border: timeFrameValue==='frame' ? '1px solid #00cc00' : undefined
                             }}
@@ -145,17 +137,16 @@ function Trigger(props) {
                       )}
                     </Row>
                     <Row className="ms-1 me-1">
-                      <EndPointButton
+                      <EndpointButton
                         className="display-inline-block"
                         endpoint={triggerEndPoint}
                         fullpath={`triggers/${key}/enable`}
-                        value={triggerEndPoint?.data.triggers[key]?.running ? false : true}
+                        value={triggerEndPoint?.data?.triggers?.[key]?.running ? false : true}
                         disabled={!triggerEndPoint?.data?.modbus?.connected}
-                        event_type="click"
-                        variant={triggerEndPoint?.data.triggers[key]?.running ? "danger" : "primary"}
+                        variant={triggerEndPoint?.data?.triggers?.[key]?.running ? "danger" : "primary"}
                       >
-                          {triggerEndPoint?.data.triggers[key]?.running ? "Stop": "Start"}
-                      </EndPointButton>
+                          {triggerEndPoint?.data?.triggers?.[key]?.running ? "Stop": "Start"}
+                      </EndpointButton>
                     </Row>
                   </TitleCard>
                 </Col>
@@ -183,31 +174,29 @@ function Trigger(props) {
                 </Row>
                 <Row className='mt-3'>
                   <InputGroup>
-                    <EndPointButton
+                    <EndpointButton
                         endpoint={triggerEndPoint}
                         fullpath={"all_timers_enable"}
                         value={{
                           'enable': true,
                           'freerun': timeFrameValue==='free'
                         }}
-                        event_type="click"
                         className="flex-fill"
                       >
                         Start all timers
-                      </EndPointButton>
-                      <EndPointButton
+                      </EndpointButton>
+                      <EndpointButton
                         endpoint={triggerEndPoint}
                         fullpath={"all_timers_enable"}
                         value={{
                           'enable': false,
                           'freerun': timeFrameValue==='free'
                         }}
-                        event_type="click"
                         variant='danger'
                         className="flex-fill"
                       >
                         Stop all timers
-                      </EndPointButton>
+                      </EndpointButton>
                   </InputGroup>
                 </Row>
               </Col>
@@ -241,7 +230,7 @@ function Trigger(props) {
                     border: '1px solid lightblue',
                     backgroundColor: '#e0f7ff'
                   }}>
-                    {checkNullNoDp(furnaceEndPoint.data.tcp?.tcp_reading?.frame)}
+                    {checkNullNoDp(furnaceEndPoint.data?.tcp?.tcp_reading?.frame)}
                   </InputGroup.Text>
                 </InputGroup>
               </Col>
@@ -271,14 +260,13 @@ function Trigger(props) {
               </Col>
             </Row>
             <Row>
-              <EndPointButton style={{}}
+              <EndpointButton style={{}}
                 endpoint={liveXEndPoint}
-                fullpath={liveXEndPoint.data.acquisition?.acquiring ? "acquisition/stop" : "acquisition/start"}
+                fullpath={liveXEndPoint.data?.acquisition?.acquiring ? "acquisition/stop" : "acquisition/start"}
                 value={['furnace', 'widefov', 'narrowfov']}
-                event_type="click"
-                variant={liveXEndPoint.data.acquisition?.acquiring ? "danger" : "success" }>
-                  {liveXEndPoint.data.acquisition?.acquiring ? "Stop acquisition" : "Start acquisition"}
-              </EndPointButton>
+                variant={liveXEndPoint.data?.acquisition?.acquiring ? "danger" : "success" }>
+                  {liveXEndPoint.data?.acquisition?.acquiring ? "Stop acquisition" : "Start acquisition"}
+              </EndpointButton>
             </Row>
           </Container>
         </TitleCard>

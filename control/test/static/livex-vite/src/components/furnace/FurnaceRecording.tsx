@@ -1,14 +1,15 @@
-import React from 'react';
-import Col from 'react-bootstrap/Col';
-import Row from 'react-bootstrap/Row';
-import InputGroup from 'react-bootstrap/InputGroup';
-import Button from 'react-bootstrap/Button';
-import { TitleCard, WithEndpoint } from 'odin-react';
-import { checkNullNoDp  } from '../../utils';
+import type { AdapterEndpoint } from 'odin-react';
+import type { FurnaceEndpointTypes } from '../../EndpointTypes';
 
-const EndPointButton = WithEndpoint(Button);
+import { TitleCard, EndpointButton } from 'odin-react';
+import { Row, Col, InputGroup } from 'react-bootstrap';
+import { checkNullNoDp } from '../../utils';
 
-function FurnaceRecording(props) {
+interface FurnaceRecordingProps {
+    furnaceEndPoint: AdapterEndpoint<FurnaceEndpointTypes>;
+}
+
+function FurnaceRecording(props: FurnaceRecordingProps) {
     const {furnaceEndPoint} = props;
 
     // Fixing the label width of the display labels so that they're consistent
@@ -32,7 +33,7 @@ function FurnaceRecording(props) {
               border: '1px solid lightblue',
               backgroundColor: '#e0f7ff'
             }}>
-              {checkNullNoDp(furnaceEndPoint.data.tcp?.tcp_reading?.counter)}
+              {checkNullNoDp(furnaceEndPoint.data?.tcp?.tcp_reading?.counter)}
             </InputGroup.Text>
           </InputGroup>
         </Col>
@@ -46,20 +47,19 @@ function FurnaceRecording(props) {
               border: '1px solid lightblue',
               backgroundColor: '#e0f7ff'
             }}>
-              {checkNullNoDp(furnaceEndPoint.data.tcp?.tcp_reading?.temperature_a)}
+              {checkNullNoDp(furnaceEndPoint.data?.tcp?.tcp_reading?.temperature_upper)}
             </InputGroup.Text>
           </InputGroup>
         </Col>
       </Row>
       <Row className="mt-3">
-        <EndPointButton
+        <EndpointButton
           endpoint={furnaceEndPoint}
           fullpath={"tcp/acquire"}
-          value={furnaceEndPoint.data.tcp?.acquire ? false : true}
-          event_type="click"
-          variant={furnaceEndPoint.data.tcp?.acquire ? "danger" : "success" }>
-          {furnaceEndPoint.data.tcp?.acquire ? "Stop furnace recording" : "Record (only) furnace data"}
-        </EndPointButton>
+          value={furnaceEndPoint.data?.tcp?.acquire ? false : true}
+          variant={furnaceEndPoint.data?.tcp?.acquire ? "danger" : "success" }>
+          {furnaceEndPoint.data?.tcp?.acquire ? "Stop furnace recording" : "Record (only) furnace data"}
+        </EndpointButton>
       </Row>
     </TitleCard>
   )

@@ -1,11 +1,15 @@
-import React from 'react';
-import Col from 'react-bootstrap/Col';
-import Row from 'react-bootstrap/Row';
-import InputGroup from 'react-bootstrap/InputGroup';
-import { TitleCard, useAdapterEndpoint } from 'odin-react';
+import type { AdapterEndpoint } from 'odin-react';
+import type { FurnaceEndpointTypes } from '../../EndpointTypes';
+
+import { Col, Row, InputGroup } from 'react-bootstrap';
+import { TitleCard } from 'odin-react';
 import { checkNull, usePrevious } from '../../utils';
 
-function InfoPanel(props) {
+interface InfoPanelProps {
+    furnaceEndPoint: AdapterEndpoint<FurnaceEndpointTypes>;
+}
+
+function InfoPanel(props: InfoPanelProps) {
     const {furnaceEndPoint} = props;
 
     const lastInput_upper = usePrevious(furnaceEndPoint.data?.pid_upper?.temperature);
@@ -21,6 +25,66 @@ function InfoPanel(props) {
         border: '1px solid lightblue',
         backgroundColor: '#e0f7ff'
       }
+
+  // Predo calcs for typing in calculation reasons
+  // Calcs must be done with defined values. So if any aren't defined, whole thing is for checkNull
+  const upperPid = furnaceEndPoint.data?.pid_upper;
+
+  const upperPlcVolt =
+    upperPid?.output != null &&
+    upperPid?.output_scalar != null
+      ? upperPid.output * 0.1 * upperPid.output_scalar
+      : undefined;
+
+  const upperPGain =
+    upperPid?.proportional != null &&
+    upperPid?.setpoint != null &&
+    upperPid?.temperature != null
+      ? upperPid.proportional * (upperPid.setpoint - upperPid.temperature)
+      : undefined;
+
+  const upperISumDiff =
+    upperPid?.integral != null &&
+    upperPid?.setpoint != null &&
+    upperPid?.temperature != null
+      ? upperPid.integral * (upperPid.setpoint - upperPid.temperature)
+      : undefined;
+
+  const upperDSumDiff =
+    upperPid?.derivative != null &&
+    upperPid?.temperature != null &&
+    lastInput_upper != null
+      ? upperPid.derivative * (upperPid.temperature - lastInput_upper)
+      : undefined;
+
+  const lowerPid = furnaceEndPoint.data?.pid_lower;
+
+  const lowerPlcVolt =
+    lowerPid?.output != null &&
+    lowerPid?.output_scalar != null
+      ? lowerPid.output * 0.1 * lowerPid.output_scalar
+      : undefined;
+
+  const lowerPGain =
+    lowerPid?.proportional != null &&
+    lowerPid?.setpoint != null &&
+    lowerPid?.temperature != null
+      ? lowerPid.proportional * (lowerPid.setpoint - lowerPid.temperature)
+      : undefined;
+
+  const lowerISumDiff =
+    lowerPid?.integral != null &&
+    lowerPid?.setpoint != null &&
+    lowerPid?.temperature != null
+      ? lowerPid.integral * (lowerPid.setpoint - lowerPid.temperature)
+      : undefined;
+
+  const lowerDSumDiff =
+    lowerPid?.derivative != null &&
+    lowerPid?.temperature != null &&
+    lastInput_lower != null
+      ? lowerPid.derivative * (lowerPid.temperature - lastInput_lower)
+      : undefined;
 
   return (
     <TitleCard title={
@@ -92,7 +156,7 @@ function InfoPanel(props) {
                 </InputGroup.Text>
                 <InputGroup.Text
                   style={labelStyling}>
-                    {checkNull((furnaceEndPoint.data?.pid_upper?.output) * 0.1 * furnaceEndPoint.data?.pid_upper?.output_scalar)}
+                    {checkNull(upperPlcVolt)}
                 </InputGroup.Text>
               </InputGroup>
             </Row>
@@ -102,9 +166,7 @@ function InfoPanel(props) {
                 P Gain
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
-                {checkNull(
-                  furnaceEndPoint.data.pid_upper?.proportional
-                  * (furnaceEndPoint.data.pid_upper?.setpoint - furnaceEndPoint.data.pid_upper?.temperature))}
+                {checkNull(upperPGain)}
               </InputGroup.Text>
             </InputGroup>
           </Row>
@@ -114,9 +176,7 @@ function InfoPanel(props) {
                 I Sum Diff.
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
-                {checkNull(
-                  furnaceEndPoint.data.pid_upper?.integral
-                  * (furnaceEndPoint.data.pid_upper?.setpoint - furnaceEndPoint.data.pid_upper?.temperature))}
+                {checkNull(upperDSumDiff)}
               </InputGroup.Text>
             </InputGroup>
           </Row>
@@ -126,9 +186,7 @@ function InfoPanel(props) {
                 D Sum Diff.
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
-              {checkNull(
-                  furnaceEndPoint.data.pid_upper?.derivative
-                  * (furnaceEndPoint.data.pid_upper?.temperature - lastInput_upper))}
+              {checkNull(upperISumDiff)}
               </InputGroup.Text>
             </InputGroup>
           </Row>
@@ -138,7 +196,7 @@ function InfoPanel(props) {
                 Out Sum
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
-              {checkNull(furnaceEndPoint.data.pid_upper?.outputsum)}
+              {checkNull(furnaceEndPoint.data?.pid_upper?.outputsum)}
               </InputGroup.Text>
             </InputGroup>
           </Row>
@@ -163,7 +221,7 @@ function InfoPanel(props) {
                 </InputGroup.Text>
                 <InputGroup.Text
                   style={labelStyling}>
-                    {checkNull((furnaceEndPoint.data?.pid_lower?.output) * 0.1 * furnaceEndPoint.data?.pid_lower?.output_scalar)}
+                    {checkNull(lowerPlcVolt)}
                 </InputGroup.Text>
               </InputGroup>
             </Row>
@@ -173,9 +231,7 @@ function InfoPanel(props) {
                 P Gain
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
-                {checkNull(
-                  furnaceEndPoint.data.pid_lower?.proportional
-                  * (furnaceEndPoint.data.pid_lower?.setpoint - furnaceEndPoint.data.pid_lower?.temperature))}
+                {checkNull(lowerPGain)}
               </InputGroup.Text>
             </InputGroup>
           </Row>
@@ -185,9 +241,7 @@ function InfoPanel(props) {
                 I Sum Diff.
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
-                {checkNull(
-                  furnaceEndPoint.data.pid_lower?.integral
-                  * (furnaceEndPoint.data.pid_lower?.setpoint - furnaceEndPoint.data.pid_lower?.temperature))}
+                {checkNull(lowerISumDiff)}
               </InputGroup.Text>
             </InputGroup>
           </Row>
@@ -197,9 +251,7 @@ function InfoPanel(props) {
                 D Sum Diff.
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
-              {checkNull(
-                  furnaceEndPoint.data.pid_lower?.derivative
-                  * (furnaceEndPoint.data.pid_lower?.temperature - lastInput_lower))}
+              {checkNull(lowerDSumDiff)}
               </InputGroup.Text>
             </InputGroup>
           </Row>
@@ -209,7 +261,7 @@ function InfoPanel(props) {
                 Out Sum
               </InputGroup.Text>
               <InputGroup.Text style={labelStyling}>
-              {checkNull(furnaceEndPoint.data.pid_lower?.outputsum)}
+              {checkNull(furnaceEndPoint.data?.pid_lower?.outputsum)}
               </InputGroup.Text>
             </InputGroup>
           </Row>

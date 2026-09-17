@@ -1,39 +1,36 @@
-import React from 'react';
+import type { AdapterEndpoint } from 'odin-react';
+import type { FurnaceEndpointTypes } from '../../EndpointTypes';
 
-import { checkNull } from '../../utils';
-
-import { TitleCard, WithEndpoint } from 'odin-react';
-import Button from 'react-bootstrap/Button';
-import Form from 'react-bootstrap/Form';
-import Col from 'react-bootstrap/Col';
-import Row from 'react-bootstrap/Row';
-
-import { floatingInputStyle, floatingLabelStyle } from '../../utils';
-import { FloatingLabel } from 'react-bootstrap';
+import { TitleCard, WithEndpoint, EndpointButton } from 'odin-react';
+import { Row, Col, Form, FloatingLabel } from 'react-bootstrap';
+import { checkNull, floatingInputStyle, floatingLabelStyle } from '../../utils';
 
 const EndpointSelect = WithEndpoint(Form.Select);
-const EndPointButton = WithEndpoint(Button);
 const EndPointFormControl = WithEndpoint(Form.Control);
 
-function ThermalGradient(props){
-    const {furnaceEndPoint} = props;
-    const {connectedDisable} = props;
+interface ThermalGradientProps {
+    furnaceEndPoint: AdapterEndpoint<FurnaceEndpointTypes>;
+    connectedDisable: boolean;
+}
 
-    const high_metadata = furnaceEndPoint.metadata.gradient?.high_heater;
+function ThermalGradient(props: ThermalGradientProps){
+    const {furnaceEndPoint, connectedDisable} = props;
+
+    const high_metadata = furnaceEndPoint.metadata?.gradient?.high_heater;
 
     return (
       <TitleCard title={
         <Row>
           <Col xs={3} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>Thermal Gradient</Col>
           <Col xs={3}>
-            <EndPointButton
+            <EndpointButton
               endpoint={furnaceEndPoint}
               fullpath="gradient/enable"
               value={furnaceEndPoint.data?.gradient?.enable ? false : true}
               variant={furnaceEndPoint.data?.gradient?.enable ? 'danger' : 'primary'}
               >
                 {furnaceEndPoint.data?.gradient?.enable ? "Disable" : "Enable"}
-            </EndPointButton>
+            </EndpointButton>
           </Col>
         </Row>
       }>
@@ -67,7 +64,7 @@ function ThermalGradient(props){
                 endpoint={furnaceEndPoint}
                 fullpath="gradient/high_heater"
                 variant="outline-secondary"
-                buttonText={furnaceEndPoint.data.gradient?.high_heater}
+                buttonText={furnaceEndPoint.data?.gradient?.high_heater}
                 disabled={connectedDisable}
                 style={floatingInputStyle}>
                   {(high_metadata?.allowed_values ?? []).map(
@@ -85,7 +82,7 @@ function ThermalGradient(props){
                   plaintext
                   readOnly
                   style={floatingLabelStyle}
-                  value={checkNull(furnaceEndPoint.data.gradient?.actual)}
+                  value={checkNull(furnaceEndPoint.data?.gradient?.actual)}
                 />
             </FloatingLabel>
             <FloatingLabel
@@ -94,7 +91,7 @@ function ThermalGradient(props){
                   plaintext
                   readOnly
                   style={floatingLabelStyle}
-                  value={checkNull(furnaceEndPoint.data.gradient?.theoretical)}
+                  value={checkNull(furnaceEndPoint.data?.gradient?.theoretical)}
                 />
             </FloatingLabel>
           </Col>

@@ -1,11 +1,23 @@
-import React, { useEffect, useState } from 'react';
-
+import { useEffect, useState } from 'react';
 import Plot from 'react-plotly.js';
 
+interface ResizeableOdinGraphProps {
+    title: string;
+    prop_data: number[] | number[][];
+    x_data?: number[];
+    width?: string;
+    height?: string;
+    responsive?: boolean;
+    useResizeHandler?: boolean;
+    num_x?: number;
+    num_y?: number;
+    type?: string;
+    series_names?: string[];
+    colorscale?: string[];
+    zoom_event_handler?: any;
+}
 
-function ResizeableOdinGraph(props) {
-
-
+function ResizeableOdinGraph(props: ResizeableOdinGraphProps) {
     const {title, prop_data, x_data=null, width='100%', height='100%', responsive=true,useResizeHandler=true,
            num_x=null, num_y=null, type='scatter', series_names=[],
            colorscale="Portland", zoom_event_handler=null} = props;
@@ -13,7 +25,7 @@ function ResizeableOdinGraph(props) {
     const [layout, changeLayout] = useState({});
 
 
-    const get_array_dimenions = (data) => {
+    const get_array_dimenions = (data: number[] | number[][]) => {
         var x = (x_data) ? x_data.length : data.length;
         var y = (Array.isArray(data[0]) ? data[0].length : 1);
         // var z = (Array.isArray(data[0]) ? (Array.isArray(data[0][0]) ? data[0][0].length : 1) : 1);
@@ -32,10 +44,11 @@ function ResizeableOdinGraph(props) {
             if(data_dims.y > 1)
             {
                 // multiple datasets
+                const propData2D = prop_data as number[][];
                 for(var i = 0; i<data_dims.x; i++){
-                    var dataset = {
-                        x: (x_data) ? x_data : Array.from(prop_data[i], (v, k) => k),
-                        y: prop_data[i],
+                    const dataset = {
+                        x: (x_data) ? x_data : Array.from(propData2D[i], (_, k) => k),
+                        y: propData2D[i],
                         type: "scatter",
                         name: series_names[i] || null
                     }
@@ -44,10 +57,12 @@ function ResizeableOdinGraph(props) {
             }
             else
             {
-                var dataset = {
-                    x: (x_data) ? x_data : Array.from(prop_data, (v, k) => k),
-                    y: prop_data,
-                    type: "scatter"
+                const propData1D = prop_data as number[];
+                const dataset = {
+                    x: (x_data) ? x_data : Array.from(propData1D, (_, k) => k),
+                    y: propData1D,
+                    type: "scatter",
+                    name: "dataset"
                 }
                 data.push(dataset);
                 
@@ -63,7 +78,7 @@ function ResizeableOdinGraph(props) {
             if(data_dims.y > 1)
             {
                 //data is 2 dimensional,  easy to turn into a 2d heatmap
-                var dataset = {
+                const dataset = {
                     z: prop_data,
                     type: type,
                     xaxis: "x",
@@ -77,12 +92,12 @@ function ResizeableOdinGraph(props) {
             else
             {
                 var reshape_data = [];
-                for(var i = 0; i<prop_data.length; i+= num_x)
+                for(var i = 0; i<prop_data.length; i+= num_x ?? 1)
                 {
-                    reshape_data.push(prop_data.slice(i, i+num_x));
+                    reshape_data.push(prop_data.slice(i, i+(num_x??0)));
                 }
                 //data is one dimensional, we need to reshape it?
-                var dataset = {
+                const dataset = {
                     z: reshape_data,
                     type: type,
                     xaxis: "x",

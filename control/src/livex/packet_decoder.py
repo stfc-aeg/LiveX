@@ -17,7 +17,7 @@ class LiveXPacketDecoder(struct.Struct):
         self.all_keys = [
             'frame',
             'temperature_upper', 'output_upper', 'kp_upper', 'ki_upper', 'kd_upper', 'lastInput_upper', 'outputSum_upper', 'setpoint_upper',
-            'temperature_lower', 'output_lower', 'kp_lower', 'ki_lower', 'kd_lower', 'lastInput_lower', 'outputSum_lower', 'setpoint_upper'
+            'temperature_lower', 'output_lower', 'kp_lower', 'ki_lower', 'kd_lower', 'lastInput_lower', 'outputSum_lower', 'setpoint_lower'
         ]
 
         # keys for non-debug data
