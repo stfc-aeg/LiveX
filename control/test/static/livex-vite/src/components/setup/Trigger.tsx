@@ -1,7 +1,7 @@
 import type { TriggerEndpointTypes, TriggerEndpointTriggerType, CameraEndpointTypes, FurnaceEndpointTypes, LiveXEndpointTypes } from '../../EndpointTypes';
 
 import { Row, Col, Container, Form, InputGroup, ButtonGroup, ToggleButton } from 'react-bootstrap';
-import { TitleCard, WithEndpoint, useAdapterEndpoint, EndpointButton } from 'odin-react';
+import { TitleCard, WithEndpoint, useAdapterEndpoint, EndpointButton } from '@dssg/odin-react';
 import { useEffect, useState } from 'react';
 
 import { checkNullNoDp } from '../../utils';

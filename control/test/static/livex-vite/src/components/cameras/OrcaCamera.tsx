@@ -1,9 +1,9 @@
-import type { AdapterEndpoint, ParamNode } from 'odin-react';
+import type { AdapterEndpoint, ParamNode } from '@dssg/odin-react';
 import type { CameraEndpointTypes, LiveDataEndpointTypes } from '../../EndpointTypes';
 
 import { useState, useRef, useEffect } from 'react';
 import { Row, Col, Container, Stack, Form, InputGroup, Button, FloatingLabel } from 'react-bootstrap';
-import { useAdapterEndpoint, WithEndpoint, TitleCard, EndpointButton } from 'odin-react';
+import { useAdapterEndpoint, WithEndpoint, TitleCard, EndpointButton } from '@dssg/odin-react';
 
 import { checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../../utils';
 import ClickableImage from './ClickableImage';

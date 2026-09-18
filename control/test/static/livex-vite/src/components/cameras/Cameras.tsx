@@ -1,7 +1,7 @@
 import type { CameraEndpointTypes, LiveDataEndpointTypes } from '../../EndpointTypes';
 
 import { Row, Col } from 'react-bootstrap';
-import { useAdapterEndpoint } from 'odin-react';
+import { useAdapterEndpoint } from '@dssg/odin-react';
 
 import OrcaCamera from './OrcaCamera';
 

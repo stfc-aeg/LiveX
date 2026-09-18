@@ -2,7 +2,7 @@ import type { MetadataEndpointTypes } from '../../EndpointTypes';
 
 import {  Form, InputGroup, Dropdown, Container } from 'react-bootstrap';
 import { useState, useEffect } from 'react';
-import { TitleCard, WithEndpoint, useAdapterEndpoint } from 'odin-react';
+import { TitleCard, WithEndpoint, useAdapterEndpoint } from '@dssg/odin-react';
 import DropdownSelector from '../DropdownSelector.tsx';
 import TagInput from "./TagInput.tsx";
 

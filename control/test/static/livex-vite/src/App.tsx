@@ -5,7 +5,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 import { Row, Col } from 'react-bootstrap';
 
-import { OdinApp } from 'odin-react';
+import { OdinApp } from '@dssg/odin-react';
 
 import FurnacePage from './components/furnace/FurnacePage.tsx';
 import Metadata from './components/setup/Metadata.tsx';

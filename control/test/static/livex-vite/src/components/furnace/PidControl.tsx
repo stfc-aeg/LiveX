@@ -1,6 +1,6 @@
 import { Row, Col, Form, FloatingLabel } from 'react-bootstrap';
-import { TitleCard, WithEndpoint, EndpointButton } from 'odin-react';
-import type { AdapterEndpoint } from 'odin-react';
+import { TitleCard, WithEndpoint, EndpointButton } from '@dssg/odin-react';
+import type { AdapterEndpoint } from '@dssg/odin-react';
 import type { FurnaceEndpointTypes } from '../../EndpointTypes';
 import { checkNull  } from '../../utils';
 

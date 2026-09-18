@@ -1,7 +1,7 @@
 import type { InferenceEndpointTypes } from '../../EndpointTypes';
 
 import { Row, Col, Form, FloatingLabel } from 'react-bootstrap';
-import { useAdapterEndpoint, EndpointButton, TitleCard } from 'odin-react';
+import { useAdapterEndpoint, EndpointButton, TitleCard } from '@dssg/odin-react';
 import { useState, useMemo } from 'react';
 
 import MonitorGraph from '../furnace/MonitorGraph';

@@ -1,7 +1,7 @@
 import type { InferenceEndpointTypes } from '../../EndpointTypes';
 
 import { Row, Col, Container, Form, FloatingLabel, Button } from 'react-bootstrap';
-import { useAdapterEndpoint, TitleCard, EndpointButton } from 'odin-react';
+import { useAdapterEndpoint, TitleCard, EndpointButton } from '@dssg/odin-react';
 import { useState } from 'react';
 import { checkNull, checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../../utils';
 

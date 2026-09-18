@@ -1,1 +1,0 @@
-declare module 'odin-sequencer-react-ui';

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Row, Col, Button, InputGroup } from 'react-bootstrap';
-import { TitleCard, AdapterEndpoint } from 'odin-react';
-import type { ParamTree, ParamNode } from 'odin-react';
+import { TitleCard, AdapterEndpoint } from '@dssg/odin-react';
+import type { ParamTree, ParamNode } from '@dssg/odin-react';
 import ResizeableOdinGraph from '../ResizeableOdinGraph';
 
 interface MonitorGraphProps {

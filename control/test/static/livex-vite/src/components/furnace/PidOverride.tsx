@@ -1,8 +1,8 @@
-import type { AdapterEndpoint } from 'odin-react';
+import type { AdapterEndpoint } from '@dssg/odin-react';
 import type { FurnaceEndpointTypes } from '../../EndpointTypes';
 
 import { Col, Row, Form, FloatingLabel } from 'react-bootstrap';
-import { TitleCard, WithEndpoint, EndpointButton } from 'odin-react';
+import { TitleCard, WithEndpoint, EndpointButton } from '@dssg/odin-react';
 import { floatingInputStyle } from '../../utils';
 
 const EndPointFormControl = WithEndpoint(Form.Control);

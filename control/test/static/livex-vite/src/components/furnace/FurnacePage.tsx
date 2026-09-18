@@ -2,7 +2,7 @@
 import { FurnaceEndpointTypes } from '../../EndpointTypes';
 
 import { Col, Row, Button, Container } from 'react-bootstrap';
-import { TitleCard, WithEndpoint, useAdapterEndpoint } from 'odin-react';
+import { TitleCard, WithEndpoint, useAdapterEndpoint } from '@dssg/odin-react';
 
 import PidControl from './PidControl';
 import ThermalGradient from './ThermalGradient';

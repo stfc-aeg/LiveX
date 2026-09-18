@@ -1,7 +1,7 @@
 import type { GraphEndpointTypes } from '../EndpointTypes'
 
 import { Row, Col } from 'react-bootstrap';
-import { useAdapterEndpoint } from 'odin-react';
+import { useAdapterEndpoint } from '@dssg/odin-react';
 import MonitorGraph from './furnace/MonitorGraph';
 
 interface GraphPageProps {

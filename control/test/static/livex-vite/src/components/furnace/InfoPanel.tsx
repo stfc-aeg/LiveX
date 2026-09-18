@@ -1,8 +1,8 @@
-import type { AdapterEndpoint } from 'odin-react';
+import type { AdapterEndpoint } from '@dssg/odin-react';
 import type { FurnaceEndpointTypes } from '../../EndpointTypes';
 
 import { Col, Row, InputGroup } from 'react-bootstrap';
-import { TitleCard } from 'odin-react';
+import { TitleCard } from '@dssg/odin-react';
 import { checkNull, usePrevious } from '../../utils';
 
 interface InfoPanelProps {

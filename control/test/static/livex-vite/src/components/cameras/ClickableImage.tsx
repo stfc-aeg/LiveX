@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { AdapterEndpoint } from 'odin-react';
+import type { AdapterEndpoint } from '@dssg/odin-react';
 
 interface ClickableImageProps {
     id: string;

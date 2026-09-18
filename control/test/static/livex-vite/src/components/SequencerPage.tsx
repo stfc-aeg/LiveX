@@ -1,6 +1,4 @@
-import type { SequencerEndpointTypes } from '../EndpointTypes';
-import { useAdapterEndpoint } from 'odin-react';
-import { OdinSequencer } from 'odin-sequencer-react-ui';
+import { OdinSequencer } from 'odin-sequencer-ui';
 
 // This page acts as a 'wrapper' for the odinsequencer to prevent endpoints causing rerenders of all
 // App.jsx children needlessly.
@@ -11,10 +9,8 @@ interface SequencerPageProps {
 function SequencerPage(props: SequencerPageProps) {
     const {endpoint_url} = props;
 
-    const sequencerEndpoint = useAdapterEndpoint<SequencerEndpointTypes>('sequencer', endpoint_url, 1000);
-
     return (
-      <OdinSequencer endpoint={sequencerEndpoint}/>
+      <OdinSequencer endpoint_name={'sequencer'} endpoint_url={endpoint_url} poll_interval={1000}/>
     )
 }
 

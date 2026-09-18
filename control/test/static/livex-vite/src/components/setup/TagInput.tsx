@@ -1,4 +1,4 @@
-import type { AdapterEndpoint } from 'odin-react';
+import type { AdapterEndpoint } from '@dssg/odin-react';
 import type { MetadataEndpointTypes } from '../../EndpointTypes';
 
 import { useState, useCallback, useRef, useMemo } from 'react';

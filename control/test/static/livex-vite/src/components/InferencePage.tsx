@@ -1,7 +1,7 @@
 import type { CameraEndpointTypes } from '../EndpointTypes';
 
 import Row from 'react-bootstrap/Row';
-import { useAdapterEndpoint } from 'odin-react';
+import { useAdapterEndpoint } from '@dssg/odin-react';
 import InferenceCard from './cameras/InferenceCard';
 
 interface InferencePageProps {

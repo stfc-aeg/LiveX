@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
-import { OdinErrorContext } from 'odin-react';
+import { OdinErrorContext } from '@dssg/odin-react';
 
 const rootElement = document.getElementById('root')
 
