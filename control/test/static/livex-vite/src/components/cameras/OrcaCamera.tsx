@@ -1,14 +1,12 @@
 import type { AdapterEndpoint, ParamNode } from '@dssg/odin-react';
-import type { CameraEndpointTypes, LiveDataEndpointTypes } from '../../EndpointTypes';
+import type { CameraEndpointTypes, CameraType, LiveDataEndpointTypes } from '../../EndpointTypes';
 
 import { useState, useRef, useEffect } from 'react';
 import { Row, Col, Container, Stack, Form, InputGroup, Button, FloatingLabel } from 'react-bootstrap';
-import { useAdapterEndpoint, WithEndpoint, TitleCard, EndpointButton } from '@dssg/odin-react';
+import { EndpointInput, TitleCard, EndpointButton } from '@dssg/odin-react';
 
 import { checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../../utils';
 import ClickableImage from './ClickableImage';
-
-const EndPointFormControl = WithEndpoint(Form.Control);
 
 interface OrcaCameraProps {
     endpoint: AdapterEndpoint<CameraEndpointTypes>;
@@ -23,12 +21,13 @@ function OrcaCamera(props: OrcaCameraProps) {
  
     const liveViewData = liveViewEndPoint?.data?.[name];
     const colour_metadata = liveViewEndPoint?.metadata?.[name]?.image?.colour;
+    const camera = endpoint?.data?.cameras?.[name] as CameraType | undefined;
 
     // Array of camera status names
     const status = ['disconnected', 'connected', 'capturing'];
     // Current status of orcaCamera (for readability)
-    const orcaStatus = endpoint?.data?.[name]?.status?.camera_status ?? "Not found";
-    const orcaConnected = endpoint?.data?.[name]?.connection?.connected;
+    const orcaStatus = camera?.status?.camera_status ?? "Not found";
+    const orcaConnected = camera?.connection?.connected;
 
     // This dropdown behaves differently so that you could enter other resolutions via command
     const commonImageResolutions = [
@@ -89,7 +88,7 @@ function OrcaCamera(props: OrcaCameraProps) {
           <TitleCard title={
             <Row>
               <Col xs={4} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>
-                {endpoint?.data?.[name]?.camera_name + " control"}
+                {`${name} control`}
               </Col>
               <Col>
                 {orcaConnected ? (
@@ -150,7 +149,7 @@ function OrcaCamera(props: OrcaCameraProps) {
                         plaintext
                         readOnly
                         style={floatingLabelStyle}
-                        value={checkNullNoDp(endpoint?.data?.[name]?.status.frame_number)}
+                        value={checkNullNoDp(camera?.status?.frame_number)}
                       />
                   </FloatingLabel>
                 </Col>
@@ -161,7 +160,7 @@ function OrcaCamera(props: OrcaCameraProps) {
                         plaintext
                         readOnly
                         style={floatingLabelStyle}
-                        value={checkNullNoDp(endpoint?.data?.[name]?.status?.camera_temperature)}
+                        value={checkNullNoDp(camera?.status?.camera_temperature)}
                       />
                   </FloatingLabel>
                 </Col>
@@ -171,18 +170,16 @@ function OrcaCamera(props: OrcaCameraProps) {
                 <InputGroup.Text>
                     exposure_time
                 </InputGroup.Text>
-                <EndPointFormControl
+                <EndpointInput
                     endpoint={endpoint}
-                    type="number"
                     fullpath={`${name}/config/exposure_time`}
-                    event_type="enter">
-                </EndPointFormControl>
+                />
               </InputGroup>
               </Stack>
               <TitleCard title={
                 <Row>
                   <Col xs={4} className='d-flex align-items-center' style={{fontSize:'1.3rem'}}>
-                    {`${endpoint?.data?.[name]?.camera_name} preview`}
+                    {`${name} preview`}
                   </Col>
                   <Col xs={8} className='d-flex justify-content-end'>
                     <Form.Text>Fix height scale</Form.Text>
@@ -243,11 +240,10 @@ function OrcaCamera(props: OrcaCameraProps) {
                     </Row>
                     <FloatingLabel className="mb-3"
                     label="Autoclip %">
-                      <EndPointFormControl
+                      <EndpointInput
                           endpoint={liveViewEndPoint}
-                          type="number"
-                          fullpath={`${name}/image/autoclip_percent`}>
-                      </EndPointFormControl>
+                          fullpath={`${name}/image/autoclip_percent`}
+                      />
                     </FloatingLabel>
                   </Col>
                   <Col xs={12} sm={6}>

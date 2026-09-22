@@ -27,7 +27,7 @@ function App() {
   const endpoint_url = import.meta.env.VITE_ENDPOINT_URL;
 
   return (
-    <OdinApp title="AIXI Control" navLinks={["Metadata and Setup", "Sequencer", "Furnace Control", "Camera Control", "Monitoring", "Inferencing", "Motors"]}>
+    <OdinApp title="AIXI Control" navLinks={["Metadata and Setup", "Furnace Control", "Camera Control", "Monitoring", "Inferencing", "Motors", "Sequencer"]}>
       <Row>
         <Col xs={12}>
           <Metadata
@@ -39,9 +39,6 @@ function App() {
             endpoint_url={endpoint_url}>
           </Trigger>
         </Col>
-      </Row>
-      <Row>
-        <SequencerPage endpoint_url={endpoint_url}/>
       </Row>
       <Row>
         <FurnacePage/>
@@ -65,6 +62,9 @@ function App() {
         <Motors
           endpoint_url={endpoint_url}
         />
+      </Row>
+      <Row>
+        <SequencerPage endpoint_url={endpoint_url}/>
       </Row>
     </OdinApp>
   );

@@ -26,8 +26,6 @@ class LiveXController(BaseController):
         self.ref_trigger = options.get('reference_trigger', 'furnace')
         # Filepaths can vary by system - i.e. cameras may have multiple storage locations
         self.local_filepath = options.get('local_filepath', '/tmp')
-        self.widefov_filepath = options.get('widefov_filepath', '/tmp')
-        self.narrowfov_filepath = options.get('narrowfov_filepath', '/tmp')
 
         self.sequencer_filepath = options.get('sequencer_filepath', '/tmp')
         self.executing_sequence = False
@@ -60,70 +58,77 @@ class LiveXController(BaseController):
 
         :param adapters: dictionary of adapter instances
         """
-        try:
-            self.adapters = adapters
+        self.adapters = adapters
 
-            # These adapters are all necessary so warn if they are not found
-            if 'munir' in self.adapters:
-                self.munir = adapters["munir"].controller
-                self.munir_adapter = adapters["munir"]
-            else:
-                logging.warning("Munir adapter not found.")
+        # These adapters are all necessary so warn if they are not found
+        if 'munir' in self.adapters:
+            self.munir = adapters["munir"].controller
+            self.munir_adapter = adapters["munir"]
+        else:
+            logging.warning("Munir adapter not found.")
 
-            self.furnace = self.adapters["furnace"].controller if 'furnace' in self.adapters else logging.warning("Furnace adapter not found.")
+        self.furnace = self.adapters["furnace"].controller if 'furnace' in self.adapters else logging.warning("Furnace adapter not found.")
 
-            if 'trigger' in self.adapters:
-                self.trigger = adapters["trigger"].controller
-            else:
-                logging.warning("Trigger adapter not found.")
+        if 'trigger' in self.adapters:
+            self.trigger = adapters["trigger"].controller
+        else:
+            logging.warning("Trigger adapter not found.")
 
-            self.orca = adapters["camera"].controller if 'camera' in self.adapters else logging.warning("Camera adapter not found")
-            self.metadata = adapters["metadata"] if 'metadata' in self.adapters else logging.warning("Metadata adapter not found.")
-            # Metadata adapter is likely easier with IAC
+        self.orca = adapters["camera"].controller if 'camera' in self.adapters else logging.warning("Camera adapter not found")
+        self.metadata = adapters["metadata"] if 'metadata' in self.adapters else logging.warning("Metadata adapter not found.")
+        # Metadata adapter is likely easier with IAC
 
-            if 'sequencer' in self.adapters:
-                logging.debug("Livex controller registering context with sequencer")
-                self.adapters['sequencer'].add_context('livex', self)
+        # Subsystem name check to ensure systems are compatible
+        trigger_names = [name for name in self.trigger.triggers.keys()]
+        system_names = ['furnace'] + [name for name in self.orca.names]
+        missing_names = []
+        for name in system_names:
+            if name not in trigger_names:
+                missing_names.append(name)
+        if missing_names:
+            raise LiveXError(f"System names (furnace, or camera) are defined that are not present in trigger names: {missing_names}. Please make sure all systems have an associated trigger.")
 
-                # Add a new logger
-                self.sequencer = self.adapters['sequencer'].controller.manager
-                self.sequencer.register_logger(self.log_sequence_message)
+        if 'sequencer' in self.adapters:
+            logging.debug("Livex controller registering context with sequencer")
+            self.adapters['sequencer'].add_context('livex', self)
 
-                self.sequencer.register_sequence_start_hook(self.prepare_sequencer_file)
-                self.sequencer.register_sequence_finish_hook(self.write_sequencer_file)
+            # Add a new logger
+            self.sequencer = self.adapters['sequencer'].controller.manager
+            self.sequencer.register_logger(self.log_sequence_message)
 
-            if 'live_data' in self.adapters:
-                self.live_data = self.adapters['live_data']
+            self.sequencer.register_sequence_start_hook(self.prepare_sequencer_file)
+            self.sequencer.register_sequence_finish_hook(self.write_sequencer_file)
 
-            if 'inference' in self.adapters:
-                self.inference = self.adapters['inference'].controller
+        if 'live_data' in self.adapters:
+            self.live_data = self.adapters['live_data']
 
-            # With adapters initialised, IAC can be used to get any more needed info
+        if 'inference' in self.adapters:
+            self.inference = self.adapters['inference'].controller
 
-            # Write furnace timer to go for readings
-            self.trigger.triggers['furnace'].set_frequency(10)
-            self.trigger.triggers['furnace'].set_enable(True)
-            self.furnace.update_furnace_frequency(10)  # Inform furnace of frequency change, as this is done outside of usual channel
+        # Write furnace timer to go for readings
+        self.trigger.triggers['furnace'].set_frequency(10)
+        self.trigger.triggers['furnace'].set_enable(True)
+        self.furnace.update_furnace_frequency(10)  # Inform furnace of frequency change, as this is done outside of usual channel
 
-            self.trigger_manager = TriggerManager(
-                self.trigger, self.furnace, self.orca,
-                exposure_lookup_path=self.exposure_lookup_path, ref_trigger=self.ref_trigger
-            )
-            self.trigger_manager.get_frequencies()
-            self.trigger_manager.set_target(self.trigger_manager.acq_frame_target)
+        self.trigger_manager = TriggerManager(
+            self.trigger, self.furnace, self.orca,
+            exposure_lookup_path=self.exposure_lookup_path, ref_trigger=self.ref_trigger
+        )
+        self.trigger_manager.get_frequencies()
+        self.trigger_manager.set_target(self.trigger_manager.acq_frame_target)
 
-            # Add cameras to self.filepaths for acquisition handling with default
-            for camera in self.orca.cameras:
-                self.filepaths[camera.name] = {'filename': None, 'filepath': self.local_filepath}
 
-                # Set cameras to trigger source 2 (external)
-                # Internal triggering of 120Hz is much too fast for inferencing
-                camera.set_config(value=2, param='trigger_source')
+        # Add cameras to self.filepaths for acquisition handling with default
+        for camera in self.orca.cameras:
+            # Filepaths are set in _generate_experiment_filenames but adding structure now is useful
+            self.filepaths[camera.name] = {'filename': None, 'filepath': None}
 
-            # Reconstruct tree with relevant adapter references
-            self._build_tree()
-        except Exception as e:
-            logging.error(f"Acquisition initialize failed: {e}")
+            # Set cameras to trigger source 2 (external)
+            # Internal triggering of 120Hz is much too fast for inferencing
+            camera.set_config(value=2, param='trigger_source')
+
+        # Reconstruct tree with relevant adapter references
+        self._build_tree()
 
     def prepare_sequencer_file(self, sequence_name, args, kwargs):
         """Prepare the file information for the sequencer log."""
@@ -203,9 +208,6 @@ class LiveXController(BaseController):
         campaign_name = campaign_name.replace(" ", "_")
         experiment_id = campaign_name + "_" + str(acquisition_number).rjust(4, '0')
 
-        # Add other path sorting logic here. Consider how the names might need to be in config file for real use
-        # e.g. system_names=furnace, wide... then widefov_dir, narrowfov_dir, etc.. Should furnace be assumed?
-
         def build_filename(system, ext):
             return f"{experiment_id}_{system}.{ext}"
 
@@ -223,6 +225,7 @@ class LiveXController(BaseController):
         for camera in self.orca.cameras:
             name = camera.name
             self.filepaths[name]["filename"] = f"{experiment_id}_{name}"
+            # These are set earlier 
             self.filepaths[name]["filepath"] = self.options.get(f"{name}_filepath", self.local_filepath)
         # Set values in metadata adapter
         iac_set(self.metadata, 'fields/experiment_id', 'value', experiment_id)
@@ -232,7 +235,8 @@ class LiveXController(BaseController):
     def start_acquisition(self, acquisitions=[]):
         """Start an acquisition. Disable timers, configure all values, then start timers simultaneously.
         :param freerun: bool deciding if frame target is overridden to 0 for indefinite capture
-        :param acquisitions: (dict) {name: bool} to determine which acquisitions are to be run
+        :param acquisitions: list of names to determine which subsystems are to be used
+        This is why trigger and camera names should match.
         """
         self.acquiring = True
         if self.furnace.force_solo_acquisition:

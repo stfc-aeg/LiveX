@@ -1,4 +1,4 @@
-import type { TriggerEndpointTypes, TriggerEndpointTriggerType, CameraEndpointTypes, FurnaceEndpointTypes, LiveXEndpointTypes } from '../../EndpointTypes';
+import type { TriggerEndpointTypes, CameraEndpointTypes, CameraType, FurnaceEndpointTypes, LiveXEndpointTypes } from '../../EndpointTypes';
 
 import { Row, Col, Container, Form, InputGroup, ButtonGroup, ToggleButton } from 'react-bootstrap';
 import { TitleCard, WithEndpoint, useAdapterEndpoint, EndpointButton } from '@dssg/odin-react';
@@ -19,6 +19,8 @@ function Trigger(props: TriggerProps) {
     const orcaEndPoint = useAdapterEndpoint<CameraEndpointTypes>('camera', endpoint_url, 1000);
     const furnaceEndPoint = useAdapterEndpoint<FurnaceEndpointTypes>('furnace', endpoint_url, 1000);
     const liveXEndPoint = useAdapterEndpoint<LiveXEndpointTypes>('livex', endpoint_url, 1000);
+
+    const camera_names = orcaEndPoint?.data?.camera_names ?? [];
 
     const [timeFrameValue, setTimeFrameValue] = useState('free');
     const timeFrameRadios = [
@@ -48,8 +50,7 @@ function Trigger(props: TriggerProps) {
 
       const pathHead = checked ? 'link_cameras' : 'unlink_cameras';
       const pathBody = "acquisition/link_triggers/";
-      const value = ['widefov', 'narrowfov'];
-      liveXEndPoint.put({[pathHead]: value}, pathBody);
+      liveXEndPoint.put({[pathHead]: camera_names}, pathBody);
     }
 
     const [exposureLookup, setExposureLookup] = useState(false);
@@ -234,36 +235,29 @@ function Trigger(props: TriggerProps) {
                   </InputGroup.Text>
                 </InputGroup>
               </Col>
-              <Col>
-                <InputGroup>
-                  <InputGroup.Text>widefov frame count</InputGroup.Text>
-                  <InputGroup.Text style={{
-                    width: labelWidth,
-                    border: '1px solid lightblue',
-                    backgroundColor: '#e0f7ff'
-                  }}>
-                    {checkNullNoDp(orcaEndPoint?.data?.widefov?.status?.frame_number)}
-                  </InputGroup.Text>
-                </InputGroup>
-              </Col>
-              <Col>
-                <InputGroup>
-                  <InputGroup.Text>narrowfov frame count</InputGroup.Text>
-                  <InputGroup.Text style={{
-                    width: labelWidth,
-                    border: '1px solid lightblue',
-                    backgroundColor: '#e0f7ff'
-                  }}>
-                    {checkNullNoDp(orcaEndPoint?.data?.narrowfov?.status?.frame_number)}
-                  </InputGroup.Text>
-                </InputGroup>
-              </Col>
+              {camera_names.map((camera_name) => {
+                const camera = orcaEndPoint?.data?.cameras?.[camera_name] as CameraType | undefined;
+                return (
+                  <Col key={camera_name}>
+                    <InputGroup>
+                      <InputGroup.Text>{camera_name} frame count</InputGroup.Text>
+                      <InputGroup.Text style={{
+                        width: labelWidth,
+                        border: '1px solid lightblue',
+                        backgroundColor: '#e0f7ff'
+                      }}>
+                        {checkNullNoDp(camera?.status?.frame_number)}
+                      </InputGroup.Text>
+                    </InputGroup>
+                  </Col>
+                );
+              })}
             </Row>
             <Row>
               <EndpointButton style={{}}
                 endpoint={liveXEndPoint}
                 fullpath={liveXEndPoint.data?.acquisition?.acquiring ? "acquisition/stop" : "acquisition/start"}
-                value={['furnace', 'widefov', 'narrowfov']}
+                value={['furnace', ...camera_names]}
                 variant={liveXEndPoint.data?.acquisition?.acquiring ? "danger" : "success" }>
                   {liveXEndPoint.data?.acquisition?.acquiring ? "Stop acquisition" : "Start acquisition"}
               </EndpointButton>

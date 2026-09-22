@@ -122,11 +122,7 @@ export interface LiveXEndpointTypes extends ParamNode {
         acquiring: boolean;
         frame_target: number;
         freerun: boolean;
-        frequencies: {
-            furnace: number;
-            narrowfov: number;
-            widefov: number;
-        };
+        frequencies: Record<string, number>;
         link_triggers: {
             current: string[];
             link_cameras: string[] | null;
@@ -137,9 +133,8 @@ export interface LiveXEndpointTypes extends ParamNode {
         stop: any;
     };
     cameras: {
-        narrowfov_exposure: number;
         use_exposure_lookup: boolean;
-        widefov_exposure: number;
+        [camera_exposure: `${string}_exposure`]: number;
     };
 }
 
@@ -300,7 +295,10 @@ export interface CameraType extends ParamNode {
 }
 
 export interface CameraEndpointTypes extends ParamNode {
-    [camera_id: string]: CameraType;
+    camera_names: string[];
+    cameras: {
+        [camera_id: string]: CameraType;
+    };
 }
 
 export interface InferenceEndpointResultTypes extends ParamNode {
