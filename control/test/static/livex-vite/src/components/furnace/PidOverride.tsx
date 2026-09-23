@@ -42,7 +42,6 @@ function PidOverride(props: PidOverrideProps) {
               endpoint={furnaceEndPoint}
               fullpath={pid+"/override/percent_out"}
               disabled={connectedDisable}
-              style={floatingInputStyle}
             />
           </FloatingLabel>
         </Col>

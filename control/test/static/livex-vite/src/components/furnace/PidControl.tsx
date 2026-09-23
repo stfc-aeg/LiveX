@@ -46,7 +46,6 @@ function PidControl(props: PidControlProps) {
                       endpoint={furnaceEndPoint}
                       fullpath={pid+"/proportional"}
                       disabled={connectedDisable}
-                      style={floatingInputStyle}
                     />
                 </FloatingLabel>
                   <FloatingLabel
@@ -55,7 +54,6 @@ function PidControl(props: PidControlProps) {
                       endpoint={furnaceEndPoint}
                       fullpath={pid+"/integral"}
                       disabled={connectedDisable}
-                      style={floatingInputStyle}
                     />
                 </FloatingLabel>
                 <FloatingLabel
@@ -64,7 +62,6 @@ function PidControl(props: PidControlProps) {
                       endpoint={furnaceEndPoint}
                       fullpath={pid+"/derivative"}
                       disabled={connectedDisable}
-                      style={floatingInputStyle}
                     />
                 </FloatingLabel>
               </Col>
@@ -77,7 +74,6 @@ function PidControl(props: PidControlProps) {
                           endpoint={furnaceEndPoint}
                           fullpath={pid+"/setpoint"}
                           disabled={connectedDisable}
-                          style={floatingInputStyle}
                         />
                     </FloatingLabel>
                   </Col>

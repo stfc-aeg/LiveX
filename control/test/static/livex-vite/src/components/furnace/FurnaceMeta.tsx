@@ -26,7 +26,6 @@ function FurnaceMeta(props: FurnaceMetaProps) {
                   endpoint={furnaceEndPoint}
                   fullpath={"max_setpoint"}
                   disabled={connectedDisable}
-                  style={floatingInputStyle}
                 />
               </FloatingLabel>
             </Col>
@@ -36,7 +35,6 @@ function FurnaceMeta(props: FurnaceMetaProps) {
                   endpoint={furnaceEndPoint}
                   fullpath={"max_setpoint_increase"}
                   disabled={connectedDisable}
-                  style={floatingInputStyle}
                 />
               </FloatingLabel>
             </Col>
@@ -48,7 +46,6 @@ function FurnaceMeta(props: FurnaceMetaProps) {
                   endpoint={furnaceEndPoint}
                   fullpath={"pid_upper/output_scalar"}
                   disabled={connectedDisable}
-                  style={floatingInputStyle}
                 />
               </FloatingLabel>
             </Col>
@@ -58,7 +55,6 @@ function FurnaceMeta(props: FurnaceMetaProps) {
                   endpoint={furnaceEndPoint}
                   fullpath={"pid_lower/output_scalar"}
                   disabled={connectedDisable}
-                  style={floatingInputStyle}
                 />
               </FloatingLabel>
             </Col>

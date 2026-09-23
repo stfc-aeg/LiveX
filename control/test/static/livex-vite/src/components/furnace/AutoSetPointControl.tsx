@@ -42,7 +42,6 @@ function AutoSetPointControl(props: AutoSetPointControlProps){
                   endpoint={furnaceEndPoint}
                   fullpath="autosp/rate"
                   disabled={connectedDisable}
-                  style={floatingInputStyle}
                 />
               </FloatingLabel>
             </Col>

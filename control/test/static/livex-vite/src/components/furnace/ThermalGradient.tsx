@@ -42,7 +42,6 @@ function ThermalGradient(props: ThermalGradientProps){
                   endpoint={furnaceEndPoint}
                   fullpath="gradient/wanted"
                   disabled={connectedDisable}
-                  style={floatingInputStyle}
                 />
               </FloatingLabel>
             <FloatingLabel
@@ -51,7 +50,6 @@ function ThermalGradient(props: ThermalGradientProps){
                   endpoint={furnaceEndPoint}
                   fullpath="gradient/distance"
                   disabled={connectedDisable}
-                  style={floatingInputStyle}
                 />
             </FloatingLabel>
             <FloatingLabel
