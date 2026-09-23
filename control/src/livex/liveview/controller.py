@@ -6,7 +6,7 @@ from odin_control.adapters.base_controller import BaseController
 from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from livex.util import LiveXError
-from livex.live_data.processor import LiveDataProcessor
+from livex.liveview.processor import LiveDataProcessor
 
 class LiveDataController(BaseController):
     """Class to instantiate and manage the ParameterTree for LiveDataProcessor classes."""
@@ -92,7 +92,7 @@ class LiveDataController(BaseController):
                                         partial(self.set_img_clip_percent, processor=proc)
                     ),
                     "zoom": (lambda proc=proc: [
-                        proc.zoom['x_lower'], proc.zoom['x_upper'], proc.zoom['y_lower'], proc.zoom['y_upper']],
+                        [proc.zoom['x_lower'], proc.zoom['x_upper']], [proc.zoom['y_lower'], proc.zoom['y_upper']]],
                         partial(self.set_zoom_boundaries, processor=proc)),
                     "autoclip": (lambda proc=proc: proc.autoclip,
                                  partial(self.set_autoclip, processor=proc)),

@@ -1,4 +1,4 @@
-from livex.live_data.controller import LiveDataController, LiveXError
+from livex.liveview.controller import LiveDataController, LiveXError
 
 from odin_control.adapters.adapter import ApiAdapter, ApiAdapterResponse, wants_metadata
 
