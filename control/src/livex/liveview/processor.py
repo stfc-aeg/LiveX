@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from tornado.escape import json_decode
 from odin_data.control.ipc_channel import IpcChannel
 
-class LiveDataProcessor():
+class LiveViewProcessor():
     """Class to process image data received on a multiprocess that it instantiates."""
 
     orientations = {
@@ -23,7 +23,7 @@ class LiveDataProcessor():
     }
 
     def __init__(self, endpoint, resolution, pixel_bytes, orientation, mirror_x=False, mirror_y=False, size_x=2048, size_y=1152, colour='greyscale'):
-        """Initialise the LiveDataProcessor object.
+        """Initialise the LiveViewProcessor object.
         This method constructs the Queue, Pipes and Process necessary for multiprocessing.
         :param endpoint: string representation of endpoint for image data.
         :param resolution: dict ({'x': x, 'y': y}) of maximum image dimensions
@@ -99,7 +99,7 @@ class LiveDataProcessor():
         """Create an IPC channel with the processor's endpoint and get data from it.
         Continuously polls the pipe (for processor parameters) and the channel (for images).
         On successful poll, clears queue to get latest image, to avoid historical data.
-        :param processor: LiveDataProcessor object to reference.
+        :param processor: LiveViewProcessor object to reference.
         """
         channel = IpcChannel(IpcChannel.CHANNEL_TYPE_SUB, processor.endpoint)
         channel.connect()

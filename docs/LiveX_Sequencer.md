@@ -213,10 +213,10 @@ These are instantiated by the trigger adapter above, accessible via `trigger.tri
 - `set_frequency(value: int)`: set the frequency of the trigger to the given value
 - `set_target(target: int)`: set the frame target of the trigger to the given value
 
-# Live_Data
+# liveview
 
-The live_data image previewer is also available through the sequencer. It is important to remember that the variables here apply only to the preview images seen, and not the saved data, which is always the full region and resolution. You could use this to define a specific zoom, increase the resolution, or automatically change the colour map; for example, if you know that during a sequence a certain area will become of interest, or you want to save some processing power with lower resolution images before a certain temperature.
-When changing any detail with the live_data adapter, it requires an argument for which processor (which accepts the output from one camera) is being referred to. The processors aren’t named but are defined in order from the config – you can access these with `self.processors[x]` where x is (indexed from 0) the number in the list of processors.
+The liveview image previewer is also available through the sequencer. It is important to remember that the variables here apply only to the preview images seen, and not the saved data, which is always the full region and resolution. You could use this to define a specific zoom, increase the resolution, or automatically change the colour map; for example, if you know that during a sequence a certain area will become of interest, or you want to save some processing power with lower resolution images before a certain temperature.
+When changing any detail with the liveview adapter, it requires an argument for which processor (which accepts the output from one camera) is being referred to. The processors aren’t named but are defined in order from the config – you can access these with `self.processors[x]` where x is (indexed from 0) the number in the list of processors.
 
 | Attr Name | Description | 
 | --------- | ----------- |
@@ -224,7 +224,7 @@ When changing any detail with the live_data adapter, it requires an argument for
 
 ### Processor Attributes
 
-Processors store the actual information, but they are run in a Process. This means that they should be edited only through functions in the live_data class, though you can still access the previously-updated version of this information.
+Processors store the actual information, but they are run in a Process. This means that they should be edited only through functions in the liveview class, though you can still access the previously-updated version of this information.
 
 | attr name           | description |
 |---------------------|-------------|
@@ -247,7 +247,7 @@ Processors store the actual information, but they are run in a Process. This mea
 | pipe_parent, pipe_child | Pipe object outputs |
 | process           | (Process) process object that runs image processing logic |
 
-### Methods (live_data adapter)
+### Methods (liveview adapter)
 When a method has a Processor as the argument, get the processor you want to use from the processors attribute in the class. Processors are created in the order listed in the `livex.cfg` file (typically widefov, then narrowfov)
 
 - `set_img_x/y(value: int, processor: Processor)`: Set the width/height of the image in pixels within an existing zoom. If you define more than the maximum width, it should just include the entire image.

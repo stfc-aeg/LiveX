@@ -1,10 +1,10 @@
-from livex.liveview.controller import LiveDataController, LiveXError
+from livex.liveview.controller import LiveViewController, LiveXError
 
 from odin_control.adapters.adapter import ApiAdapter, ApiAdapterResponse, wants_metadata
 
-class LiveDataAdapter(ApiAdapter):
+class LiveViewAdapter(ApiAdapter):
 
-    controller_cls = LiveDataController
+    controller_cls = LiveViewController
     error_cls = LiveXError
 
     def get(self, path, request):

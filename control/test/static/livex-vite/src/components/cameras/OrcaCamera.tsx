@@ -1,5 +1,5 @@
 import type { AdapterEndpoint, ParamNode } from '@dssg/odin-react';
-import type { CameraEndpointTypes, CameraType, LiveDataEndpointTypes } from '../../EndpointTypes';
+import type { CameraEndpointTypes, CameraType, LiveViewEndpointTypes } from '../../EndpointTypes';
 
 import { useState, useRef, useEffect } from 'react';
 import { Row, Col, Container, Stack, Form, InputGroup, Button, FloatingLabel } from 'react-bootstrap';
@@ -10,7 +10,7 @@ import ClickableImage from './ClickableImage';
 
 interface OrcaCameraProps {
     endpoint: AdapterEndpoint<CameraEndpointTypes>;
-    liveViewEndPoint: AdapterEndpoint<LiveDataEndpointTypes>;
+    liveViewEndPoint: AdapterEndpoint<LiveViewEndpointTypes>;
     name: string;
 }
 

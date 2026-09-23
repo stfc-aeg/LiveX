@@ -1,4 +1,4 @@
-import type { CameraEndpointTypes, CameraType, LiveDataEndpointTypes } from '../../EndpointTypes';
+import type { CameraEndpointTypes, CameraType, LiveViewEndpointTypes } from '../../EndpointTypes';
 
 import { Row, Col } from 'react-bootstrap';
 import { useAdapterEndpoint } from '@dssg/odin-react';
@@ -14,7 +14,7 @@ function Cameras(props: CamerasProps) {
     const {endpoint_url} = props;
 
     const cameraEndPoint = useAdapterEndpoint<CameraEndpointTypes>('camera', endpoint_url, 1000);
-    const liveViewEndPoint = useAdapterEndpoint<LiveDataEndpointTypes>('liveview', endpoint_url, 1000);
+    const liveViewEndPoint = useAdapterEndpoint<LiveViewEndpointTypes>('liveview', endpoint_url, 1000);
 
     const camera_names = cameraEndPoint?.data?.camera_names ?? [];
     const cameras = cameraEndPoint?.data?.cameras;

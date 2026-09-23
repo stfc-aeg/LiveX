@@ -176,7 +176,7 @@ export interface MetadataEndpointTypes extends ParamNode {
     };
 }
 
-export interface LiveDataDetailsTypes extends ParamNode {
+export interface LiveViewDetailsTypes extends ParamNode {
     cam_name: string;
     endpoint: string;
     image: {
@@ -193,8 +193,8 @@ export interface LiveDataDetailsTypes extends ParamNode {
     };
 }
 
-export interface LiveDataEndpointTypes extends ParamNode {
-    [camera_id: string]: LiveDataDetailsTypes;
+export interface LiveViewEndpointTypes extends ParamNode {
+    [camera_id: string]: LiveViewDetailsTypes;
 }
 
 

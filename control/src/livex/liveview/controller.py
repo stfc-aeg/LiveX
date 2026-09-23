@@ -6,25 +6,25 @@ from odin_control.adapters.base_controller import BaseController
 from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from livex.util import LiveXError
-from livex.liveview.processor import LiveDataProcessor
+from livex.liveview.processor import LiveViewProcessor
 
-class LiveDataController(BaseController):
-    """Class to instantiate and manage the ParameterTree for LiveDataProcessor classes."""
+class LiveViewController(BaseController):
+    """Class to instantiate and manage the ParameterTree for LiveViewProcessor classes."""
 
     def __init__(self, options): # endpoints, names, resolutions):
-        """Initialise the LiveDataController. Create a LiveDataProcessor for each endpoint
+        """Initialise the LiveViewController. Create a LiveViewProcessor for each endpoint
         provided in config, then create a ParameterTree to handle behaviours for those classes.
         :param endpoints: list of endpoints in string format.
         """
-        logging.debug("Initialising LiveDataController.")
+        logging.debug("Initialising LiveViewController.")
         self.options = options
 
         # Split on comma, remove whitespace if it exists
         endpoints = [
-            item.strip() for item in self.options.get('livedata_endpoint', None).split(",")
+            item.strip() for item in self.options.get('liveview_endpoint', "").split(",")
         ]
         self.names = [
-            item.strip() for item in self.options.get('endpoint_name', None).split(",")
+            item.strip() for item in self.options.get('endpoint_name', "").split(",")
         ]
         # Array of dicts of resolutions
         resolutions = [
@@ -51,10 +51,10 @@ class LiveDataController(BaseController):
                 mirror_x = True if 'x' in mirrors else False
                 mirror_y = True if 'y' in mirrors else False
 
-            logging.warning(f"Creating LiveDataProcessor for {name} at {endpoints[i]} with resolution {resolution['x']}x{resolution['y']}, orientation {orientation}, mirror_x={mirror_x}, mirror_y={mirror_y}")
+            logging.warning(f"Creating LiveViewProcessor for {name} at {endpoints[i]} with resolution {resolution['x']}x{resolution['y']}, orientation {orientation}, mirror_x={mirror_x}, mirror_y={mirror_y}")
 
             self.processors.append(
-                LiveDataProcessor(endpoints[i], resolution, pixel_bytes, orientation, mirror_x, mirror_y)
+                LiveViewProcessor(endpoints[i], resolution, pixel_bytes, orientation, mirror_x, mirror_y)
             )
 
             proc = self.processors[i]
@@ -125,7 +125,7 @@ class LiveDataController(BaseController):
         self.adapters = adapters
         if 'sequencer' in self.adapters:
             logging.debug("Live data controller registering context with sequencer")
-            self.adapters['sequencer'].add_context('livedata', self)
+            self.adapters['sequencer'].add_context('liveview', self)
 
     def get_image_from_processor_name(self, name, type):
         if type not in ['image', 'histogram']:
@@ -140,7 +140,7 @@ class LiveDataController(BaseController):
                 return processor.get_histogram()
 
     def cleanup(self):
-        """Clean up the LiveDataController instance.
+        """Clean up the LiveViewController instance.
 
         This method terminates processors, allowing shutdown.
         """
@@ -179,7 +179,7 @@ class LiveDataController(BaseController):
 
     def _update_render_info(self, processor):
         """Pipe updated parameters to processor thread.
-        :param processor: LiveDataProcessor object to reference.
+        :param processor: LiveViewProcessor object to reference.
         """
         # Could be done programmatically but not enough to warrant this complexity
         params = {
@@ -197,7 +197,7 @@ class LiveDataController(BaseController):
     def set_img_x(self, value, processor):
         """Set the width of the image in pixels.
         :param value: integer representing number of pixels.
-        :param processor: LiveDataProcessor object to reference
+        :param processor: LiveViewProcessor object to reference
         """
         processor.size_x = int(value)
         self._update_render_info(processor)
@@ -205,7 +205,7 @@ class LiveDataController(BaseController):
     def set_img_y(self, value, processor):
         """Set the height of the image in pixels.
         :param value: integer representing number of pixels.
-        :param processor: LiveDataProcessor object to reference
+        :param processor: LiveViewProcessor object to reference
         """
         processor.size_y = int(value)
         self._update_render_info(processor)
@@ -213,7 +213,7 @@ class LiveDataController(BaseController):
     def set_img_dims(self, value, processor):
         """Set both image dimensions, width and height (x and y).
         :param value: array of integers representing width/height in pixels.
-        :param processor: LiveDataProcessor object to reference.
+        :param processor: LiveViewProcessor object to reference.
         """
         processor.dimensions = value
         processor.size_x = int(processor.dimensions[0])
@@ -234,7 +234,7 @@ class LiveDataController(BaseController):
     def set_img_colour(self, value, processor):
         """Set the colour of the image in the parameter tree, used to determine the colour map.
         :param value: colour map name as a string. see get_colour_map
-        :param processor: LiveDataProcessor object to reference
+        :param processor: LiveViewProcessor object to reference
         """
         processor.colour = str(value)
         self._update_render_info(processor)
@@ -263,7 +263,7 @@ class LiveDataController(BaseController):
     def set_img_clip_value(self, value, processor):
         """Set the image clipping range absolutely.
         :param value: array of clip range limits, min to max
-        :param processor: LiveDataProcessor object
+        :param processor: LiveViewProcessor object
         """
         processor.clipping['min'] = int(value[0])
         processor.clipping['max'] = int(value[1])
@@ -281,7 +281,7 @@ class LiveDataController(BaseController):
         """Set the image clipping range proportionally.
         :param value: array of clip range limits. This is provided by a clickableimage component
         so it takes the form [[xmin, xmax], [ymin, ymax]]. Here, y is irrelevant.
-        :param processor: LiveDataProcessor object
+        :param processor: LiveViewProcessor object
         """
         select_min = value[0][0]
         select_max = value[0][1]
@@ -305,7 +305,7 @@ class LiveDataController(BaseController):
     def set_resolution(self, value, processor):
         """Set the resolution of the image.
         :param value: Resolution expressed as a percentage.
-        :param processor: LiveDataProcessor object
+        :param processor: LiveViewProcessor object
         """
         value = int(value)
         processor.resolution_percent = value
@@ -317,7 +317,7 @@ class LiveDataController(BaseController):
         """Set the zoom boundaries for the image.
         Has an override - giving 0 and 100 as both x and y boundaries resets to full size.
         :param value: array of zoom boundaries in %. [[x_low, x_high], [y_low, y_high]].
-        :param processor: LiveData Processor object.
+        :param processor: LiveView Processor object.
         """
         x_low, x_high = value[0]
         y_low, y_high = value[1]
@@ -373,7 +373,7 @@ class LiveDataController(BaseController):
     def set_autoclip(self, value, processor):
         """Set whether autoclip is enabled.
         :param value: boolean representing whether autoclip is enabled.
-        :param processor: LiveDataProcessor object
+        :param processor: LiveViewProcessor object
         """
         processor.autoclip = bool(value)
         self._update_render_info(processor)
@@ -381,7 +381,7 @@ class LiveDataController(BaseController):
     def set_autoclip_percent(self, value, processor):
         """Set the autoclip percentage.
         :param value: integer representing the percentage of pixels to include in autoclip.
-        :param processor: LiveDataProcessor object
+        :param processor: LiveViewProcessor object
         """
         processor.autoclip_percent = int(value)
         self._update_render_info(processor)
