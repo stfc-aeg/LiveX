@@ -125,50 +125,26 @@
         "persist": false,
         "user_input": false
     },
-    "widefov_framerate": {
-        "label": "WideFOV frame rate",
+    "<camera>_framerate": {
+        "label": "<camera> frame rate",
         "default": 0.0,
         "persist": false,
         "user_input": false
     },
-    "narrowfov_framerate": {
-        "label": "NarrowFOV frame rate",
+    "<camera>_exposure": {
+        "label": "<camera> exposure time",
         "default": 0.0,
         "persist": false,
         "user_input": false
     },
-    "widefov_exposure": {
-        "label": "WideFOV exposure time",
-        "default": 0.0,
-        "persist": false,
-        "user_input": false
-    },
-    "narrowfov_exposure": {
-        "label": "NarrowFOV exposure time",
-        "default": 0.0,
-        "persist": false,
-        "user_input": false
-    },
-    "widefov_orientation": {
-        "label": "WideFOV image orientation",
+    "<camera>_orientation": {
+        "label": "<camera> image orientation",
         "default": "up",
         "persist": false,
         "user_input": false
     },
-    "narrowfov_orientation": {
-        "label": "NarrowFOV image orientation",
-        "default": "up",
-        "persist": false,
-        "user_input": false
-    },
-    "widefov_resolution": {
-        "label": "WideFOV resolution (microns)",
-        "default": 0,
-        "persist": true,
-        "user_input": true
-    },
-    "narrowfov_resolution": {
-        "label": "NarrowFOV resolution (microns)",
+    "<camera>_resolution": {
+        "label": "<camera> resolution (microns)",
         "default": 0,
         "persist": true,
         "user_input": true
