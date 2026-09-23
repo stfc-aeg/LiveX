@@ -97,7 +97,7 @@ function OrcaCamera(props: OrcaCameraProps) {
                     <EndpointButton // Move between statuses 1 and 0
                       endpoint={endpoint}
                       value={orcaStatus!==status[0] ? "disconnect" : "connect"}
-                      fullpath={`${name}/command`}
+                      fullpath={`cameras/${name}/command`}
                       disabled={![status[1], status[0]].includes(orcaStatus)}
                       variant={orcaStatus!==status[0] ? "warning" : "success"}>
                         {orcaStatus!==status[0] ? 'Disconnect' : 'Connect'}
@@ -107,7 +107,7 @@ function OrcaCamera(props: OrcaCameraProps) {
                     <EndpointButton // Move between statuses 3 and 1
                       endpoint={endpoint}
                       value={orcaStatus===status[2] ? "end_capture" : "capture"}
-                      fullpath={`${name}/command`}
+                      fullpath={`cameras/${name}/command`}
                       disabled={![status[2], status[1]].includes(orcaStatus)}
                       variant={orcaStatus===status[2] ? "warning" : "success"}>
                       {orcaStatus===status[2] ? 'Stop Capturing' : 'Capture'}
@@ -119,7 +119,7 @@ function OrcaCamera(props: OrcaCameraProps) {
                   <EndpointButton
                     endpoint={endpoint}
                     value={true}
-                    fullpath={`${name}/connection/reconnect`}
+                    fullpath={`cameras/${name}/connection/reconnect`}
                     disabled={orcaConnected}
                     variant={orcaConnected ? "info" : "danger"}>
                     {orcaConnected ? 'Connected' : 'Reconnect'}
@@ -172,7 +172,7 @@ function OrcaCamera(props: OrcaCameraProps) {
                 </InputGroup.Text>
                 <EndpointInput
                     endpoint={endpoint}
-                    fullpath={`${name}/config/exposure_time`}
+                    fullpath={`cameras/${name}/config/exposure_time`}
                 />
               </InputGroup>
               </Stack>

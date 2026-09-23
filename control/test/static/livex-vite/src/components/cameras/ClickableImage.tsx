@@ -114,7 +114,7 @@ function ClickableImage(props: ClickableImageProps) {
       ];
 
       setPoints(rectanglePoints);
-      // Coordinates are processed in live_data/controller.py as
+      // Coordinates are processed in liveview/controller.py as
       // [[x_lower, x_upper], [y_lower, y_upper]]
       setCoords([[minX, maxX], [minY, maxY]]);
     }, [startPoint, endPoint, maxAxis]);
