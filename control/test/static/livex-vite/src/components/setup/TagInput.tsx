@@ -10,11 +10,24 @@ interface TagInputProps {
   metadataEndPoint: AdapterEndpoint<MetadataEndpointTypes>;
   field: string;
   labelWidth: number | string;
-  currentValue: string[]; // Assuming currentValue is an array of strings
+  currentValue: string | string[];
 }
 
 function TagInput(props: TagInputProps) {
   const { options, metadataEndPoint, field, labelWidth, currentValue } = props;
+
+  const parseTags = (value: string | string[]): string[] => {
+    if (Array.isArray(value)) {
+      return value;
+    }
+
+    try {
+      const parsedValue = JSON.parse(value);
+      return Array.isArray(parsedValue) ? parsedValue : [];
+    } catch {
+      return [];
+    }
+  };
 
   // Memo for stable references prevents flickering
   const selectOptions = useMemo(
@@ -23,9 +36,7 @@ function TagInput(props: TagInputProps) {
   );
 
   // Track selected values and not objects to avoid re-render due to comparison issues
-  const [selectedValues, setSelectedValues] = useState(() =>
-    Array.isArray(currentValue) ? currentValue : []
-  );
+  const [selectedValues, setSelectedValues] = useState(() => parseTags(currentValue));
 
   // Convert the values to objects for the select
   const selectedOptions = useMemo(
@@ -35,7 +46,7 @@ function TagInput(props: TagInputProps) {
 
   const sendTags = (values: string[]) => {
     const fullpath = `fields/${field}/value`;
-    let valueParam = { 'value': values };
+    const valueParam = { 'value': JSON.stringify(values) };
     metadataEndPoint.put(valueParam, fullpath)
       .catch((err) => { console.log(err) });
   }

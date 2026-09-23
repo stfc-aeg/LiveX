@@ -131,20 +131,7 @@ class MetadataController(BaseController):
         :param data: dictionary of parameters to set
         """
         try:
-            path_parts = path.strip('/').split('/')
-            if (
-                len(path_parts) == 3
-                and path_parts[0] == "fields"
-                and path_parts[2] == "value"
-                and path_parts[1] in self.metadata
-                and isinstance(data, dict)
-                and "value" in data
-                and isinstance(data["value"], list)
-                and isinstance(self.metadata[path_parts[1]].value, list)
-            ):
-                self.metadata[path_parts[1]].value = data["value"]
-            else:
-                self.param_tree.set(path, data)
+            self.param_tree.set(path, data)
         except ParameterTreeError as error:
             logging.error(error)
             raise LiveXError(error)
@@ -293,8 +280,7 @@ class MetadataController(BaseController):
         """
         self.hdf_write = False
 
-        # Build a dict of the current metadata values
-        metadata = {key: field.value for key, field in self.metadata.items()}
+        metadata = self._metadata_for_output()
 
         with HdfMetadataWriter(self.hdf_path, self.hdf_file) as hdf5:
             hdf5.write(self.hdf_group, metadata)
@@ -307,8 +293,7 @@ class MetadataController(BaseController):
         """
         self.markdown_write = False
 
-        # Build a dict of the current metadata values
-        metadata = {key: field.value for key, field in self.metadata.items()}
+        metadata = self._metadata_for_output()
 
         with MarkdownMetaWriter(
             self.markdown_template, self.markdown_path, self.markdown_file
@@ -323,8 +308,22 @@ class MetadataController(BaseController):
         """
         self.yaml_write = False
 
-        # Build a dict of the current metadata values
-        metadata = {key: field.value for key, field in self.metadata.items()}
+        metadata = self._metadata_for_output()
 
         with YamlMetadataWriter(self.yaml_path, self.yaml_file) as yaml:
             yaml.write(metadata)
+
+    def _metadata_for_output(self) -> ParamDict:
+        """Return metadata with multi_choice values restored to lists."""
+        metadata = {}
+        for key, field in self.metadata.items():
+            value = field.value
+            if field.multi_choice and isinstance(value, str):
+                try:
+                    decoded_value = json.loads(value)
+                    if isinstance(decoded_value, list):
+                        value = decoded_value
+                except json.JSONDecodeError:
+                    pass
+            metadata[key] = value
+        return metadata

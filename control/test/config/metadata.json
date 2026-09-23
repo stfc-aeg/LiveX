@@ -42,7 +42,7 @@
         "label": "Tags",
         "choices": ["hottearing", "nucleation", "recycling", "test","dark field","bright field","flat field"],
         "multi_choice": true,
-        "default": [],
+        "default": "[]",
         "persist": true,
         "user_input": true
     },

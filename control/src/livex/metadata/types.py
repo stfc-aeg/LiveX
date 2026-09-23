@@ -5,6 +5,7 @@ This module implements type hints and dataclasses for use in the LiveX metadata 
 Tim Nicholls, STFC Detector Systems Software Group
 """
 
+import json
 import shelve
 from dataclasses import dataclass, field, fields
 from functools import partial
@@ -58,6 +59,10 @@ class MetadataField:
         # field is not present therein
         if not self.persist or self.store is None or self.key not in self.store:
             self.value = self.default
+
+        # Store multi-choice values as JSON text so an empty selection has a stable type.
+        if self.multi_choice and isinstance(self.value, list):
+            self.value = json.dumps(self.value)
 
         # Determine the type based on the initial value
         self.type = type(self.value).__name__
