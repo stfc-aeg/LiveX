@@ -1,7 +1,7 @@
 import type { AdapterEndpoint } from '@dssg/odin-react';
 import type { MetadataEndpointTypes } from '../../EndpointTypes';
 
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Select from 'react-select';
 
@@ -15,7 +15,6 @@ interface TagInputProps {
 
 function TagInput(props: TagInputProps) {
   const { options, metadataEndPoint, field, labelWidth, currentValue } = props;
-  const timer = useRef(setTimeout(() => {}, 0)); // Ref to store the debounce timer
 
   // Memo for stable references prevents flickering
   const selectOptions = useMemo(
@@ -35,7 +34,7 @@ function TagInput(props: TagInputProps) {
   );
 
   const sendTags = (values: string[]) => {
-    let fullpath = `fields/${field}/`;
+    const fullpath = `fields/${field}/value`;
     let valueParam = { 'value': values };
     metadataEndPoint.put(valueParam, fullpath)
       .catch((err) => { console.log(err) });
@@ -45,16 +44,9 @@ function TagInput(props: TagInputProps) {
     (newValue: readonly {label: string; value: string}[] | null) => {
       const values = newValue ? newValue.map(option => option.value) : [];
       setSelectedValues(values);
-
-      if (timer.current) {
-        clearTimeout(timer.current);
-      }
-      timer.current = setTimeout(() => {
-        console.log("Timer Elapsed. Sending tag data.");
-        sendTags(values);
-      }, 1000);
+      sendTags(values);
     },
-    []
+    [metadataEndPoint, field]
   );
 
   return (
