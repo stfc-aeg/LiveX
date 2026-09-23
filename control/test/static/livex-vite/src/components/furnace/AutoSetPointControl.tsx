@@ -1,12 +1,11 @@
 import type { AdapterEndpoint } from '@dssg/odin-react';
 import type { FurnaceEndpointTypes } from '../../EndpointTypes';
 
-import { TitleCard, WithEndpoint, EndpointButton } from '@dssg/odin-react';
+import { TitleCard, WithEndpoint, EndpointInput, EndpointButton } from '@dssg/odin-react';
 import { Form, Col, Row, FloatingLabel } from 'react-bootstrap';
 import { checkNull, floatingInputStyle, floatingLabelStyle } from '../../utils';
 
 const EndpointSelect = WithEndpoint(Form.Select);
-const EndPointFormControl = WithEndpoint(Form.Control);
 
 interface AutoSetPointControlProps {
     furnaceEndPoint: AdapterEndpoint<FurnaceEndpointTypes>;
@@ -39,14 +38,12 @@ function AutoSetPointControl(props: AutoSetPointControlProps){
             <Col xs={6} sm={4}>
               <FloatingLabel
               label="Rate (K/s)">
-                <EndPointFormControl
+                <EndpointInput
                   endpoint={furnaceEndPoint}
-                  type="number"
                   fullpath="autosp/rate"
-                  event_type="enter"
                   disabled={connectedDisable}
-                  style={floatingInputStyle}>
-                </EndPointFormControl>
+                  style={floatingInputStyle}
+                />
               </FloatingLabel>
             </Col>
             <Col xs={6} sm={4}>

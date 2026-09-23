@@ -1,12 +1,11 @@
 import type { AdapterEndpoint } from '@dssg/odin-react';
 import type { FurnaceEndpointTypes } from '../../EndpointTypes';
 
-import { TitleCard, WithEndpoint, EndpointButton } from '@dssg/odin-react';
+import { TitleCard, WithEndpoint, EndpointInput, EndpointButton } from '@dssg/odin-react';
 import { Row, Col, Form, FloatingLabel } from 'react-bootstrap';
 import { checkNull, floatingInputStyle, floatingLabelStyle } from '../../utils';
 
 const EndpointSelect = WithEndpoint(Form.Select);
-const EndPointFormControl = WithEndpoint(Form.Control);
 
 interface ThermalGradientProps {
     furnaceEndPoint: AdapterEndpoint<FurnaceEndpointTypes>;
@@ -39,9 +38,8 @@ function ThermalGradient(props: ThermalGradientProps){
           <Col xs={6}>
             <FloatingLabel
               label="K/mm">
-                <EndPointFormControl
+                <EndpointInput
                   endpoint={furnaceEndPoint}
-                  type="number"
                   fullpath="gradient/wanted"
                   disabled={connectedDisable}
                   style={floatingInputStyle}
@@ -49,11 +47,9 @@ function ThermalGradient(props: ThermalGradientProps){
               </FloatingLabel>
             <FloatingLabel
               label="Space (mm)">
-                <EndPointFormControl
+                <EndpointInput
                   endpoint={furnaceEndPoint}
-                  type="number"
                   fullpath="gradient/distance"
-                  event_type="enter"
                   disabled={connectedDisable}
                   style={floatingInputStyle}
                 />

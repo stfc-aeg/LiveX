@@ -2,10 +2,8 @@ import type { AdapterEndpoint } from '@dssg/odin-react';
 import type { FurnaceEndpointTypes } from '../../EndpointTypes';
 
 import { Col, Row, Form, FloatingLabel } from 'react-bootstrap';
-import { TitleCard, WithEndpoint, EndpointButton } from '@dssg/odin-react';
+import { TitleCard, EndpointInput, EndpointButton } from '@dssg/odin-react';
 import { floatingInputStyle } from '../../utils';
-
-const EndPointFormControl = WithEndpoint(Form.Control);
 
 interface PidOverrideProps {
     furnaceEndPoint: AdapterEndpoint<FurnaceEndpointTypes>;
@@ -39,13 +37,13 @@ function PidOverride(props: PidOverrideProps) {
         }>
         <Col>
           <FloatingLabel
-              label="Output %">
-              <EndPointFormControl
-                  endpoint={furnaceEndPoint}
-                  fullpath={pid+"/override/percent_out"}
-                  disabled={connectedDisable}
-                  style={floatingInputStyle}
-              />
+            label="Output %">
+            <EndpointInput
+              endpoint={furnaceEndPoint}
+              fullpath={pid+"/override/percent_out"}
+              disabled={connectedDisable}
+              style={floatingInputStyle}
+            />
           </FloatingLabel>
         </Col>
       </TitleCard>

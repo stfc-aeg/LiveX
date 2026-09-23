@@ -1,12 +1,10 @@
 import { Row, Col, Form, FloatingLabel } from 'react-bootstrap';
-import { TitleCard, WithEndpoint, EndpointButton } from '@dssg/odin-react';
+import { TitleCard, EndpointInput, EndpointButton } from '@dssg/odin-react';
 import type { AdapterEndpoint } from '@dssg/odin-react';
 import type { FurnaceEndpointTypes } from '../../EndpointTypes';
 import { checkNull  } from '../../utils';
 
 import { floatingInputStyle } from '../../utils';
-
-const EndPointFormControl = WithEndpoint(Form.Control);
 
 interface PidControlProps {
     furnaceEndPoint: AdapterEndpoint<FurnaceEndpointTypes>;
@@ -44,9 +42,8 @@ function PidControl(props: PidControlProps) {
               <Col xs={6}>
                 <FloatingLabel
                   label="Proportional">
-                    <EndPointFormControl
+                    <EndpointInput
                       endpoint={furnaceEndPoint}
-                      type="number"
                       fullpath={pid+"/proportional"}
                       disabled={connectedDisable}
                       style={floatingInputStyle}
@@ -54,9 +51,8 @@ function PidControl(props: PidControlProps) {
                 </FloatingLabel>
                   <FloatingLabel
                   label="Integral">
-                    <EndPointFormControl
+                    <EndpointInput
                       endpoint={furnaceEndPoint}
-                      type="number"
                       fullpath={pid+"/integral"}
                       disabled={connectedDisable}
                       style={floatingInputStyle}
@@ -64,9 +60,8 @@ function PidControl(props: PidControlProps) {
                 </FloatingLabel>
                 <FloatingLabel
                   label="Derivative">
-                    <EndPointFormControl
+                    <EndpointInput
                       endpoint={furnaceEndPoint}
-                      type="number"
                       fullpath={pid+"/derivative"}
                       disabled={connectedDisable}
                       style={floatingInputStyle}
@@ -78,9 +73,8 @@ function PidControl(props: PidControlProps) {
                   <Col> {/* This Col avoids minor FloatingLabel positioning bug */}
                     <FloatingLabel
                       label="Enter set pt.">
-                        <EndPointFormControl
+                        <EndpointInput
                           endpoint={furnaceEndPoint}
-                          type="number"
                           fullpath={pid+"/setpoint"}
                           disabled={connectedDisable}
                           style={floatingInputStyle}

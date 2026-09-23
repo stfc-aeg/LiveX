@@ -1,13 +1,11 @@
 import type { MetadataEndpointTypes } from '../../EndpointTypes';
 
-import {  Form, InputGroup, Dropdown, Container } from 'react-bootstrap';
+import { Form, InputGroup, Container } from 'react-bootstrap';
 import { useState, useEffect } from 'react';
-import { TitleCard, WithEndpoint, useAdapterEndpoint } from '@dssg/odin-react';
-import DropdownSelector from '../DropdownSelector.tsx';
+import { TitleCard, WithEndpoint, EndpointInput, useAdapterEndpoint } from '@dssg/odin-react';
 import TagInput from "./TagInput.tsx";
 
-const EndPointFormControl = WithEndpoint(Form.Control);
-const EndpointDropdown = WithEndpoint(DropdownSelector);
+const EndpointSelect = WithEndpoint(Form.Select);
 
 interface MetadataProps {
   endpoint_url: string;
@@ -95,21 +93,20 @@ function Metadata(props: MetadataProps) {
                     <InputGroup.Text style={{width:labelWidth}}>
                       {label}:
                     </InputGroup.Text>
-                    <EndpointDropdown
-                      id={`metadata-${key}`}
+                    <EndpointSelect
                       endpoint={metadataEndPoint}
                       fullpath={"fields/"+key+"/value"}
                       variant="outline-secondary"
                       buttonText={currentValue}>
                         {choices.map(
                         (selection, index) => (
-                          <Dropdown.Item
-                            eventKey={selection}
+                          <option
+                            value={selection}
                             key={index}>
                               {selection}
-                          </Dropdown.Item>
+                          </option>
                         ))}
-                    </EndpointDropdown>
+                    </EndpointSelect>
                   </InputGroup>
                   )
               }
@@ -124,15 +121,13 @@ function Metadata(props: MetadataProps) {
                   <InputGroup.Text style={{width:labelWidth}}>
                     {label}:
                   </InputGroup.Text>
-                  <EndPointFormControl
+                  <EndpointInput
                     endpoint={metadataEndPoint}
-                    type="text"
                     fullpath={"fields/"+key+"/value"}
-                    event_type="enter"
                     as="textarea"
                     rows="5"
-                    style={{flex: 1}}>
-                </EndPointFormControl>
+                    style={{flex: 1}}
+                  />
                 </InputGroup>
               )
             }
@@ -143,12 +138,10 @@ function Metadata(props: MetadataProps) {
                 <InputGroup.Text style={{width:labelWidth}}>
                   {label}:
                 </InputGroup.Text>
-                <EndPointFormControl
+                <EndpointInput
                   endpoint={metadataEndPoint}
-                  type="text"
                   fullpath={"fields/"+key+"/value"}
-                  event_type="enter">
-                </EndPointFormControl>
+                />
               </InputGroup>
               )
             }

@@ -1,11 +1,8 @@
-import type { AdapterEndpoint } from '@dssg/odin-react';
 import type { FurnaceEndpointTypes } from '../../EndpointTypes';
 
-import { Col, Row, Form, FloatingLabel } from 'react-bootstrap';
-import { TitleCard, WithEndpoint } from '@dssg/odin-react';
+import { Col, Row, FloatingLabel } from 'react-bootstrap';
+import { type AdapterEndpoint, TitleCard, EndpointInput } from '@dssg/odin-react';
 import { floatingInputStyle } from '../../utils';
-
-const EndPointFormControl = WithEndpoint(Form.Control);
 
 interface FurnaceMetaProps {
   furnaceEndPoint: AdapterEndpoint<FurnaceEndpointTypes>;
@@ -25,7 +22,7 @@ function FurnaceMeta(props: FurnaceMetaProps) {
           <Row>
             <Col xs={6}>
               <FloatingLabel label="Max Setpoint">
-                <EndPointFormControl
+                <EndpointInput
                   endpoint={furnaceEndPoint}
                   fullpath={"max_setpoint"}
                   disabled={connectedDisable}
@@ -35,7 +32,7 @@ function FurnaceMeta(props: FurnaceMetaProps) {
             </Col>
             <Col xs={6}>
               <FloatingLabel label="Max Setpoint Increase">
-                <EndPointFormControl
+                <EndpointInput
                   endpoint={furnaceEndPoint}
                   fullpath={"max_setpoint_increase"}
                   disabled={connectedDisable}
@@ -47,7 +44,7 @@ function FurnaceMeta(props: FurnaceMetaProps) {
           <Row className="mt-3">
             <Col xs={6}>
               <FloatingLabel label="Upper Output Power Scalar">
-                <EndPointFormControl
+                <EndpointInput
                   endpoint={furnaceEndPoint}
                   fullpath={"pid_upper/output_scalar"}
                   disabled={connectedDisable}
@@ -57,7 +54,7 @@ function FurnaceMeta(props: FurnaceMetaProps) {
             </Col>
             <Col xs={6}>
               <FloatingLabel label="Lower Output Power Scalar">
-                <EndPointFormControl
+                <EndpointInput
                   endpoint={furnaceEndPoint}
                   fullpath={"pid_lower/output_scalar"}
                   disabled={connectedDisable}

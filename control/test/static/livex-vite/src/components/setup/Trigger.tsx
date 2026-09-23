@@ -1,12 +1,10 @@
 import type { TriggerEndpointTypes, CameraEndpointTypes, CameraType, FurnaceEndpointTypes, LiveXEndpointTypes } from '../../EndpointTypes';
 
 import { Row, Col, Container, Form, InputGroup, ButtonGroup, ToggleButton } from 'react-bootstrap';
-import { TitleCard, WithEndpoint, useAdapterEndpoint, EndpointButton } from '@dssg/odin-react';
+import { TitleCard, EndpointInput, useAdapterEndpoint, EndpointButton } from '@dssg/odin-react';
 import { useEffect, useState } from 'react';
 
 import { checkNullNoDp } from '../../utils';
-
-const EndPointFormControl = WithEndpoint(Form.Control);
 
 interface TriggerProps {
     endpoint_url: string;
@@ -99,26 +97,23 @@ function Trigger(props: TriggerProps) {
                     <Row>
                       <InputGroup>
                         <InputGroup.Text>Freq. (Hz)</InputGroup.Text>
-                        <EndPointFormControl
+                        <EndpointInput
                           endpoint={liveXEndPoint}
-                          type="number"
                           fullpath={`acquisition/frequencies/${key}`}
-                          event_type="enter">
-                        </EndPointFormControl>
+                        />
                       </InputGroup>
                     </Row>
                     <Row>
                       <InputGroup>
                         <InputGroup.Text>Frame #</InputGroup.Text>
                         {timeFrameValue==='frame' && key===ref_trigger ? (
-                          <EndPointFormControl
+                          <EndpointInput
                             endpoint={liveXEndPoint}
-                            type="number"
                             fullpath={'acquisition/frame_target'}
                             style={{
                               border: timeFrameValue==='frame' ? '1px solid #00cc00' : undefined
                             }}
-                            />
+                          />
                         ) : (
                           <InputGroup.Text style={{flex:1}}>
                             {data.target}
@@ -128,11 +123,9 @@ function Trigger(props: TriggerProps) {
                       {orcaEndPoint?.data?.cameras?.hasOwnProperty(key) && (
                         <InputGroup>
                           <InputGroup.Text>Exposure</InputGroup.Text>
-                          <EndPointFormControl
+                          <EndpointInput
                             endpoint={liveXEndPoint}
-                            type="number"
                             fullpath={`cameras/${key}_exposure`}
-                            event_type="enter"
                           />
                         </InputGroup>
                       )}
