@@ -79,8 +79,8 @@ class MetadataController(BaseController):
                 )
                 logging.error(error_msg)
 
-        # Load the specified metadata configuration file
-        self._load_config(metadata_config, raise_error=False)
+        # Store the specified metadata configuration file for loading once adapters are available
+        self.metadata_config = metadata_config
 
     def initialize(self, adapters: ParamDict) -> None:
         """Initialize the controller.
@@ -91,6 +91,7 @@ class MetadataController(BaseController):
         :param adapters: dictionary of adapter instances
         """
         self.adapters = adapters
+        self._load_config(self.metadata_config, raise_error=False)
         if 'sequencer' in self.adapters:
             logging.debug("Metadata controller registering context with sequencer")
             self.adapters['sequencer'].add_context('metadata', self)
@@ -130,7 +131,20 @@ class MetadataController(BaseController):
         :param data: dictionary of parameters to set
         """
         try:
-            self.param_tree.set(path, data)
+            path_parts = path.strip('/').split('/')
+            if (
+                len(path_parts) == 3
+                and path_parts[0] == "fields"
+                and path_parts[2] == "value"
+                and path_parts[1] in self.metadata
+                and isinstance(data, dict)
+                and "value" in data
+                and isinstance(data["value"], list)
+                and isinstance(self.metadata[path_parts[1]].value, list)
+            ):
+                self.metadata[path_parts[1]].value = data["value"]
+            else:
+                self.param_tree.set(path, data)
         except ParameterTreeError as error:
             logging.error(error)
             raise LiveXError(error)
@@ -178,9 +192,24 @@ class MetadataController(BaseController):
             with open(metadata_config, "r") as config_file:
                 fields = json.load(config_file)
 
+            camera_names = self.adapters['camera'].controller.names
+            expanded_fields = {}
+            for name, field in fields.items():
+                if '<camera>' in name:
+                    for camera_name in camera_names:
+                        expanded_name = name.replace('<camera>', camera_name)
+                        expanded_field = {
+                            key: value.replace('<camera>', camera_name)
+                            if isinstance(value, str) else value
+                            for key, value in field.items()
+                        }
+                        expanded_fields[expanded_name] = expanded_field
+                else:
+                    expanded_fields[name] = field
+
             # Build metadata fields from the parsed configuration
             self.metadata = {
-                name: MetadataField(key=name, **field) for name, field in fields.items()
+                name: MetadataField(key=name, **field) for name, field in expanded_fields.items()
             }
 
             # Update the configuraiton state and parameter tree with the new fields

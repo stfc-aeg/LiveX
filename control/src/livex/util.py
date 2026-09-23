@@ -7,14 +7,21 @@ from pymodbus.payload import BinaryPayloadDecoder
 from pymodbus.payload import BinaryPayloadBuilder
 from pymodbus.constants import Endian
 from odin_control.adapters.adapter import ApiAdapterRequest
+from odin_control.adapters.base_controller import BaseController, BaseError
 
 import logging
 import math
 
-class LiveXError(Exception):
+from typing import Any, TypeVar
+
+AnyController = TypeVar("AnyController", bound=BaseController)
+
+class LiveXError(BaseError):
     """Simple exception class to wrap lower-level exceptions."""
     pass
 
+class ICCError(BaseError):
+    """Simple exception class to wrap inter-controller communication exceptions."""
 
 def read_coil(client, address, asInt=False):
     """Read and return the value from the coil at the specified address, optionally as an int."""
@@ -79,17 +86,40 @@ def write_modbus_float(client, value, address, byteorder=Endian.BIG, wordorder=E
 
     return response
 
-def iac_get(adapter, path, **kwargs):
-    """Generic IAC get method for synchronous adapters."""
-    request = ApiAdapterRequest(None, accept="application/json")
-    response = adapter.get(path, request)
-    if response.status_code != 200:
-        logging.debug(f"IAC GET failed for adapter {adapter}, path {path}: {response.data}")
-    return response.data.get(kwargs['param']) if 'param' in kwargs else response.data
+def icc_get(controller, path, **kwargs):
+    """Generic ICC get method for synchronous adapter controllers."""
+    try:
+        response_data = controller.get(path)
+    except Exception as e:
+        raise ICCError(
+            f"ICC GET failed for controller {controller}, path {path}: {e}"
+        )
 
-def iac_set(adapter, path, param, data):
-    """Generic IAC set method for synchronous adapters."""
-    request = ApiAdapterRequest({param: data}, content_type="application/vnd.odin-native")
-    response = adapter.put(path, request)
-    if response.status_code != 200:
-        logging.debug(f"IAC SET failed for adapter {adapter}, path {path}: {response.data}")
+    if not isinstance(response_data, dict):
+        raise ICCError(
+            f"ICC GET returned an invalid response for controller {controller}, path {path}: "
+            f"{response_data}"
+        )
+    # Convert the dictionaries keys to a set. If there is exactly one, 'value', return it
+    if set(response_data) == {"value"}:
+        return response_data["value"]
+    return response_data
+
+def icc_set(controller: AnyController, path: str, data: dict[str: Any]):
+    """Generic inter-adapter-controller set method for odin_control controllers.
+    This method avoids the HTTP message construction and directly calls the controller's set method
+    to ensure the ParameterTree is updated correctly, while avoiding unnecessary encoding/decoding.
+    
+    :param controller: Controller object to target.
+    :type controller: Any Subclass of BaseController
+    :param path: Parameter tree path to target, to not include the parameter itself
+    :type path: str
+    :param data: Dictionary of parameter value(s) to write to the specified path.
+    :type data: dict[str, Any]
+    """
+    try:
+        controller.set(path, data)
+    except Exception as e:
+        raise ICCError(
+            f"ICC SET failed for controller {controller}, path {path}: {e}"
+        )
