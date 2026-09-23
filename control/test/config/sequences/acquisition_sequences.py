@@ -41,6 +41,9 @@ def abortable_acquisition(heat_rate=2.5, target_temp=150, heat_hold_time=15,cool
     
     print("acquisition starts here")
 
+    livex.start_acquisition(['furnace', 'widefov', 'narrowfov'])
+    time.sleep(3)
+
     aspc.set_heating('cooling')
     aspc.set_rate(cool_rate)
     aspc.set_enable(True)
@@ -52,7 +55,12 @@ def abortable_acquisition(heat_rate=2.5, target_temp=150, heat_hold_time=15,cool
             aspc.set_enable(False)
             for heater in heaters:
                 heater.set_enable(False)
+            livex.stop_acquisition()
             return
+
+    print("Cooling target reached, ending acquisition.")
+    aspc.set_enable(False)
+    livex.stop_acquisition()
 
 def d25_test_acquisition(
     heat_rate=2.5, target_temp=600, heat_hold_time=60,
