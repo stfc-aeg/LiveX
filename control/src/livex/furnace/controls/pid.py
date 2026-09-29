@@ -46,7 +46,8 @@ class PID():
                                 {'min': 0, 'max': 100}),
                 'enable': (lambda: self.override_enable, self.set_override_enable)
             },
-            'output_scalar': (lambda: self.power_scalar, self.set_power_scalar)
+            'output_scalar': (lambda: self.power_scalar, self.set_power_scalar,
+                                {'min': 0, 'max': 1})
         })
 
     def set_power_scalar(self, value):
