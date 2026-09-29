@@ -10,11 +10,11 @@ Tim Nicholls, STFC Detector Systems Software Group
 import json
 import logging
 from functools import partial
-from typing import Any, Callable, Dict, Tuple
+from typing import Callable, Tuple
 
-from livex.base_controller import BaseController
+from odin_control.adapters.base_controller import BaseController
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from livex.util import LiveXError
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from .hdf_writer import HdfMetadataWriter
 from .markdown_writer import MarkdownMetaWriter
@@ -79,8 +79,8 @@ class MetadataController(BaseController):
                 )
                 logging.error(error_msg)
 
-        # Load the specified metadata configuration file
-        self._load_config(metadata_config, raise_error=False)
+        # Store the specified metadata configuration file for loading once adapters are available
+        self.metadata_config = metadata_config
 
     def initialize(self, adapters: ParamDict) -> None:
         """Initialize the controller.
@@ -91,6 +91,7 @@ class MetadataController(BaseController):
         :param adapters: dictionary of adapter instances
         """
         self.adapters = adapters
+        self._load_config(self.metadata_config, raise_error=False)
         if 'sequencer' in self.adapters:
             logging.debug("Metadata controller registering context with sequencer")
             self.adapters['sequencer'].add_context('metadata', self)
@@ -178,9 +179,24 @@ class MetadataController(BaseController):
             with open(metadata_config, "r") as config_file:
                 fields = json.load(config_file)
 
+            camera_names = self.adapters['camera'].controller.names
+            expanded_fields = {}
+            for name, field in fields.items():
+                if '<camera>' in name:
+                    for camera_name in camera_names:
+                        expanded_name = name.replace('<camera>', camera_name)
+                        expanded_field = {
+                            key: value.replace('<camera>', camera_name)
+                            if isinstance(value, str) else value
+                            for key, value in field.items()
+                        }
+                        expanded_fields[expanded_name] = expanded_field
+                else:
+                    expanded_fields[name] = field
+
             # Build metadata fields from the parsed configuration
             self.metadata = {
-                name: MetadataField(key=name, **field) for name, field in fields.items()
+                name: MetadataField(key=name, **field) for name, field in expanded_fields.items()
             }
 
             # Update the configuraiton state and parameter tree with the new fields
@@ -264,8 +280,7 @@ class MetadataController(BaseController):
         """
         self.hdf_write = False
 
-        # Build a dict of the current metadata values
-        metadata = {key: field.value for key, field in self.metadata.items()}
+        metadata = self._metadata_for_output()
 
         with HdfMetadataWriter(self.hdf_path, self.hdf_file) as hdf5:
             hdf5.write(self.hdf_group, metadata)
@@ -278,8 +293,7 @@ class MetadataController(BaseController):
         """
         self.markdown_write = False
 
-        # Build a dict of the current metadata values
-        metadata = {key: field.value for key, field in self.metadata.items()}
+        metadata = self._metadata_for_output()
 
         with MarkdownMetaWriter(
             self.markdown_template, self.markdown_path, self.markdown_file
@@ -294,8 +308,22 @@ class MetadataController(BaseController):
         """
         self.yaml_write = False
 
-        # Build a dict of the current metadata values
-        metadata = {key: field.value for key, field in self.metadata.items()}
+        metadata = self._metadata_for_output()
 
         with YamlMetadataWriter(self.yaml_path, self.yaml_file) as yaml:
             yaml.write(metadata)
+
+    def _metadata_for_output(self) -> ParamDict:
+        """Return metadata with multi_choice values restored to lists."""
+        metadata = {}
+        for key, field in self.metadata.items():
+            value = field.value
+            if field.multi_choice and isinstance(value, str):
+                try:
+                    decoded_value = json.loads(value)
+                    if isinstance(decoded_value, list):
+                        value = decoded_value
+                except json.JSONDecodeError:
+                    pass
+            metadata[key] = value
+        return metadata

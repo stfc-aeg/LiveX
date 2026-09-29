@@ -2,7 +2,7 @@
 
 import logging
 
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from odin_data.control.ipc_channel import IpcChannel
 from odin_data.control.ipc_message import IpcMessage
 

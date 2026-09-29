@@ -1,11 +1,8 @@
-from functools import partial
 from enum import Enum
 from dataclasses import dataclass
 from livex.modbusAddresses import modAddr
 import logging
-from livex.util import write_modbus_float, read_decode_input_reg, read_decode_holding_reg, write_coil, LiveXError
-
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from livex.util import write_modbus_float, read_decode_input_reg, LiveXError
 
 class CONNECTIONS(Enum):
     """Enum to associate the physical connection point of a thermocouple to the index in the PLC."""

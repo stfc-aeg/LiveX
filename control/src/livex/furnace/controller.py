@@ -2,11 +2,11 @@ import logging
 import time
 import socket
 from concurrent import futures
-from functools import partial
 
 from tornado.concurrent import run_on_executor
 
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from odin_control.adapters.base_controller import BaseController
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 
 from pymodbus.client import ModbusTcpClient
 
@@ -23,7 +23,7 @@ from livex.packet_decoder import LiveXPacketDecoder
 
 from livex.mockModbusClient import MockModbusClient, MockPLC, MockTCPClient
 
-class FurnaceController():
+class FurnaceController(BaseController):
     """FurnaceController - class that communicates with a modbus server on a PLC to drive a furnace."""
     # Thread executor used for background tasks
     executor = futures.ThreadPoolExecutor(max_workers=2)

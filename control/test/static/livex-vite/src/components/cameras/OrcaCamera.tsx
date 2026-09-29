@@ -1,0 +1,315 @@
+import type { AdapterEndpoint, ParamNode } from '@dssg/odin-react';
+import type { CameraEndpointTypes, CameraType, LiveViewEndpointTypes } from '../../EndpointTypes';
+
+import { useState, useRef, useEffect } from 'react';
+import { Row, Col, Container, Stack, Form, InputGroup, Button, FloatingLabel } from 'react-bootstrap';
+import { EndpointInput, TitleCard, EndpointButton } from '@dssg/odin-react';
+
+import { checkNullNoDp, floatingInputStyle, floatingLabelStyle } from '../../utils';
+import ClickableImage from './ClickableImage';
+
+interface OrcaCameraProps {
+    endpoint: AdapterEndpoint<CameraEndpointTypes>;
+    liveViewEndPoint: AdapterEndpoint<LiveViewEndpointTypes>;
+    name: string;
+}
+
+function OrcaCamera(props: OrcaCameraProps) {
+    const {endpoint} = props;
+    const {liveViewEndPoint} = props;
+    const {name} = props;
+ 
+    const liveViewData = liveViewEndPoint?.data?.[name];
+    const colour_metadata = liveViewEndPoint?.metadata?.[name]?.image?.colour;
+    const camera = endpoint?.data?.cameras?.[name] as CameraType | undefined;
+
+    // Array of camera status names
+    const status = ['disconnected', 'connected', 'capturing'];
+    // Current status of orcaCamera (for readability)
+    const orcaStatus = camera?.status?.camera_status ?? "Not found";
+    const orcaConnected = camera?.connection?.connected;
+
+    // This dropdown behaves differently so that you could enter other resolutions via command
+    const commonImageResolutions = [
+        10, 25, 50, 75, 100
+    ];
+
+  const [fitMode, setFitMode] = useState<boolean>(false);
+  const [fitHeightFactor, setFitHeightFactor] = useState<number>(7); // default 70vh
+  const [aspectRatio, setAspectRatio] = useState<number>(1);
+
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // measure image to get its aspect ratio
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    const img = wrapper.querySelector("img");
+    if (!img) return;
+
+    const updateAspect = () => {
+      if (img.naturalWidth && img.naturalHeight) {
+        setAspectRatio(img.naturalWidth / img.naturalHeight);
+      }
+    };
+
+    // wait for image to load
+    img.addEventListener("load", updateAspect);
+    updateAspect();
+
+    return () => img.removeEventListener("load", updateAspect);
+  }, [liveViewData]);
+
+  // compute container style
+  const fitStyle =
+    fitMode && aspectRatio
+      ? {
+          height: `${fitHeightFactor * 10}vh`,
+          width: `${fitHeightFactor*10 * aspectRatio}vh`,
+          maxWidth: "100%",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }
+      : {
+          width: "100%",
+          height: "auto",
+          display: "flex",
+          justifyContent: "center",
+        };
+
+
+    /* The titlecard buttons have variable output, display, and colour, depending on the camera status.
+    Example, when the camera isn't connected, you can connect. If it's connected, you can disconnect.
+    When capturing, that button is disabled - you need to move it out of that state first.*/
+    return (
+        <Container>
+          <TitleCard title={
+            <Row>
+              <Col xs={4} className="d-flex align-items-center" style={{fontSize:'1.3rem'}}>
+                {`${name} control`}
+              </Col>
+              <Col>
+                {orcaConnected ? (
+                <Row>
+                  <Col xs={3}>
+                    <EndpointButton // Move between statuses 1 and 0
+                      endpoint={endpoint}
+                      value={orcaStatus!==status[0] ? "disconnect" : "connect"}
+                      fullpath={`cameras/${name}/command`}
+                      disabled={![status[1], status[0]].includes(orcaStatus)}
+                      variant={orcaStatus!==status[0] ? "warning" : "success"}>
+                        {orcaStatus!==status[0] ? 'Disconnect' : 'Connect'}
+                    </EndpointButton>
+                  </Col>
+                  <Col xs={3}>
+                    <EndpointButton // Move between statuses 3 and 1
+                      endpoint={endpoint}
+                      value={orcaStatus===status[2] ? "end_capture" : "capture"}
+                      fullpath={`cameras/${name}/command`}
+                      disabled={![status[2], status[1]].includes(orcaStatus)}
+                      variant={orcaStatus===status[2] ? "warning" : "success"}>
+                      {orcaStatus===status[2] ? 'Stop Capturing' : 'Capture'}
+                    </EndpointButton>
+                  </Col>
+                </Row>
+                ) : (
+                <Col>
+                  <EndpointButton
+                    endpoint={endpoint}
+                    value={true}
+                    fullpath={`cameras/${name}/connection/reconnect`}
+                    disabled={orcaConnected}
+                    variant={orcaConnected ? "info" : "danger"}>
+                    {orcaConnected ? 'Connected' : 'Reconnect'}
+                  </EndpointButton>
+                </Col>
+                )}
+              </Col>
+            </Row>
+          }>
+            <Col>
+              <Row className="mb-3">
+                <Col xs={4}>
+                  <FloatingLabel
+                    label="Status">
+                      <Form.Control
+                        plaintext
+                        readOnly
+                        style={floatingLabelStyle}
+                        value={(orcaStatus || "Not found")}
+                      />
+                  </FloatingLabel>
+                </Col>
+                <Col xs={4}>
+                  <FloatingLabel
+                    label="Frame Count">
+                      <Form.Control
+                        plaintext
+                        readOnly
+                        style={floatingLabelStyle}
+                        value={checkNullNoDp(camera?.status?.frame_number)}
+                      />
+                  </FloatingLabel>
+                </Col>
+                <Col xs={4}>
+                  <FloatingLabel
+                    label="Cam Temp. (C)">
+                      <Form.Control
+                        plaintext
+                        readOnly
+                        style={floatingLabelStyle}
+                        value={checkNullNoDp(camera?.status?.camera_temperature)}
+                      />
+                  </FloatingLabel>
+                </Col>
+              </Row>
+              <Stack>
+              <InputGroup>
+                <InputGroup.Text>
+                    exposure_time
+                </InputGroup.Text>
+                <EndpointInput
+                    endpoint={endpoint}
+                    fullpath={`cameras/${name}/config/exposure_time`}
+                />
+              </InputGroup>
+              </Stack>
+              <TitleCard title={
+                <Row>
+                  <Col xs={4} className='d-flex align-items-center' style={{fontSize:'1.3rem'}}>
+                    {`${name} preview`}
+                  </Col>
+                  <Col xs={8} className='d-flex justify-content-end'>
+                    <Form.Text>Fix height scale</Form.Text>
+                    <Form.Range
+                      min={1}
+                      max={10}
+                      step={1}
+                      value={fitHeightFactor}
+                      onChange={(e) => setFitHeightFactor(Number(e.target.value))}
+                      style={{ width: "120px" }}
+                    />
+                    <Button
+                      variant={fitMode?"danger":"primary"}
+                      onClick={()=>setFitMode(!fitMode)}>
+                        {fitMode?"Auto image height":"Fix image height"}
+                    </Button>
+                  </Col>
+                </Row>}>
+                <Row className={fitMode?"justify-content-center":undefined}>
+                  <div ref={wrapperRef} style={fitMode?{
+                    ...fitStyle,
+                    lineHeight:0, verticalAlign:'top'
+                    }:undefined}>
+                    <ClickableImage
+                      id={`image-${name}`}
+                      endpoint={liveViewEndPoint}
+                      imgPath={`_image/${name}/image`}
+                      coordsPath={`${name}/image`}
+                      coordsParam="zoom"
+                      valuesAsPercentages={true}>
+                    </ClickableImage>
+                  </div>
+
+                </Row>
+                <Row>
+                  <ClickableImage
+                    id={`histogram-${name}`}
+                    endpoint={liveViewEndPoint}
+                    imgPath={`_image/${name}/histogram`}
+                    coordsPath={`${name}/image`}
+                    coordsParam="clip_range_percent"
+                    maximiseAxis="y"
+                    rectOutlineColour='black'
+                    rectRgbaProperties='rgba(50,50,50,0.05)'
+                    valuesAsPercentages={true}>
+                  </ClickableImage>
+                </Row>
+                <Row className="mt-3">
+                  <Col xs={12} sm={6} style={{justifyContent:'center'}}>
+                    <Row style={{justifyContent:'center'}}>
+                        <EndpointButton className="mb-3 w-75"
+                          endpoint={liveViewEndPoint}
+                          fullpath={`${name}/image/autoclip`}
+                          value={liveViewData?.image?.autoclip ? false : true}
+                          variant={liveViewData?.image.autoclip ? 'danger' : 'primary'}>
+                          {liveViewData?.image?.autoclip ? "Disable Autoclip" : "Enable Autoclip"}
+                        </EndpointButton>
+                    </Row>
+                    <FloatingLabel className="mb-3"
+                    label="Autoclip %">
+                      <EndpointInput
+                          endpoint={liveViewEndPoint}
+                          fullpath={`${name}/image/autoclip_percent`}
+                      />
+                    </FloatingLabel>
+                  </Col>
+                  <Col xs={12} sm={6}>
+                      <Row style={{justifyContent:'center'}}>
+                        <EndpointButton className="mt-2 mb-3 w-75"
+                          endpoint={liveViewEndPoint}
+                          fullpath={`${name}/image/clip_range_value`}
+                          value={[0, 65535]}
+                          variant="primary">
+                          Reset Clipping Range
+                        </EndpointButton>
+                      </Row>
+                      <Row style={{justifyContent:'center'}}>
+                        <EndpointButton className="w-75"
+                          endpoint={liveViewEndPoint}
+                          fullpath={`${name}/image/zoom`}
+                          value={[[0, 100], [0, 100]]}
+                          variant="primary">
+                            Reset Zoom
+                        </EndpointButton>
+                      </Row>
+                  </Col>
+                </Row>
+                <Row className="mt-3">
+                  <Col xs={6}>
+                    <FloatingLabel
+                      label="Image Colour Map">
+                      <Form.Select
+                        style={floatingInputStyle}
+                        value={liveViewData?.image?.colour ?? "?"}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>)=> {
+                          liveViewEndPoint.put({ colour: e.target.value } as ParamNode, `${name}/image`);
+                        }}>
+                          {(colour_metadata?.allowed_values || ['greyscale']).map(
+                            (selection: string, index: number) => (
+                              <option value={selection} key={index}>{selection}</option>
+                            )
+                          )}
+                      </Form.Select>
+                    </FloatingLabel>
+                  </Col>
+                  <Col xs={6}>
+                    <FloatingLabel
+                      label="Resolution (%)">
+                        <Form.Select
+                          style={floatingInputStyle}
+                          value={liveViewData?.image?.resolution ?? "?"}
+                          onChange={(e: React.ChangeEvent<HTMLSelectElement>)=> {
+                            liveViewEndPoint.put({ resolution: Number(e.target.value) } as ParamNode, `${name}/image`);
+                          }}>
+                            {commonImageResolutions.map((effect: number, index: number) => (
+                              <option value={effect} key={index}>
+                                {effect}
+                              </option>
+                              ))
+                            }
+                        </Form.Select>
+                    </FloatingLabel>
+                  </Col>
+                </Row>
+              </TitleCard>
+            </Col>
+          </TitleCard>
+        </Container>
+    )
+}
+
+export default OrcaCamera;
+

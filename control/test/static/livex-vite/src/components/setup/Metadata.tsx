@@ -1,0 +1,168 @@
+import type { MetadataEndpointTypes } from '../../EndpointTypes';
+
+import { Form, InputGroup, Container } from 'react-bootstrap';
+import { useState, useEffect } from 'react';
+import { TitleCard, WithEndpoint, EndpointInput, useAdapterEndpoint } from '@dssg/odin-react';
+import TagInput from "./TagInput.tsx";
+
+const EndpointSelect = WithEndpoint(Form.Select);
+
+interface MetadataProps {
+  endpoint_url: string;
+}
+
+function Metadata(props: MetadataProps) {
+    const {endpoint_url} = props;
+
+    const metadataEndPoint = useAdapterEndpoint<MetadataEndpointTypes>('metadata', endpoint_url, 1000);
+    // Need some object defined even when metadataEndPoint is resolving to null
+    const metaJson = metadataEndPoint?.data?.fields ? metadataEndPoint.data.fields : {} ;
+
+    const [labelWidth, setLabelWidth] = useState("60px"); // Default value if metaJson is not updated
+
+    // Calculate a 'minimum' label width to make the inputgroup.texts consistent
+    useEffect(() => {
+    // No need to calculate if there's no keys (i.e.: endpoint not found)
+    if (Object.keys(metaJson).length > 0) {
+
+      // Function to calculate width
+      const calculateLabelWidth = (fields: Record<string, any>) => {
+        let maxLength = 0;
+        Object.keys(fields).forEach((key) => {
+          const labelLength = fields[key].label.length;
+          const valid = fields[key].user_input;
+          // console.log("label:", fields[key].label)
+          if (labelLength > maxLength && valid) {
+            maxLength = labelLength;
+          }
+        });
+        const additionalPadding = 8; // Extra room for borders
+        return `${maxLength * 7 + additionalPadding}px`;
+      };
+
+      const calculatedWidth = calculateLabelWidth(metaJson);
+      setLabelWidth(calculatedWidth);
+    }
+  }, [metaJson]); // Only re-run the effect if metaJson changes
+
+
+    const renderForm = () => {
+        return Object.keys(metaJson).map((key) => {
+            const field = metaJson[key];
+            const {label, choices, user_input, multi_line, multi_choice=false} = field;
+
+            const currentValue = metadataEndPoint?.data?.fields?.[key]?.value;
+
+            // Carving out a specific exception for this non-user-input for now
+            if (["acquisition_num", "start_time", "stop_time"].includes(key))
+            {
+              // Label is split on the parentheses of acquisition number
+              // until more refined solution (metadata field property) is introduced
+              return (
+                <InputGroup>
+                  <InputGroup.Text style={{width:labelWidth}}>
+                    {label.split('(')[0]} 
+                  </InputGroup.Text>
+                  <InputGroup.Text>
+                      {currentValue}
+                    </InputGroup.Text>
+                </InputGroup>
+              )
+            }
+            if (!user_input) {
+                return null; // Skip non-user-input fields
+            }
+
+            if (choices && multi_choice === true)
+            { // Tags
+              return (
+                <TagInput
+                  options={metadataEndPoint?.data?.fields[key]?.choices ?? ['']}
+                  metadataEndPoint={metadataEndPoint}
+                  field={key}
+                  labelWidth={labelWidth}
+                  key={key}
+                  currentValue={currentValue}
+                />
+              )
+            }
+            else if (choices)
+              { // Dropdown
+                return (
+                  <InputGroup>
+                    <InputGroup.Text style={{width:labelWidth}}>
+                      {label}:
+                    </InputGroup.Text>
+                    <EndpointSelect
+                      endpoint={metadataEndPoint}
+                      fullpath={"fields/"+key+"/value"}
+                      variant="outline-secondary"
+                      buttonText={currentValue}>
+                        {choices.map(
+                        (selection, index) => (
+                          <option
+                            value={selection}
+                            key={index}>
+                              {selection}
+                          </option>
+                        ))}
+                    </EndpointSelect>
+                  </InputGroup>
+                  )
+              }
+            else if (multi_line)
+            {  // not dropdown or tags, so text. but multi_line, not regular
+              return (
+                <InputGroup
+                  style={{
+                    display: 'flex',
+                    width: '100%'
+                    }}>
+                  <InputGroup.Text style={{width:labelWidth}}>
+                    {label}:
+                  </InputGroup.Text>
+                  <EndpointInput
+                    endpoint={metadataEndPoint}
+                    fullpath={"fields/"+key+"/value"}
+                    as="textarea"
+                    rows="5"
+                    style={{flex: 1}}
+                  />
+                </InputGroup>
+              )
+            }
+            else
+            { // Everything that's not a dropdown, tag, or large box, is a normal text field
+              return (
+              <InputGroup>
+                <InputGroup.Text style={{width:labelWidth}}>
+                  {label}:
+                </InputGroup.Text>
+                <EndpointInput
+                  endpoint={metadataEndPoint}
+                  fullpath={"fields/"+key+"/value"}
+                />
+              </InputGroup>
+              )
+            }
+        })
+    }
+return(
+  <Container>
+    <TitleCard title="Experiment Details">
+        {renderForm()}
+        <InputGroup>
+          <InputGroup.Text style={{width:labelWidth}}>
+            Also included in metadata:
+          </InputGroup.Text>
+          <InputGroup.Text>
+            Gradient (K/mm, distance), ASPC cooling rate, camera exposure/orientation, trigger rates
+          </InputGroup.Text>
+        </InputGroup>
+    </TitleCard>
+  </Container>
+    )
+}
+
+export default Metadata;
+

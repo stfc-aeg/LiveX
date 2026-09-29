@@ -1,4 +1,4 @@
-from odin.adapters.parameter_tree import ParameterTree
+from odin_control.adapters.parameter_tree import ParameterTree
 from livex.util import read_coil, read_decode_input_reg, read_decode_holding_reg, write_modbus_float, write_coil, LiveXError
 import logging
 
@@ -46,7 +46,8 @@ class PID():
                                 {'min': 0, 'max': 100}),
                 'enable': (lambda: self.override_enable, self.set_override_enable)
             },
-            'output_scalar': (lambda: self.power_scalar, self.set_power_scalar)
+            'output_scalar': (lambda: self.power_scalar, self.set_power_scalar,
+                                {'min': 0, 'max': 1})
         })
 
     def set_power_scalar(self, value):

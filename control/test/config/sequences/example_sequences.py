@@ -126,19 +126,19 @@ def stabilise_at_temperature_a(setpoint=300, stability_threshold=0.25, do_gradie
 
 
 def change_img_settings(camera_name="widefov", x_boundaries=[0,100], y_boundaries=[0,100], clip_percent_range=[0, 100], colour='AUTUMN'):
-    """Example sequence to demonstrate interaction with the live_data adapter."""
-    livedata = get_context('livedata')
+    """Example sequence to demonstrate interaction with the liveview adapter."""
+    liveview = get_context('liveview')
 
     proc = None
-    # Normally, livedata is accessed only via ParameterTree where processor is part of the argument
+    # Normally, liveview is accessed only via ParameterTree where processor is part of the argument
     # Can't do that here, so instead you need to identify which processor to target
-    for processor in livedata.processors:
+    for processor in liveview.processors:
         if processor.name == camera_name:
             proc = processor
 
-    livedata.set_zoom_boundaries([x_boundaries, y_boundaries], processor=proc)
-    livedata.set_img_colour(colour, processor=proc)
-    livedata.set_img_clip_percent(clip_percent_range, processor=proc)
+    liveview.set_zoom_boundaries([x_boundaries, y_boundaries], processor=proc)
+    liveview.set_img_colour(colour, processor=proc)
+    liveview.set_img_clip_percent(clip_percent_range, processor=proc)
 
 def calibrate_encoder_motor_direction(controller_name='furnace', stage_name='heater_a'):
     """Example sequence to calibrate the motor direction such that 'forward' increases the position."""

@@ -7,11 +7,11 @@ file formats.
 Tim Nicholls, STFC Detector Systems Software Group
 """
 
-from livex.base_adapter import BaseAdapter
+from odin_control.adapters.adapter import ApiAdapter
 from livex.metadata.controller import LiveXError, MetadataController
 
 
-class MetadataAdapter(BaseAdapter):
+class MetadataAdapter(ApiAdapter):
 
     controller_cls = MetadataController
     error_cls = LiveXError

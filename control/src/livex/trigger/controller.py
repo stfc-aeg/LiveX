@@ -1,10 +1,10 @@
 import logging
 
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from odin_control.adapters.base_controller import BaseController
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
 from pymodbus.client import ModbusTcpClient
 from tornado.ioloop import PeriodicCallback
 
-from livex.base_controller import BaseController
 from livex.modbusAddresses import modAddr
 from livex.util import (
     LiveXError,

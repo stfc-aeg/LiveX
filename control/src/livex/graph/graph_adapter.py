@@ -7,14 +7,12 @@ Ashley Neaves, STFC Detector Systems Software Group"""
 
 import logging
 
-from odin.adapters.adapter import (ApiAdapter, ApiAdapterRequest,
-                                   ApiAdapterResponse, request_types, response_types)
-from odin.util import decode_request_body
-from odin.adapters.parameter_tree import ParameterTree, ParameterTreeError
-from tornado.ioloop import PeriodicCallback, IOLoop
+from odin_control.adapters.adapter import (ApiAdapter, ApiAdapterRequest,
+                                   ApiAdapterResponse)
+from odin_control.adapters.parameter_tree import ParameterTree, ParameterTreeError
+from tornado.ioloop import PeriodicCallback
 import time
 import json
-
 
 class GraphDataset():
 
@@ -45,7 +43,7 @@ class GraphDataset():
         cur_time = time.time()
         response = self.adapter.get(self.get_path, ApiAdapterRequest(None))
         end_path = self.get_path.rstrip("/").split("/")[-1]  # Following line needs only last param
-        data = response.data[end_path]
+        data = response.data['value']
 
         self.data.append(data)
         self.timestamps.append(cur_time)

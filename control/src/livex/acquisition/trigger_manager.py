@@ -11,8 +11,8 @@ class TriggerManager:
         self.ref_trigger = ref_trigger
 
         self.furnace = furnace_adapter
-        self.orca = camera_adapter
-        self.cam_names = [cam.name for cam in self.orca.cameras]
+        self.camera = camera_adapter
+        self.cam_names = [cam.name for cam in self.camera.cameras]
 
         try:
             with open(exposure_lookup_path, 'r') as f:
@@ -36,7 +36,7 @@ class TriggerManager:
         self.cam_subtree = {
             f'{camera.name}_exposure': (lambda camera=camera: camera.config['exposure_time'], partial(
                 self.set_camera_exposure, cam_name=camera.name)
-            ) for camera in self.orca.cameras
+            ) for camera in self.camera.cameras
         }
         self.cam_subtree['use_exposure_lookup'] = (lambda: self.use_exposure_lookup, self.set_use_exposure_lookup)
 
@@ -69,7 +69,7 @@ class TriggerManager:
 
         # Handle exposure if needed
         if self.use_exposure_lookup and trigger in self.cam_names:
-            cam = self.orca.get_camera_by_name(trigger)
+            cam = self.camera.get_camera_by_name(trigger)
             exp_time = self.exp_lookup.get(value, cam.config['exposure_time'])
             self.set_camera_exposure(exp_time, trigger)
 
@@ -116,14 +116,14 @@ class TriggerManager:
             return
 
         camera = None
-        camera = self.orca.get_camera_by_name(cam_name)
+        camera = self.camera.get_camera_by_name(cam_name)
         camera.set_config(value=exposure_time, param='exposure_time')
 
         # Handle linked cameras
         if cam_name in self.linked_triggers:
             for linked in self.linked_triggers:
                 if linked != cam_name:
-                    cam = self.orca.get_camera_by_name(linked)
+                    cam = self.camera.get_camera_by_name(linked)
                     cam.set_config(value=exposure_time, param='exposure_time')
 
     def set_acq_frame_target(self, value):

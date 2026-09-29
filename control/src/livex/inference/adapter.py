@@ -4,10 +4,10 @@ At present, this module implements a few basic values to show that live inferenc
 
 Mika Shearwood, STFC Detector Systems Software Group
 """
-from livex.base_adapter import BaseAdapter
+from odin_control.adapters.adapter import ApiAdapter
 from livex.inference.controller import InferenceController, LiveXError
 
-class InferenceAdapter(BaseAdapter):
+class InferenceAdapter(ApiAdapter):
 
     controller_cls = InferenceController
     error_cls = LiveXError
