@@ -55,8 +55,12 @@ class EndpointManager():
         self.get_stats()
         self.list_models()
 
+        if not self.stats:
+            raise LiveXError(f"Failed to get stats from {self.name} results endpoint, please check the connection.")
+
         # There may be a model loaded already
-        if self.stats['model']['name'] is not None:
+        
+        if self.stats['app_state'] != 'no_model':
             self.get_model_status()
             self._clear_results()
 
@@ -120,27 +124,36 @@ class EndpointManager():
         self.selected_model = response.get('name', name.strip())
         self.model_status = response
 
-        self.get_model_status()   
-        self._clear_results()    
+        self.get_model_status()
+        self._clear_results()
 
     def _clear_results(self):
         """Create an empty results tree based on the current model's result_modes."""
         result_modes = self.model_status.get('result_modes')
         if result_modes is not None and result_modes != self.result_modes:
             self.result_modes = result_modes
-            self.results = {'bounded': {}, 'unbounded': {}, 'first_frame': 0, 'most_recent_frame': 0}
+            self.results = { 'first_frame': 0, 'most_recent_frame': 0}
 
-            for graph_type in ('bounded', 'unbounded'):
-                for result in result_modes.get(graph_type, []):
-                    result_name = result['name']
-                    self.results[graph_type][result_name] = {
-                        'label': result.get('label', result_name),
-                        'axis': result.get('axis'),
-                        'data': [],
-                    }
+            # Result modes is a dictionary of graph-names, which have some data and the results to plot on them
+            # These results contain the name of the result and an optional label for the graph legend
+            logging.warning(f"result_modes: {result_modes}")
+            for graph_name in result_modes.keys():
+                graph = result_modes[graph_name]
+                self.results[graph_name] = {
+                    'type': graph['type'],
+                    'axis_limit': graph.get('axis_limit', None),
+                    'x_label': graph.get('x_label', None),
+                    'y_label': graph.get('y_label', None),
+                    'graph_label': graph.get('graph_label', None),
+                    'results': {}
+                }
 
-            self.results['bitmap'] = result_modes.get('bitmap', {'enabled': False})
-            self.results['bitmap']['data'] = []
+                if graph['type'] != 'bitmap':
+                    for result in graph['results']:
+                        self.results[graph_name]['results'][result['name']] = {
+                            'label': result.get('label', result['name']),
+                            'data': [],
+                        }
 
     def get_model_status(self):
         """Send a command to get the latest model status information."""
@@ -150,21 +163,17 @@ class EndpointManager():
     def get_results(self):
         """Drain and store results currently buffered by the endpoint."""
         response = self._call(cmd='get_results')
+
         results = response.get('results', [])
         frame_number = None
-        for inferred_frame in results:
+        for inferred_frame in results:  # Results is an array of objects
             frame_number = inferred_frame['frame_number']
-            if not self.results['first_frame']:
-                self.results['first_frame'] = frame_number
-            for graph_type in ('bounded', 'unbounded'):
-                frame_values = inferred_frame.get(graph_type, {})
-                for result_key, value in frame_values.items():
-                    self.results[graph_type][result_key]['data'].append(value)
+            for graph_name, results in inferred_frame['values'].items():
+                for result, value in results.items():
+                    self.results[graph_name]['results'][result]['data'].append(
+                        value
+                    )
 
-        final_frame = results[-1]
-        bitmap_data = final_frame.get('bitmap', [])
-        if bitmap_data:
-            self.results['bitmap']['data'] = bitmap_data
         self.results['most_recent_frame'] = frame_number
 
     def _close_connection(self):
