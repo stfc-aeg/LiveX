@@ -314,19 +314,34 @@ export interface GraphEndpointTypes extends ParamNode {
     [graph_id: string]: GraphEndpointDataType;
 }
 
-export interface InferencingEndpointResultTypes extends ParamNode {
+interface InferencingEndpointResultBase extends ParamNode {
     axis_limit?: [number, number];
+    frame_number?: number | null;
     graph_label?: string;
-    results?: {
-        [result_id: string]: {
-            data: number[];
-            label: string;
-        };
-    };
-    type: string;
     x_label?: string;
     y_label?: string;
 }
+
+interface InferencingTraceResult extends ParamNode {
+    data: number[];
+    label: string;
+}
+
+export interface InferencingBitmapResult extends InferencingEndpointResultBase {
+    type: 'bitmap';
+    results: {
+        _image?: string;
+    };
+}
+
+export interface InferencingLineResult extends InferencingEndpointResultBase {
+    type: 'line';
+    results: Record<string, InferencingTraceResult>;
+}
+
+export type InferencingEndpointResultTypes =
+    | InferencingBitmapResult
+    | InferencingLineResult;
 
 export interface InferencingEndpointEndpointTypes extends ParamNode {
     "connection": {

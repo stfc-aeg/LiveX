@@ -22,6 +22,7 @@ function InferencePage(props: InferencePageProps) {
           <InferencingCard
             key={key}
             endpoint={inferencingEndpoint}
+            endpoint_url={endpoint_url}
             name={inferencingEndpoint?.data?.endpoint?.[key]?.endpoint_name || 'Unknown Endpoint'}
           />
         ))}

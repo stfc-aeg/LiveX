@@ -1,20 +1,94 @@
-import type { InferencingEndpointResultTypes, InferencingEndpointTypes } from '../../EndpointTypes';
+import type {
+  InferencingEndpointResultTypes,
+  InferencingEndpointTypes,
+  InferencingLineResult,
+} from '../../EndpointTypes';
 
 import { Row, Col, Form, FloatingLabel } from 'react-bootstrap';
-import { type AdapterEndpoint, WithEndpoint, TitleCard } from '@dssg/odin-react';
+import { type AdapterEndpoint, useAdapterEndpoint, WithEndpoint, TitleCard } from '@dssg/odin-react';
+import { useEffect, useRef, useState } from 'react';
 
 import MonitorGraph from '../furnace/MonitorGraph';
 import { floatingInputStyle, floatingLabelStyle, checkNull, checkNullNoDp } from '../../utils';
 
 interface InferencingCardProps {
   endpoint: AdapterEndpoint<InferencingEndpointTypes>;
+  endpoint_url: string;
   name: string;
 }
 
 const EndpointSelect = WithEndpoint(Form.Select);
 
+interface BitmapImageProps {
+  endpoint_url: string;
+  endpoint_name: string;
+  graph_name: string;
+  alt: string;
+}
+
+function BitmapImage({ endpoint_url, endpoint_name, graph_name, alt }: BitmapImageProps) {
+  const [src, setSrc] = useState<string>();
+  const imageEndpoint = useAdapterEndpoint<InferencingEndpointTypes>(
+    'inferencing', endpoint_url, 1000
+  );
+  const getRef = useRef(imageEndpoint.get);
+  getRef.current = imageEndpoint.get;
+  const graph = imageEndpoint.data?.endpoint?.[endpoint_name]?.results?.[graph_name];
+  const isBitmapGraph = typeof graph !== 'number' && graph?.type === 'bitmap';
+  const path = `endpoint/${endpoint_name}/results/${graph_name}/results/_image`;
+
+  useEffect(() => {
+    if (!isBitmapGraph) {
+      setSrc(undefined);
+      return;
+    }
+
+    let active = true;
+    let requestPending = false;
+    let objectUrl: string | undefined;
+
+    const updateImage = async () => {
+      if (requestPending) return;
+      requestPending = true;
+      try {
+        const image = await getRef.current<Blob>(path, { responseType: 'blob' });
+        if (!active || image.size === 0) return;
+
+        const nextUrl = URL.createObjectURL(image);
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        objectUrl = nextUrl;
+        setSrc(nextUrl);
+      } catch {
+        return;
+      } finally {
+        requestPending = false;
+      }
+    };
+
+    void updateImage();
+    const intervalId = window.setInterval(() => void updateImage(), 1000);
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [isBitmapGraph, path]);
+
+  return src ? (
+    <img src={src} alt={alt} style={{ maxWidth: '100%', maxHeight: '70vh' }} />
+  ) : (
+    <div role="status">Waiting for image.</div>
+  );
+}
+
+type InferenceGraph = {
+  graphId: string;
+  graph: InferencingEndpointResultTypes;
+  series: Array<[string, InferencingLineResult['results'][string]]>;
+};
+
 function InferencingCard(props: InferencingCardProps) {
-    const {endpoint, name} = props;
+    const {endpoint, endpoint_url, name} = props;
 
     const datapath = endpoint?.data?.endpoint?.[name];
     const results = endpoint?.data?.endpoint?.[name]?.results;
@@ -22,7 +96,7 @@ function InferencingCard(props: InferencingCardProps) {
 
     const availableModels = endpoint?.data?.endpoint?.[name]?.model?.available || [];
     const firstFrame = results?.first_frame ?? 0;
-    const graphs = Object.entries(results ?? {}).flatMap(([graphId, value]) => {
+    const graphs = Object.entries(results ?? {}).flatMap<InferenceGraph>(([graphId, value]) => {
       // Skip first_frame and most_recent_frame, everything else is results to display
       if (typeof value === 'number') return [];
 
@@ -58,36 +132,6 @@ function InferencingCard(props: InferencingCardProps) {
                     </EndpointSelect>
                   </FloatingLabel>
                 </Col>
-                {/* <Col xs={4}>
-                  <FloatingLabel label="# Predictions">
-                    <Form.Control
-                      plaintext
-                      readOnly
-                      style={floatingLabelStyle}
-                      value={checkNullNoDp(inferenceResults?.num_predictions)}
-                    />
-                  </FloatingLabel>
-                </Col>
-                <Col xs={4}>
-                  <FloatingLabel label="Last Frame #">
-                    <Form.Control
-                      plaintext
-                      readOnly
-                      style={floatingLabelStyle}
-                      value={checkNullNoDp(inferenceResults?.last_frame_number)}
-                    />
-                  </FloatingLabel>
-                </Col>
-                <Col xs={4}>
-                <FloatingLabel label="Avg Inf. Time">
-                  <Form.Control
-                    plaintext
-                    readOnly
-                    style={floatingLabelStyle}
-                    value={checkNull(inferenceResults?.avg_inference_time_ms)}
-                  />
-                </FloatingLabel>
-                </Col> */}
               </Row>
               <Row className='mt-3'>
                   Preprocessing (e.g. flatfield)
@@ -120,7 +164,12 @@ function InferencingCard(props: InferencingCardProps) {
             {graphs.map(({ graphId, graph, series }) => (
               <Col key={graphId} xs={12} xl={6}>
                 {graph.type === 'bitmap' ? (
-                  <div role="status">Image display not currently available.</div>
+                  <BitmapImage
+                    endpoint_url={endpoint_url}
+                    endpoint_name={name}
+                    graph_name={graphId}
+                    alt={`${graph.graph_label || graphId} frame ${graph.frame_number ?? ''}`}
+                  />
                 ) : (
                   <MonitorGraph
                     endpoint={endpoint}

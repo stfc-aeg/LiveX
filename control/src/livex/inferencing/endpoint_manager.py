@@ -2,11 +2,14 @@
 
 import logging
 
+import zmq
+from zmq import ZMQError
+from tornado.escape import json_decode
 from odin_control.adapters.parameter_tree import ParameterTree
 from odin_data.control.ipc_channel import IpcChannel
 from odin_data.control.ipc_message import IpcMessage
+
 from livex.util import LiveXError
-from zmq import ZMQError
 
 class EndpointManager():
 
@@ -14,6 +17,10 @@ class EndpointManager():
 
         self.endpoint_addr = endpoint
         self.results_endpoint = self.endpoint_addr + ":9002"
+        self.image_endpoint = self.endpoint_addr + ":9003"
+        self.image_channel = None
+        self.image_header = None
+        self.image = None
         self.name = name
         self.data_retention = data_retention
 
@@ -24,15 +31,20 @@ class EndpointManager():
         self.selected_model = None
         self.available_models = []
         self.result_modes = None
-        self.connected = False
+        self.bitmap_images = {}
+        self.results_connected = False
+        self.image_connected = False
         self.timeout_ms = 1000
         self.error_consecutive = 0
 
         self._connect_results()
         self.tree = {
             'endpoint_name': self.name,
-            'endpoint': self.results_endpoint,
-            'connection': {'connected': (lambda: self.connected, None)},
+            'endpoint': self.endpoint_addr,
+            'connection': {'connected': {
+                'results': (lambda: self.results_connected, None),
+                'image': (lambda: self.image_connected, None)
+            }},
             'stats': (lambda: self.stats, None),
             'model': {
                 'selected': (lambda: self.selected_model, None),
@@ -48,7 +60,7 @@ class EndpointManager():
         self.results_channel = IpcChannel(IpcChannel.CHANNEL_TYPE_DEALER)
         try:
             self.results_channel.connect(self.results_endpoint)
-            self.connected = True
+            self.results_connected = True
         except ZMQError as e:
             raise LiveXError(f"Error connecting to {self.name} results endpoint: {e}")
 
@@ -64,13 +76,37 @@ class EndpointManager():
             self.get_model_status()
             self._clear_results()
 
+    def _connect_image(self):
+        self.image_channel = IpcChannel(IpcChannel.CHANNEL_TYPE_SUB)
+        try:
+            self.image_channel.connect(self.image_endpoint)
+            self.image_channel.subscribe()
+        except ZMQError as e:
+            self.image_channel.close()
+            logging.warning("Error connecting to %s image endpoint: %s", self.name, e)
+            return
+
+        self.image_connected = True
+
+    def _update_image_connection(self, image_stream):
+        endpoint = image_stream.get('endpoint') if image_stream.get('available') else None
+        if endpoint == self.image_endpoint and (endpoint is None or self.image_connected):
+            return
+
+        self._close_image_connection()
+        if endpoint:
+            self._connect_image()
+
+    def _close_image_connection(self):
+        if self.image_channel is not None:
+            self.image_channel.close()
+        self.image_connected = False
+        self.image_header = None
+        self.image = None
+        self.bitmap_images.clear()
+
     def _call(self, cmd, params=None, timeout=1000):
-        """Send an ipc command message and return the response.
-        :param cmd: command as a string
-        :param params: any required parameters for the object
-        :param timeout: timeout in ms as an integer
-        :return: IpcMessage
-        """
+        """Send an IPC command and return its response body."""
         self.msg_id += 1
         req = IpcMessage("cmd", cmd, id=self.msg_id)
         if params:
@@ -132,6 +168,7 @@ class EndpointManager():
         """Create an empty results tree based on the current model's result_modes."""
         result_modes = self.result_modes
         self.results = {'first_frame': 0, 'most_recent_frame': 0}
+        self.bitmap_images.clear()
         if result_modes is None:
             return
 
@@ -159,10 +196,13 @@ class EndpointManager():
         self.model_status = {
             'app_state': response.get('app_state', self.model_status.get('app_state', 'no_model')),
             'display_name': response.get('display_name', self.model_status.get('display_name', None)),
-            'preprocessing': response.get('preprocessing', self.model_status.get('preprocessing', None))
+            'preprocessing': response.get('preprocessing', self.model_status.get('preprocessing', None)),
+            'image_stream': response.get('image_stream', {'available': False})
         }
         self.selected_model = response.get('selected', self.selected_model)
         self.result_modes = response.get('result_modes', self.result_modes)
+
+        self._update_image_connection(self.model_status['image_stream'])
 
     def get_results(self):
         """Drain and store results currently buffered by the endpoint."""
@@ -182,14 +222,67 @@ class EndpointManager():
 
         self.results['most_recent_frame'] = frame_number
 
+    def get_image(self):
+        """Receive available image messages and retain the newest encoded image."""
+        if not self.image_connected:
+            return self.image
+
+        latest_parts = None
+        while True:
+            try:
+                parts = self.image_channel.socket.recv_multipart(flags=zmq.NOBLOCK)
+            except zmq.Again:
+                break
+            if len(parts) == 2:
+                latest_parts = parts
+
+        if latest_parts is not None:
+            header = json_decode(latest_parts[0])
+
+            self.image = latest_parts[1]
+            content_type = {'jpeg': 'image/jpeg', 'png': 'image/png'}.get(
+                header.get('dtype')
+            )
+            if content_type is None:
+                logging.warning(f"Unsupported image format from {self.name}: {self.header}")
+                return self.image
+
+            for graph in self.results.values():
+                if isinstance(graph, dict) and graph.get('type') == 'bitmap':
+                    graph['results']['frame_number'] = header.get('frame_num')
+
+            bitmap_graphs = [
+                graph_name for graph_name, graph in self.results.items()
+                if isinstance(graph, dict) and graph.get('type') == 'bitmap'
+            ]
+            if len(bitmap_graphs) == 1:
+                self.bitmap_images[bitmap_graphs[0]] = (self.image, content_type)
+            elif bitmap_graphs:
+                logging.warning(
+                    "Cannot associate image from %s with multiple bitmap graphs: %s",
+                    self.name, bitmap_graphs
+                )
+
+        return self.image
+
+    def get_bitmap_image(self, graph_name):
+        """Return the latest encoded image and content type for a bitmap graph."""
+        graph = self.results.get(graph_name)
+        if not isinstance(graph, dict) or graph.get('type') != 'bitmap':
+            return None
+        return self.bitmap_images.get(graph_name)
+
     def _close_connection(self):
-        """Close the control channel."""
-        if self.connected:
+        """Close the control and image channels."""
+        self._close_image_connection()
+        if self.results_connected:
             self.results_channel.close()
-            self.connected = False
+            self.results_connected = False
 
     def _periodic_results_task(self):
         """Periodic task called by the controller to get model results if ready."""
         self.get_model_status()
         if self.model_status['app_state'] in ['ready', 'capturing_flat', 'inferencing']:
             self.get_results()
+        if self.image_connected:
+            self.get_image()
