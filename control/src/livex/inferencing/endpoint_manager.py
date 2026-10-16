@@ -14,7 +14,10 @@ from livex.util import LiveXError
 class EndpointManager():
 
     def __init__(self, endpoint, name, data_retention):
-
+        """Initialise the endpoint manager class.
+        Create a range of variables for managing the connections and results,
+        and create the ParameterTree after attempting to connect to a results endpoint.
+        """
         self.endpoint_addr = endpoint
         self.results_endpoint = self.endpoint_addr + ":9002"
         self.image_endpoint = self.endpoint_addr + ":9003"
@@ -57,6 +60,10 @@ class EndpointManager():
         self.param_tree = ParameterTree(self.tree)
 
     def _connect_results(self):
+        """Connect to the results endpoint.
+        If it's available, fetch results.
+        If there is a model loaded, populate the results part of the tree.
+        """
         self.results_channel = IpcChannel(IpcChannel.CHANNEL_TYPE_DEALER)
         try:
             self.results_channel.connect(self.results_endpoint)
@@ -77,6 +84,7 @@ class EndpointManager():
             self._clear_results()
 
     def _connect_image(self):
+        """Connect and subscribe to the image endpoint."""
         self.image_channel = IpcChannel(IpcChannel.CHANNEL_TYPE_SUB)
         try:
             self.image_channel.connect(self.image_endpoint)
@@ -89,6 +97,7 @@ class EndpointManager():
         self.image_connected = True
 
     def _update_image_connection(self, image_stream):
+        """Handle the image connection process."""
         endpoint = image_stream.get('endpoint') if image_stream.get('available') else None
         if endpoint == self.image_endpoint and (endpoint is None or self.image_connected):
             return
@@ -98,6 +107,7 @@ class EndpointManager():
             self._connect_image()
 
     def _close_image_connection(self):
+        """Close the image connection and reset the local references."""
         if self.image_channel is not None:
             self.image_channel.close()
         self.image_connected = False

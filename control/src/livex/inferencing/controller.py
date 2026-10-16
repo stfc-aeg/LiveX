@@ -32,6 +32,9 @@ class InferencingController(BaseController):
 
         self._create_managers()
 
+    def initialize(self, adapters):
+        pass
+
     def _create_managers(self):
         """Build the parameter tree and the endpoint managers."""
         if len(self.managers) > 0:
@@ -82,17 +85,13 @@ class InferencingController(BaseController):
         except ParameterTreeError as e:
             raise LiveXError(e)
 
-    def initialize(self, adapters):
-        pass
-
     def status_ioloop_callback(self):
         """Periodic callback task to update inference model status."""
         for manager in self.managers:
             manager._periodic_results_task()
 
     def start_background_tasks(self):
-        """Start the background tasks and reset the continuous error counter."""
-        self.error_consecutive = 0
+        """Start the background tasks."""
         self.connected = True
 
         logging.debug(f"Launching inference result update task with interval {self.bg_poll_task_interval}.")
