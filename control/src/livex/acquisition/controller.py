@@ -62,7 +62,7 @@ class LiveXController(BaseController):
             self.adapters = adapters
 
             # These adapters are all necessary so warn if they are not found
-            needed = ['furnace', 'trigger', 'munir', 'camera', 'metadata', 'sequencer', 'liveview', 'inference']
+            needed = ['furnace', 'trigger', 'munir', 'camera', 'metadata', 'sequencer', 'liveview', 'inferencing']
             for adapter in needed:
                 if adapter not in self.adapters:
                     raise LiveXError(f"Adapter {adapter} not found during initialisation. Check its name is configured and that it has loaded correctly.")
@@ -73,7 +73,7 @@ class LiveXController(BaseController):
             self.camera = adapters["camera"].controller
             self.metadata = adapters["metadata"].controller
             self.liveview = self.adapters['liveview'].controller
-            self.inference = self.adapters['inference'].controller
+            self.inferencing = self.adapters['inferencing'].controller
 
             logging.debug("Livex controller registering context with sequencer")
             self.adapters['sequencer'].add_context('livex', self)
@@ -285,12 +285,12 @@ class LiveXController(BaseController):
                 
         acq_num = icc_get(self.metadata, 'fields/acquisition_num/value', param='value')
 
-        try:
-            # Begin inference
-            for endpoint in self.inference.endpoints:
-                endpoint.start_experiment(experiment_number=acq_num)
-        except Exception as e:
-            logging.error(f"inference error: {e}")
+        # try:
+        #     # Begin inference
+        #     for endpoint in self.inferencing.endpoints:
+        #         endpoint.start_experiment(experiment_number=acq_num)
+        # except Exception as e:
+        #     logging.error(f"inference error: {e}")
 
         # Move camera(s) to capture state
         for camera in self.camera.cameras:
@@ -370,9 +370,9 @@ class LiveXController(BaseController):
             targets[name] = trigger.target
             self.trigger_manager.set_target(0)
 
-        # Stop inference
-        for endpoint in self.inference.endpoints:
-            endpoint.stop_experiment()
+        # # Stop inference
+        # for endpoint in self.inferencing.endpoints:
+        #     endpoint.stop_experiment()
 
         # Write other metadata information
         icc_set(self.metadata, 'fields/thermal_gradient_kmm/value', self.furnace.gradient.wanted)
