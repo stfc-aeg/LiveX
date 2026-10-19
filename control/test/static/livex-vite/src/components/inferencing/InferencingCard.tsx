@@ -95,7 +95,6 @@ function InferencingCard(props: InferencingCardProps) {
     const endpointPath = `endpoint/${name}`;
 
     const availableModels = endpoint?.data?.endpoint?.[name]?.model?.available || [];
-    const firstFrame = results?.first_frame ?? 0;
     const graphs = Object.entries(results ?? {}).flatMap<InferenceGraph>(([graphId, value]) => {
       // Skip first_frame and most_recent_frame, everything else is results to display
       if (typeof value === 'number') return [];
@@ -178,9 +177,7 @@ function InferencingCard(props: InferencingCardProps) {
                     paths={series.map(([traceId]) =>
                       `${endpointPath}/results/${graphId}/results/${traceId}/data`)}
                     seriesNames={series.map(([traceId, trace]) => trace.label || traceId)}
-                    xData={series.length > 0
-                      ? Array.from(series[0][1].data, (_, index) => firstFrame + index)
-                      : undefined}
+                    xData={graph.frame_number}
                     xLabel={graph.x_label}
                     yLabel={graph.y_label}
                     axisLimit={graph.axis_limit}

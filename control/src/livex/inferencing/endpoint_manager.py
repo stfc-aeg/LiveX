@@ -194,6 +194,7 @@ class EndpointManager():
             }
 
             if graph['type'] != 'bitmap':
+                self.results[graph_name]['frame_number'] = []
                 for result in graph.get('results', []):
                     self.results[graph_name]['results'][result['name']] = {
                         'label': result.get('label', result['name']),
@@ -230,6 +231,11 @@ class EndpointManager():
                         value
                     )
 
+                frame_numbers = self.results[graph_name]['frame_number']
+                if len(frame_numbers) >= self.data_retention:
+                    frame_numbers.pop(0)
+                frame_numbers.append(frame_number)
+
         self.results['most_recent_frame'] = frame_number
 
     def get_image(self):
@@ -259,7 +265,7 @@ class EndpointManager():
 
             for graph in self.results.values():
                 if isinstance(graph, dict) and graph.get('type') == 'bitmap':
-                    graph['results']['frame_number'] = header.get('frame_num')
+                    graph['frame_number'] = header.get('frame_num')
 
             bitmap_graphs = [
                 graph_name for graph_name, graph in self.results.items()

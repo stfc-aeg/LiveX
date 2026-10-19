@@ -316,7 +316,6 @@ export interface GraphEndpointTypes extends ParamNode {
 
 interface InferencingEndpointResultBase extends ParamNode {
     axis_limit?: [number, number];
-    frame_number?: number | null;
     graph_label?: string;
     x_label?: string;
     y_label?: string;
@@ -329,6 +328,7 @@ interface InferencingTraceResult extends ParamNode {
 
 export interface InferencingBitmapResult extends InferencingEndpointResultBase {
     type: 'bitmap';
+    frame_number?: number | null;
     results: {
         _image?: string;
     };
@@ -336,6 +336,7 @@ export interface InferencingBitmapResult extends InferencingEndpointResultBase {
 
 export interface InferencingLineResult extends InferencingEndpointResultBase {
     type: 'line';
+    frame_number: number[];
     results: Record<string, InferencingTraceResult>;
 }
 
